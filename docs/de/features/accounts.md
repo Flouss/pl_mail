@@ -1,4 +1,4 @@
-<!-- translated-from: features/accounts.md sha1:3c63f9c65f0a7e82c8dd84517d821aa08ddc9aa6 -->
+<!-- translated-from: features/accounts.md sha1:fad66a2c23fc9f97280a7dcc9276185055987507 -->
 
 # Konten und Aliase
 
@@ -33,6 +33,13 @@ Prüfung beim Speichern noch einmal, und ihr Ergebnis bleibt am Konto vermerkt.
 Die erste Synchronisierung startet sofort. Danach hält plMail eine IMAP-IDLE-Verbindung zu
 jedem Postfach und synchronisiert in dem Moment, in dem sich etwas ändert, mit einem geplanten
 Durchlauf alle fünfzehn Minuten dahinter.
+
+Gmail- und Outlook-Konten haben keine Verbindung, die sich offen halten ließe. Wo Push plMail nicht
+erreichen kann, wird einmal pro Minute nachgefragt, ob neue Mail im Posteingang angekommen ist,
+und das Konto wird synchronisiert, sobald das der Fall ist — eine Nachricht landet also etwa eine
+Minute, nachdem sie dein Handy erreicht hat, ganz ohne öffentliche Adresse. Spam und Mail, die ein
+Filter am Posteingang vorbeigeleitet hat, warten weiter auf den Durchlauf alle fünfzehn Minuten.
+Siehe [Mail-Ingest](../internals/mail-ingest.md#ohne-push-die-posteingangs-abfrage).
 
 Siehe [IMAP und SMTP](../providers/imap-smtp.md) für die Einstellungen, über die sich die
 Server uneinig sind.

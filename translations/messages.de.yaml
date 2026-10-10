@@ -781,6 +781,7 @@ admin:
                     idle: 'IDLE'
                     manual: 'Sync-Knopf'
                     poll: 'Takt'
+                    probe: 'Minutenprüfung'
                     push: 'Push'
                     unknown: '—'
                 col:

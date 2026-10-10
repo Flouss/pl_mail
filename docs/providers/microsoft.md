@@ -150,7 +150,11 @@ the webhook does one thing, queue a sync for the resource it names, and every de
 sync engine.
 
 **Push is never load-bearing.** A calendar that could not register is polled every fifteen minutes,
-and an account without push is synced on the same schedule. To ask for registration immediately:
+and an account without push is synced on the same schedule — except that new inbox mail is noticed
+within about a minute, because `app:mail:probe` asks Graph once a minute for the newest message in
+the inbox and queues a sync when it is not the one it saw last. That needs no public address.
+Spam, filtered mail and changes made elsewhere still wait for the sweep. To ask for registration
+immediately:
 
 ```bash
 docker compose exec php php bin/console app:calendar:push

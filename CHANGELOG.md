@@ -8,6 +8,17 @@ The published image tags: `latest` follows the most recent release below,
 
 ## Unreleased
 
+**New Gmail and Outlook mail now arrives within about a minute, with no public address.** Push needs
+Google or Microsoft to reach plMail, which an install behind a firewall cannot offer, and an account
+without push waited for the quarter-hourly sync: mail on the phone at once, in plMail up to fifteen
+minutes later. A new check, `app:mail:probe`, now runs every minute and asks each Gmail and Outlook
+account one cheap question — was anything added to the inbox? — and queues the ordinary sync when the
+answer is yes. One small request per account per minute; an account that is throttled or failing is
+left alone for as long as the provider says, or five minutes. It looks at the inbox only: spam, mail a
+filter kept out of the inbox, and changes made elsewhere still wait for the quarter-hourly sync, which
+is unchanged. Admin → Performance shows which path delivered a message: `probe` is the new check,
+`poll` is the sweep. No migration.
+
 **Keyboard shortcuts, the ones Gmail uses.** `j` and `k` move through a list, `o` opens, `u` goes
 back, `x` selects, `e` archives, `#` deletes, `s` stars, `r` `a` `f` reply, reply to all and
 forward, `c` writes, `/` searches, `g` then a letter goes to a list, `z` undoes. **?** shows all of

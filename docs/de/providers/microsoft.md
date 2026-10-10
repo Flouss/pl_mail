@@ -1,4 +1,4 @@
-<!-- translated-from: providers/microsoft.md sha1:593c30a706038d59877536d7f264562631d8d6fc -->
+<!-- translated-from: providers/microsoft.md sha1:fd40cfbda7f0220671bac2c990be68d5a980472d -->
 
 # Microsoft
 
@@ -165,7 +165,11 @@ darüber, was —, der Webhook tut also genau eine Sache, nämlich eine Synchron
 Ressource einzureihen, und jede Entscheidung bleibt in der Sync-Engine.
 
 **Push trägt nie die Last.** Ein Kalender, der sich nicht registrieren konnte, wird alle fünfzehn
-Minuten abgerufen, und ein Konto ohne Push wird nach demselben Zeitplan synchronisiert. Um die
+Minuten abgerufen, und ein Konto ohne Push wird nach demselben Zeitplan synchronisiert — nur dass
+neue Mail im Posteingang binnen etwa einer Minute bemerkt wird, weil `app:mail:probe` einmal pro
+Minute bei Graph die neueste Nachricht im Posteingang erfragt und eine Synchronisierung einreiht,
+wenn es nicht die ist, die zuletzt gesehen wurde. Dafür braucht es keine öffentliche Adresse.
+Spam, gefilterte Mail und anderswo gemachte Änderungen warten weiter auf den Durchlauf. Um die
 Registrierung sofort anzustoßen:
 
 ```bash

@@ -188,6 +188,47 @@ once.
 Admin → AI shows beside the switch — median, 95th percentile, and how many messages were shown
 before the model had answered.
 
+## Without push: the inbox probe
+
+Gmail and Outlook announce new mail by calling plMail — Pub/Sub for Google, a webhook for Microsoft —
+and both need an address the internet can reach. An install behind a firewall has neither, and an
+account without push used to be synced only by the quarter-hourly `app:mail:sync`: mail on the phone
+at once, in plMail up to fifteen minutes later.
+
+`app:mail:probe` runs every minute and asks each active Gmail and Outlook account one cheap question,
+through `App\Service\Mail\InboxProbe`, and queues the ordinary `SyncAccountMessage` (trigger
+`SyncTrigger::Probe`) only when the answer is yes. It does not fetch anything itself and it does not
+replace the poll.
+
+| | Gmail | Outlook |
+|---|---|---|
+| The question | `history.list` from the stored cursor, for messages *added* to the *inbox* | The id of the newest message in the inbox, one projected field |
+| What counts as news | Any such record | An id different from the one seen last time |
+| First look at an account | Evidence, if the window holds an arrival | Only remembered: there is nothing to compare it with |
+| An expired cursor | One sync to recover it (the real sync re-lists the mailbox) | — |
+
+**The probe never moves a cursor.** Gmail's `historyId` and Graph's delta links belong to the real sync;
+a probe that advanced either would hand the sync it just asked for an empty window.
+
+**What stops it queueing a sync every minute.** The answer stays "yes" until the sync it triggered has
+run, and that sync waits on the single `ingest` consumer, which can be minutes deep. So each account
+remembers *what* it last announced — the newest history record, the newest message id — and announces
+a thing once. Mail that arrives meanwhile is a different thing and is announced in its own right, which
+keeps the number of syncs bounded by the number of arrivals rather than the number of ticks. The memory
+lives in the cache, so losing it costs one redundant sync and never a missed one.
+
+**What it deliberately leaves to the poll.** Spam, mail a filter kept out of the inbox, and every change
+that is not an arrival — read state, labels, deletions made elsewhere. None of those is the
+"my phone has it and plMail does not" case, and `Message::$arrivedBy` says which path delivered
+what: `probe` is the fast path working, `poll` is mail it cannot see.
+
+**Being a good neighbour.** It runs on the scheduler's single worker, beside every other scheduled job.
+Each request carries its own ten-second timeout, a run starts no further account after 45 seconds, and
+an account that fails is left alone — for as long as the provider's own `Retry-After` says when
+throttled, five minutes after anything else. Accounts whose grant is already known to be dead are not
+asked at all, because every look would begin with a token refresh. At one request a minute per account
+this is a few units of a quota counted in thousands, and well inside Microsoft's per-mailbox limit.
+
 ## Threading
 
 `App\Service\Imap\MessageThreader::assignThread()` is a three-step cascade, and each step
@@ -415,6 +456,12 @@ connection-holding worker.
 table sends every post-ingest message to `enrich`; only the stamp moves a finished account's
 mail to `enrich_live`. Dispatch with `$this->router->stampsFor($result)`, and only for
 `RecentMailPolicy::recentIds()`.
+
+**A signal that stays true until a sync has run is a sync queued every tick.** The inbox probe's
+"new mail" answer only clears when the real sync moves the cursor, which waits on one shared queue.
+`InboxProbe` therefore announces each arrival once; anything added to it that reports state, not
+events, has to do the same or it recreates the self-feeding loop `ImapIdleCommand::SYNC_MIN_GAP` was
+written for.
 
 **A held message nothing releases is mail nobody can see in their inbox.** Its thread has no
 category and so is in no tab. That is why the timed release is dispatched before the feature

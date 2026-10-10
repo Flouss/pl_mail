@@ -151,8 +151,9 @@ sync engine.
 
 **Push is never load-bearing.** A calendar that could not register is polled every fifteen minutes,
 and an account without push is synced on the same schedule — except that new inbox mail is noticed
-within about a minute, because `app:mail:probe` asks Graph once a minute for the newest message in
-the inbox and queues a sync when it is not the one it saw last. That needs no public address.
+within about a minute, because `app:mail:probe` asks Graph once a minute when the newest message in
+the inbox was received and queues a sync when that is later than last time. That needs no public
+address.
 Spam, filtered mail and changes made elsewhere still wait for the sweep. To ask for registration
 immediately:
 

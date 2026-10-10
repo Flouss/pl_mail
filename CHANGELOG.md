@@ -639,6 +639,16 @@ the folder could never be swept — withheld the check that lets mail deleted el
 the account. A folder marked `\Noselect` is now created with sync off, and one that already exists
 is switched off on the next folder sync, with nothing to do on your part. It held no mail, so
 nothing is lost. No migration.
+**Choosing a profile picture from Immich, Paperless-ngx or another connected service opens the
+same picker as attaching to a mail.** Settings → Profile showed a small grid of its own: the first
+couple of dozen images at the top of the service, with no albums, no people, no search, no way to
+scroll on. Each connection's button now opens the full picker, with "Use as profile picture" where
+a mail has "Attach", and one picture can be chosen at a time. A PDF, or a file the service says is
+over 4 MB, is shown greyed out rather than hidden; Immich and Google Photos do not report sizes, so
+a large photo from them is still refused after it is chosen, with the reason under the picture
+field. A scanned photograph from Paperless-ngx is now taken as the original — it used to arrive as
+the archived PDF and be refused. The setup wizard's profile step still has the small grid, because
+the picker would replace the wizard it is inside. No migration.
 
 ## v0.3.2 — 2026-10-09
 

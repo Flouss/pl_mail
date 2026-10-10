@@ -12,6 +12,7 @@ use App\Domain\Enum\Integration\Provider;
 use App\Domain\Exception\IntegrationException;
 use App\Domain\Interface\DestinationDriverInterface;
 use App\Domain\Interface\IntegrationDriverInterface;
+use App\Domain\Interface\PictureRenditionDriverInterface;
 use App\Domain\Interface\SearchableDriverInterface;
 use App\Domain\Interface\TimelineDriverInterface;
 use App\Entity\Integration\Integration;
@@ -53,7 +54,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * Auth is an API key in x-api-key, generated per user in Immich's account
  * settings. Entry ids are Immich's own UUIDs, opaque to everything else.
  */
-final readonly class ImmichDriver implements IntegrationDriverInterface, SearchableDriverInterface, TimelineDriverInterface, DestinationDriverInterface
+final readonly class ImmichDriver implements IntegrationDriverInterface, SearchableDriverInterface, TimelineDriverInterface, DestinationDriverInterface, PictureRenditionDriverInterface
 {
     private const string API = '/api';
 
@@ -62,6 +63,12 @@ final readonly class ImmichDriver implements IntegrationDriverInterface, Searcha
      * the picker grid wants.
      */
     private const string THUMBNAIL_SIZE = 'thumbnail';
+
+    /**
+     * The other one: a JPEG or WebP of the whole photograph, about 1440 px
+     * across, whatever the original is. What a profile picture is made from.
+     */
+    private const string PICTURE_SIZE = 'preview';
 
     /**
      * Virtual folder ids. Immich album ids are UUIDs, so bare words cannot
@@ -240,6 +247,30 @@ final readonly class ImmichDriver implements IntegrationDriverInterface, Searcha
 
         return new RemoteFile(
             filename: $this->filenameFromHeaders($headers) ?? $fileId,
+            mime: trim(explode(';', $headers['content-type'][0] ?? 'application/octet-stream')[0]),
+            contents: $contents,
+        );
+    }
+
+    /**
+     * An iPhone photograph is HEIC and the original is that, so for a profile
+     * picture the preview Immich rendered of it is the file to take.
+     */
+    public function downloadPicture(Integration $integration, string $fileId): RemoteFile
+    {
+        $response = $this->request($integration, 'GET', $this->url($integration, '/assets/'.rawurlencode($fileId).'/thumbnail'), [
+            'query' => ['size' => self::PICTURE_SIZE],
+        ]);
+
+        try {
+            $contents = $response->getContent();
+            $headers = $response->getHeaders();
+        } catch (HttpExceptionInterface $e) {
+            throw $this->translate($e);
+        }
+
+        return new RemoteFile(
+            filename: $fileId,
             mime: trim(explode(';', $headers['content-type'][0] ?? 'application/octet-stream')[0]),
             contents: $contents,
         );

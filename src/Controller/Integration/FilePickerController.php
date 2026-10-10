@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Controller\Integration;
 
 use App\Controller\ChecksCsrf;
-use App\Domain\Helper\AvatarStorage;
 use App\Domain\Helper\InlineDisposition;
 use App\Controller\Mail\ComposeAttachmentController;
 use App\Domain\Enum\Integration\Capability;
@@ -122,9 +121,9 @@ final class FilePickerController extends AbstractController
             'mode'        => $forAvatar ? 'avatar' : 'attach',
             // The avatar store's own cap, so a photo it would refuse shows as
             // too large rather than being chosen and then bounced.
-            'maxBytes'    => $forAvatar ? AvatarStorage::MAX_BYTES : ComposeAttachmentController::MAX_ATTACHMENT_BYTES,
+            'maxBytes'    => $forAvatar ? $this->avatars->maxBytesFor($integration) : ComposeAttachmentController::MAX_ATTACHMENT_BYTES,
             // Files on this page that cannot be a picture: shown, not choosable.
-            'refusedIds'  => $forAvatar ? $this->avatars->refusedIds($view->listing) : [],
+            'refusedIds'  => $forAvatar ? $this->avatars->refusedIds($integration, $view->listing) : [],
             // A share link is no use as a profile picture.
             'canLink'     => false === $forAvatar && $integration->supports(Capability::ShareLink),
             'canThumb'    => $integration->supports(Capability::Thumbnail),

@@ -240,6 +240,36 @@ final class ImmichDriverTest extends TestCase
         self::assertSame('binary-jpeg', $file->contents);
     }
 
+    /**
+     * A HEIC original is no use as a profile picture, but Immich keeps a JPEG
+     * or WebP of every photograph for its own web UI. A picture is that, never
+     * the original.
+     */
+    public function testAPictureIsTheServersPreviewNotTheOriginal(): void
+    {
+        $driver = $this->driver([
+            new MockResponse('jpeg-bytes', ['response_headers' => ['content-type' => 'image/jpeg']]),
+        ]);
+
+        $file = $driver->downloadPicture($this->integration(), 'asset-1');
+
+        self::assertCount(1, $this->requests);
+        self::assertStringContainsString('/assets/asset-1/thumbnail', $this->requests[0]['url']);
+        self::assertStringContainsString('size=preview', $this->requests[0]['url']);
+        self::assertStringNotContainsString('/original', $this->requests[0]['url']);
+        self::assertSame('image/jpeg', $file->mime);
+        self::assertSame('jpeg-bytes', $file->contents);
+    }
+
+    public function testAPictureThatCannotBeFetchedIsAnIntegrationError(): void
+    {
+        $driver = $this->driver([new MockResponse('', ['http_code' => 404])]);
+
+        $this->expectException(IntegrationException::class);
+
+        $driver->downloadPicture($this->integration(), 'gone');
+    }
+
     public function testApiKeyTravelsInTheHeader(): void
     {
         $driver = $this->driver([new JsonMockResponse(['id' => 'me'])]);

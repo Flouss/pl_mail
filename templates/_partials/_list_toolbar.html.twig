@@ -260,11 +260,15 @@ The button itself carries `group` and `relative`.
         aria-hidden="true"
     >
         {{ m.tbtn('click->mail--list-toolbar#archiveSelected',    'fa-solid fa-box-archive',  'toolbar.actions.archive'|trans) }}
-        {# In Spam the Delete is Delete forever, as it is on the rows there: the
-           trash would only be a second place to delete the same mail from, and
-           a row in Spam has no trash button either. The bin keeps its Delete
-           for now — see mail--list-toolbar#purgeSelected for what asks first. #}
-        {% if 'spam' == list_scope|default('') %}
+        {# In Spam and the bin the Delete is Delete forever, as it is on the rows
+           there. In Spam the trash would only be a second place to delete the
+           same mail from; in the bin it is worse: it trashes mail that already
+           carries Trash, which changes nothing on the server while the answer
+           still takes the rows out of the list, so mail looked deleted and was
+           back on the next load. A row in either place has no trash button for
+           the same reason — see mail--list-toolbar#purgeSelected for what asks
+           first. #}
+        {% if list_scope|default('') in ['spam', 'trash'] %}
             {{ m.tbtn('click->mail--list-toolbar#purgeSelected',  'fa-solid fa-fire',          'toolbar.actions.purge'|trans,    'hover:text-danger') }}
         {% else %}
             {{ m.tbtn('click->mail--list-toolbar#deleteSelected', 'fa-solid fa-trash',         'toolbar.actions.delete'|trans,   'hover:text-danger') }}

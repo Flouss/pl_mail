@@ -40,6 +40,7 @@ final class BulkPurgeTest extends WebTestCase
     private KernelBrowser $client;
     private Connection $connection;
     private Label $spam;
+    private Label $trash;
 
     protected function setUp(): void
     {
@@ -60,6 +61,7 @@ final class BulkPurgeTest extends WebTestCase
         $this->account = $this->seedAccount();
         $this->inbox   = $this->seedLabel('Inbox', LabelRole::Inbox);
         $this->spam    = $this->seedLabel('Spam', LabelRole::Spam);
+        $this->trash   = $this->seedLabel('Trash', LabelRole::Trash);
 
         $this->client->loginUser($this->user);
     }
@@ -98,6 +100,40 @@ final class BulkPurgeTest extends WebTestCase
         self::assertNotNull(
             $this->em->find(MessageThread::class, $keptId),
             'while spam that was not ticked is untouched — the presence companion to the two assertions above',
+        );
+    }
+
+    /**
+     * The bin is a place mail is deleted for good from, exactly as Spam is.
+     *
+     * The toolbar above a selection in the bin offers Delete forever for the
+     * same reason it does in Spam: its trash Delete posts a trash for mail that
+     * already carries Trash, which changes nothing on the server and still
+     * tells the page to drop the rows. That only works while this route accepts
+     * the bin, which is what this pins — and with a Spam thread beside it, so a
+     * guard narrowed to "only the bin" would fail the other test and one
+     * narrowed to "only Spam" would fail this one.
+     */
+    public function testASelectionInTheBinIsDeletedForGood(): void
+    {
+        $binned = $this->binThread('In the bin');
+        $kept   = $this->binThread('In the bin, not ticked');
+
+        $binnedId  = $binned->id;
+        $keptId    = $kept->id;
+        $messageId = $binned->messages->first()->id;
+
+        $this->post(['ids' => [$binnedId]]);
+
+        self::assertSame(200, $this->client->getResponse()->getStatusCode());
+
+        $this->em->clear();
+
+        self::assertNull($this->em->find(MessageThread::class, $binnedId), 'the ticked conversation is gone');
+        self::assertNull($this->em->find(Message::class, $messageId), 'with its messages');
+        self::assertNotNull(
+            $this->em->find(MessageThread::class, $keptId),
+            'while what was not ticked stays in the bin — the presence companion',
         );
     }
 
@@ -203,6 +239,23 @@ final class BulkPurgeTest extends WebTestCase
 
         foreach ($thread->messages as $message) {
             $message->addLabel($this->spam);
+        }
+
+        $this->em->flush();
+
+        return $thread;
+    }
+
+    /** One conversation of one message, carrying Trash and not the Inbox. */
+    private function binThread(string $subject): MessageThread
+    {
+        $thread = $this->thread($subject);
+
+        $thread->removeLabel($this->inbox);
+        $thread->addLabel($this->trash);
+
+        foreach ($thread->messages as $message) {
+            $message->addLabel($this->trash);
         }
 
         $this->em->flush();

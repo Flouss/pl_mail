@@ -11,6 +11,7 @@ use App\Domain\Exception\AvatarRefusedException;
 use App\Domain\Exception\IntegrationException;
 use App\Domain\Helper\AvatarStorage;
 use App\Domain\Interface\OriginalFileDriverInterface;
+use App\Domain\Interface\PictureRenditionDriverInterface;
 use App\Entity\Integration\Integration;
 use App\Entity\User\User;
 use App\Repository\Integration\IntegrationRepository;
@@ -79,12 +80,17 @@ final readonly class AvatarFromIntegration
     public function browse(Integration $integration): array
     {
         try {
-            $listing = $this->drivers->forIntegration($integration)->list($integration);
+            $driver = $this->drivers->forIntegration($integration);
+            $listing = $driver->list($integration);
         } catch (IntegrationException) {
             return [];
         }
 
-        $images = array_values(array_filter($listing->files(), self::looksLikeAnImage(...)));
+        $rendersPictures = $driver instanceof PictureRenditionDriverInterface;
+        $images = array_values(array_filter(
+            $listing->files(),
+            static fn (Entry $entry): bool => self::looksLikeAnImage($entry, $rendersPictures),
+        ));
 
         return array_slice($images, 0, self::LIMIT);
     }
@@ -100,32 +106,58 @@ final readonly class AvatarFromIntegration
      *
      * @return list<string> entry ids
      */
-    public function refusedIds(?Listing $listing): array
+    public function refusedIds(Integration $integration, ?Listing $listing): array
     {
         if (null === $listing) {
             return [];
         }
 
+        $rendersPictures = $this->rendersPictures($integration);
+
         return array_values(array_map(
             static fn (Entry $entry): string => $entry->id,
-            array_filter($listing->files(), static fn (Entry $entry): bool => false === self::looksLikeAnImage($entry)),
+            array_filter($listing->files(), static fn (Entry $entry): bool => false === self::looksLikeAnImage($entry, $rendersPictures)),
         ));
+    }
+
+    /**
+     * The size above which the picker greys a file out as too large.
+     *
+     * The avatar store's own cap, except where the service renders the picture:
+     * what is kept is then the rendition, a few hundred kilobytes whatever the
+     * original weighs, so a 9 MB HEIC from a good camera is as choosable as a
+     * small one. The rendition is held to the cap all the same, in apply().
+     */
+    public function maxBytesFor(Integration $integration): int
+    {
+        return true === $this->rendersPictures($integration) ? PHP_INT_MAX : AvatarStorage::MAX_BYTES;
+    }
+
+    private function rendersPictures(Integration $integration): bool
+    {
+        return $this->drivers->forIntegration($integration) instanceof PictureRenditionDriverInterface;
     }
 
     /**
      * Only what the avatar store will take — PNG, JPEG, GIF, WebP — so nothing
      * is offered that is then refused. A HEIC photograph is an image, but not
-     * one this can keep, and offering it was offering an error.
+     * one this can keep, and offering it was offering an error — unless the
+     * service renders its photographs as pictures (PictureRenditionDriverInterface),
+     * in which case any image it holds can be chosen, because apply() fetches
+     * that rendition and not the original this entry describes.
      *
      * Not every driver reports a mime type — a photo library that only ever
      * returns photographs has little reason to — so the filename is the
      * fallback rather than the entry being dropped. Either is only a guess
      * about what the file will be; apply() decides on the bytes.
      */
-    private static function looksLikeAnImage(Entry $entry): bool
+    private static function looksLikeAnImage(Entry $entry, bool $rendersPictures): bool
     {
         if (null !== $entry->mime && '' !== $entry->mime) {
-            return in_array(strtolower($entry->mime), AvatarStorage::ALLOWED_MIME, true);
+            $mime = strtolower($entry->mime);
+
+            return in_array($mime, AvatarStorage::ALLOWED_MIME, true)
+                || (true === $rendersPictures && true === str_starts_with($mime, 'image/'));
         }
 
         return in_array(
@@ -155,12 +187,16 @@ final readonly class AvatarFromIntegration
         try {
             $driver = $this->drivers->forIntegration($integration);
 
-            // The original where the service keeps one apart from what it
-            // serves: the picker listed the file by the original's type, and
-            // the rendition — Paperless's archived PDF — is never a picture.
-            $file = $driver instanceof OriginalFileDriverInterface
-                ? $driver->downloadOriginal($integration, $fileId)
-                : $driver->download($integration, $fileId);
+            // The service's own picture where it makes one: the listing offered
+            // the original, which may be a HEIC nothing here can keep. Else the
+            // original where the service keeps one apart from what it serves:
+            // the picker listed the file by the original's type, and the
+            // rendition — Paperless's archived PDF — is never a picture.
+            $file = match (true) {
+                $driver instanceof PictureRenditionDriverInterface => $driver->downloadPicture($integration, $fileId),
+                $driver instanceof OriginalFileDriverInterface => $driver->downloadOriginal($integration, $fileId),
+                default => $driver->download($integration, $fileId),
+            };
         } catch (IntegrationException $e) {
             throw new AvatarRefusedException(AvatarRefusedException::UNAVAILABLE, $e);
         }

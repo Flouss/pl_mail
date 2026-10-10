@@ -33,11 +33,19 @@ same picker as attaching to a mail.** Settings → Profile showed a small grid o
 couple of dozen images at the top of the service, with no albums, no people, no search, no way to
 scroll on. Each connection's button now opens the full picker, with "Use as profile picture" where
 a mail has "Attach", and one picture can be chosen at a time. A PDF, or a file the service says is
-over 4 MB, is shown greyed out rather than hidden; Immich and Google Photos do not report sizes, so
-a large photo from them is still refused after it is chosen, with the reason under the picture
+over 4 MB, is shown greyed out rather than hidden; Google Photos does not report sizes, so
+a large photo from it is still refused after it is chosen, with the reason under the picture
 field. A scanned photograph from Paperless-ngx is now taken as the original — it used to arrive as
 the archived PDF and be refused. The setup wizard's profile step still has the small grid, because
 the picker would replace the wizard it is inside. No migration.
+
+**iPhone photos, Live Photos included, can be chosen as a profile picture from Immich.** They are
+HEIC, which a browser cannot show and plMail does not keep, so the picker greyed every one of them
+out as "Not a picture". For Immich, the picture is now the JPEG or WebP preview Immich makes of each
+photo, so any photo in the library can be chosen, whatever the camera saved and however large the
+original. A picture is the preview's size, about 1440 px across, which is more than a profile
+picture needs. Other services are unchanged: a HEIC file in Nextcloud, Dropbox or Google Photos is
+still greyed out. No migration.
 
 ## v0.3.2 — 2026-10-09
 

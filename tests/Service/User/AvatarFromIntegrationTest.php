@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\User;
 
+use App\Domain\DTO\Integration\Entry;
 use App\Domain\DTO\Integration\Listing;
 use App\Domain\DTO\Integration\RemoteFile;
 use App\Domain\Enum\Integration\Provider;
@@ -12,6 +13,7 @@ use App\Domain\Exception\IntegrationException;
 use App\Domain\Helper\AvatarStorage;
 use App\Domain\Interface\IntegrationDriverInterface;
 use App\Domain\Interface\OriginalFileDriverInterface;
+use App\Domain\Interface\PictureRenditionDriverInterface;
 use App\Entity\Integration\Integration;
 use App\Entity\User\User;
 use App\Repository\Integration\IntegrationRepository;
@@ -100,6 +102,87 @@ final class AvatarFromIntegrationTest extends TestCase
         self::assertNotNull($user->avatar);
         self::assertStringEndsWith('.png', $user->avatar);
         self::assertSame(['downloadOriginal'], $driver->calls);
+    }
+
+    /**
+     * An iPhone photograph is HEIC, which the avatar store cannot keep and
+     * browsers cannot show. Immich renders every photograph as a JPEG or WebP
+     * of its own, so for a driver that can do that, that is the file to fetch:
+     * the original would be refused as "not an image" every time.
+     */
+    public function testADriverThatRendersPicturesIsAskedForThePictureNotTheOriginal(): void
+    {
+        $user = new User();
+        $driver = new PictureRenderingDriver(
+            picture: new RemoteFile('IMG_1.jpg', 'image/jpeg', self::jpeg()),
+            original: new RemoteFile('IMG_1.HEIC', 'image/heic', 'not a jpeg'),
+        );
+
+        $this->pickerFor($driver)->apply($user, $this->integration(), 'f1');
+
+        self::assertNotNull($user->avatar);
+        self::assertStringEndsWith('.jpg', $user->avatar);
+        self::assertSame(['downloadPicture'], $driver->calls);
+    }
+
+    public function testAHeicPhotoIsOfferedWhereTheServiceCanRenderIt(): void
+    {
+        // Presence: the HEIC ('heic') and the JPEG ('jpeg') are both choosable.
+        // Absence: the video and the PDF are not, whatever the driver can render.
+        self::assertSame(
+            ['video', 'pdf'],
+            $this->pickerFor($this->renderingDriver())->refusedIds($this->integration(), $this->mixedListing()),
+        );
+    }
+
+    public function testAHeicPhotoIsStillRefusedWhereNothingCanRenderIt(): void
+    {
+        // The same listing from a driver with no rendition: HEIC is refused as
+        // before, and the JPEG is still not.
+        self::assertSame(
+            ['heic', 'video', 'pdf'],
+            $this->picker(null)->refusedIds($this->integration(), $this->mixedListing()),
+        );
+    }
+
+    public function testNoSizeCapAppliesToWhatTheServiceRenders(): void
+    {
+        // The original's size says nothing about the file that will be kept; the
+        // kept file is checked against the cap in apply(), whatever this says.
+        self::assertGreaterThan(
+            AvatarStorage::MAX_BYTES,
+            $this->pickerFor($this->renderingDriver())->maxBytesFor($this->integration()),
+        );
+        self::assertSame(
+            AvatarStorage::MAX_BYTES,
+            $this->picker(null)->maxBytesFor($this->integration()),
+        );
+    }
+
+    private function mixedListing(): Listing
+    {
+        return new Listing([
+            new Entry('heic', 'IMG_1.HEIC', false, 9_000_000, 'image/heic'),
+            new Entry('jpeg', 'IMG_2.JPG', false, 2_000_000, 'image/jpeg'),
+            new Entry('video', 'IMG_1.MOV', false, 5_000_000, 'video/quicktime'),
+            new Entry('pdf', 'scan.pdf', false, 100_000, 'application/pdf'),
+        ]);
+    }
+
+    private function renderingDriver(): PictureRenderingDriver
+    {
+        return new PictureRenderingDriver(
+            picture: new RemoteFile('IMG_1.jpg', 'image/jpeg', self::jpeg()),
+            original: new RemoteFile('IMG_1.HEIC', 'image/heic', 'unused'),
+        );
+    }
+
+    private static function jpeg(): string
+    {
+        ob_start();
+        imagejpeg(imagecreatetruecolor(2, 2));
+
+        return (string) ob_get_clean();
     }
 
     public function testADownloadThatFailsIsRefusedRatherThanThrown(): void
@@ -211,6 +294,65 @@ final class OriginalKeepingDriver implements IntegrationDriverInterface, Origina
         $this->calls[] = 'downloadOriginal';
 
         return $this->original;
+    }
+
+    public function upload(Integration $integration, string $absolutePath, string $filename, string $mime, ?string $folderId = null): string
+    {
+        return 'unused';
+    }
+
+    public function shareLink(Integration $integration, string $fileId): ?string
+    {
+        return null;
+    }
+
+    public function thumbnail(Integration $integration, string $fileId): ?RemoteFile
+    {
+        return null;
+    }
+}
+
+/**
+ * Immich in miniature: the listing names the original, and a picture is a
+ * separate rendition the service made, recording which one it was asked for.
+ */
+final class PictureRenderingDriver implements IntegrationDriverInterface, PictureRenditionDriverInterface
+{
+    /** @var list<string> */
+    public array $calls = [];
+
+    public function __construct(
+        private readonly RemoteFile $picture,
+        private readonly RemoteFile $original,
+    ) {
+    }
+
+    public function supports(Provider $provider): bool
+    {
+        return true;
+    }
+
+    public function verify(Integration $integration): void
+    {
+    }
+
+    public function list(Integration $integration, ?string $folderId = null, ?string $cursor = null): Listing
+    {
+        return new Listing([]);
+    }
+
+    public function download(Integration $integration, string $fileId): RemoteFile
+    {
+        $this->calls[] = 'download';
+
+        return $this->original;
+    }
+
+    public function downloadPicture(Integration $integration, string $fileId): RemoteFile
+    {
+        $this->calls[] = 'downloadPicture';
+
+        return $this->picture;
     }
 
     public function upload(Integration $integration, string $absolutePath, string $filename, string $mime, ?string $folderId = null): string

@@ -32,6 +32,17 @@ enum SyncTrigger: string
     /** The quarter-hourly `app:mail:sync`. */
     case Poll = 'poll';
 
+    /**
+     * The once-a-minute `app:mail:probe`: it saw new inbox mail on a Gmail or
+     * Microsoft account and asked for the sync that fetches it. What stands in
+     * for push on an install nobody can reach from the internet, so a message
+     * that says `probe` is that substitute working, and one that says `poll`
+     * is mail it could not see (spam, mail filtered past the inbox).
+     *
+     * Five characters because `message.arrived_by` is a VARCHAR(10).
+     */
+    case Probe = 'probe';
+
     /** Somebody pressed the sync button. */
     case Manual = 'manual';
 }

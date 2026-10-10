@@ -28,6 +28,12 @@ The first sync starts immediately. After that, plMail holds an IMAP IDLE connect
 mailbox and syncs the moment something changes, with a scheduled sweep every fifteen minutes
 behind it.
 
+Gmail and Outlook accounts have no connection to hold open. Where push cannot reach plMail they
+are asked once a minute whether new mail has arrived in the inbox, and are synced as soon as it
+has — so a message lands within about a minute of reaching your phone, with no public address
+needed. Spam and mail filtered past the inbox still wait for the fifteen-minute sweep. See
+[Mail ingest](../internals/mail-ingest.md#without-push-the-inbox-probe).
+
 See [IMAP and SMTP](../providers/imap-smtp.md) for the settings servers disagree about.
 
 ## Adding Gmail or Outlook

@@ -9,6 +9,7 @@ use App\Domain\Exception\GmailPermanentException;
 use App\Domain\Exception\GmailThrottledException;
 use App\Entity\Mail\Account;
 use App\Service\Gmail\GmailQuotaPacer;
+use App\Service\Gmail\GmailWatchService;
 use App\Service\OAuth\OAuthTokenManager;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpException;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -40,6 +41,23 @@ final class GmailApiClient
      * outright, and the request is not partially applied.
      */
     private const int IDS_PER_BATCH = 1000;
+
+    /**
+     * How long the once-a-minute inbox probe waits on Google, in seconds.
+     *
+     * The probe runs on the scheduler's worker, which also runs every other
+     * scheduled job. Without a timeout of its own a stalled connection holds
+     * that worker for HttpClient's socket default, and a stalled provider
+     * becomes a stalled schedule.
+     */
+    private const float PROBE_TIMEOUT_SECONDS = 10.0;
+
+    /**
+     * The most pages the probe will read before answering "more than I looked
+     * at". A filtered feed with a hundred-record page and five of them is
+     * already a window the real sync needs to deal with.
+     */
+    private const int PROBE_MAX_PAGES = 5;
 
     private const array TRANSIENT_REASONS = [
         'rateLimitExceeded',
@@ -296,6 +314,70 @@ final class GmailApiClient
             'history'   => $history,
             'historyId' => $latestHistoryId,
         ];
+    }
+
+    /**
+     * Whether mail has been added to the inbox since a history cursor: asked,
+     * never acted on.
+     *
+     * This is what stands in for Pub/Sub on an install that cannot be reached
+     * from the internet, and it runs every minute on the scheduler's worker, so
+     * it is deliberately small. One filtered request — inbox additions only —
+     * with a short timeout and a page cap, where listHistory() reads the whole
+     * window unfiltered and unbounded because the sync needs every change.
+     * Nothing here is stored, and in particular the account's cursor is left
+     * alone: it belongs to syncIncremental(), and a probe that moved it would
+     * hand the sync it asks for an empty window.
+     *
+     * `historyTypes` is a repeated parameter in the API's own description, but
+     * a single value is an ordinary query field; it is the several-types form
+     * that a query array cannot express (see GmailApiSyncer::syncIncremental).
+     *
+     * @return string|null the id of the newest history record that added inbox
+     *                     mail, null when none did. Reaching the page cap with
+     *                     more still to read answers with a marker rather than
+     *                     null: "could not rule it out" is a reason to let the
+     *                     real sync look, not to stay quiet.
+     */
+    public function probeInboxArrivals(Account $account, string $startHistoryId): ?string
+    {
+        $token  = $this->tokenManager->getValidAccessToken($account);
+        $newest = null;
+        $page   = null;
+
+        for ($fetched = 0; $fetched < self::PROBE_MAX_PAGES; $fetched++) {
+            $query = [
+                'startHistoryId' => $startHistoryId,
+                'historyTypes'   => 'messageAdded',
+                'labelId'        => GmailWatchService::LABEL,
+            ];
+
+            if (null !== $page) {
+                $query['pageToken'] = $page;
+            }
+
+            $response = $this->httpClient->request('GET', self::BASE . '/history', [
+                'auth_bearer' => $token,
+                'query'       => $query,
+                'timeout'     => self::PROBE_TIMEOUT_SECONDS,
+            ]);
+
+            $body = $this->decode($response, 'history.list');
+
+            foreach ($body['history'] ?? [] as $record) {
+                if (true === isset($record['id'])) {
+                    $newest = (string) $record['id'];
+                }
+            }
+
+            $page = $body['nextPageToken'] ?? null;
+
+            if (null === $page) {
+                return $newest;
+            }
+        }
+
+        return $newest ?? 'more:' . $startHistoryId;
     }
 
     // ── watch / push ──────────────────────────────────────────────────────────

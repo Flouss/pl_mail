@@ -708,6 +708,7 @@ admin:
                     idle: 'IDLE'
                     manual: 'Sync button'
                     poll: 'The watch'
+                    probe: 'The lookout'
                     push: 'Cannon'
                     unknown: '—'
                 col:

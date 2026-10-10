@@ -98,6 +98,13 @@ final class GraphApiClient
     /** Light projection used while planning — ids only, no bodies. */
     private const string DELTA_SELECT = 'id,internetMessageId,parentFolderId';
 
+    /**
+     * How long the once-a-minute inbox probe waits on Microsoft, in seconds.
+     * See GmailApiClient::PROBE_TIMEOUT_SECONDS: the same scheduler worker,
+     * the same reason.
+     */
+    private const float PROBE_TIMEOUT_SECONDS = 10.0;
+
     public function __construct(
         // The scoped client from framework.yaml, not the default one: it
         // retries a GET that Graph answers with 5xx, which is weather rather
@@ -183,6 +190,32 @@ final class GraphApiClient
     }
 
     // ── Messages ─────────────────────────────────────────────────────────────
+
+    /**
+     * The id of the newest message in the inbox, or null for an empty one.
+     *
+     * What an Outlook account is asked once a minute in place of a webhook, on
+     * an install nobody can reach from the internet. A change in this id is the
+     * signal that mail has arrived; it is not a delta query on purpose, because
+     * a delta link is the real sync's cursor and reading it here would either
+     * move it or invite the two to be confused.
+     *
+     * One message and one projected field, so a call every minute is an id
+     * and not a download, with a timeout of its own because it runs on the
+     * scheduler's worker beside everything else scheduled. Throttling reaches
+     * the caller as GraphThrottledException carrying Retry-After.
+     */
+    public function newestInboxMessageId(Account $account): ?string
+    {
+        $body = $this->request($account, 'GET', self::ME . '/mailFolders/inbox/messages', [
+            'query'   => ['$top' => 1, '$orderby' => 'receivedDateTime desc', '$select' => 'id'],
+            'timeout' => self::PROBE_TIMEOUT_SECONDS,
+        ])->toArray();
+
+        $id = $body['value'][0]['id'] ?? null;
+
+        return null === $id ? null : (string) $id;
+    }
 
     /**
      * Run a delta query over one folder.

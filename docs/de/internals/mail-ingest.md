@@ -1,4 +1,4 @@
-<!-- translated-from: internals/mail-ingest.md sha1:38b6beb3ba071c7ee0ef05200adc575b44fdf9c7 -->
+<!-- translated-from: internals/mail-ingest.md sha1:107fafc1c173c4fd8d556fefb9f54febc1bc9b1c -->
 # Mail-Ingest
 
 Vom Anbieter in die Datenbank: wie aus Bytes eine Zeile `Message` wird, was mit ihr geschieht,
@@ -211,6 +211,52 @@ Seiten. Nach der Nachricht wird einmal gefragt.
 `category_held_at` und `category_released_at` bleiben erhalten, und ihre Differenz ist die Zahl,
 die Administration → KI neben dem Schalter zeigt — Median, 95. Perzentil und wie viele
 Nachrichten angezeigt wurden, bevor das Modell geantwortet hatte.
+
+## Ohne Push: die Posteingangs-Abfrage
+
+Gmail und Outlook melden neue Mail, indem sie plMail anrufen — Pub/Sub bei Google, ein Webhook bei
+Microsoft —, und beide brauchen eine Adresse, die das Internet erreichen kann. Eine Installation hinter
+einer Firewall hat keins von beiden, und ein Konto ohne Push wurde bisher nur vom viertelstündlichen
+`app:mail:sync` synchronisiert: Mail ist sofort auf dem Handy und bis zu fünfzehn Minuten später in
+plMail.
+
+`app:mail:probe` läuft jede Minute und stellt jedem aktiven Gmail- und Outlook-Konto eine billige
+Frage, über `App\Service\Mail\InboxProbe`, und reiht die gewöhnliche `SyncAccountMessage` (Trigger
+`SyncTrigger::Probe`) nur ein, wenn die Antwort Ja lautet. Es holt selbst nichts ab und ersetzt den
+Durchlauf nicht.
+
+| | Gmail | Outlook |
+|---|---|---|
+| Die Frage | `history.list` ab dem gespeicherten Cursor, für *hinzugefügte* Nachrichten im *Posteingang* | Die ID der neuesten Nachricht im Posteingang, ein einziges projiziertes Feld |
+| Was als Neuigkeit zählt | Jeder solche Eintrag | Eine andere ID als beim letzten Mal |
+| Erster Blick auf ein Konto | Ein Beleg, wenn das Fenster eine Ankunft enthält | Wird nur gemerkt: es gibt nichts zum Vergleichen |
+| Ein abgelaufener Cursor | Ein Sync, um ihn zu beheben (der echte Sync listet das Postfach neu auf) | — |
+
+**Die Abfrage bewegt nie einen Cursor.** Gmails `historyId` und Graphs Delta-Links gehören dem echten
+Sync; eine Abfrage, die einen davon vorrückte, würde dem Sync, den sie gerade angefordert hat, ein
+leeres Fenster hinterlassen.
+
+**Was sie davon abhält, jede Minute einen Sync einzureihen.** Die Antwort bleibt „Ja“, bis der
+ausgelöste Sync gelaufen ist, und der wartet auf den einen `ingest`-Consumer, der Minuten tief sein
+kann. Darum merkt sich jedes Konto, *was* es zuletzt gemeldet hat — den neuesten History-Eintrag, die
+neueste Nachrichten-ID —, und meldet eine Sache einmal. Mail, die währenddessen ankommt, ist eine
+andere Sache und wird für sich gemeldet; so ist die Zahl der Syncs durch die Zahl der Ankünfte begrenzt
+und nicht durch die Zahl der Takte. Das Gedächtnis liegt im Cache, ein Verlust kostet also einen
+überflüssigen Sync und nie einen verpassten.
+
+**Was sie bewusst dem Durchlauf überlässt.** Spam, Mail, die ein Filter am Posteingang vorbeigeleitet
+hat, und jede Änderung, die keine Ankunft ist — Lesestatus, Labels, anderswo gelöschte Mail. Nichts
+davon ist der Fall „mein Handy hat es und plMail nicht“, und alles wird weiter vom viertelstündlichen
+Durchlauf erfasst, den das hier unverändert lässt. `Message::$arrivedBy` sagt, welcher Weg was
+geliefert hat: `probe` ist der schnelle Weg bei der Arbeit, `poll` ist Mail, die er nicht sieht.
+
+**Ein guter Nachbar sein.** Sie läuft auf dem einen Worker des Schedulers, neben jedem anderen
+geplanten Job. Jede Anfrage hat ihr eigenes Timeout von zehn Sekunden, ein Lauf beginnt nach 45
+Sekunden kein weiteres Konto mehr, und ein Konto, das scheitert, wird in Ruhe gelassen — so lange, wie
+das `Retry-After` des Anbieters es verlangt, wenn gedrosselt wird, sonst fünf Minuten. Konten, deren
+Grant bereits als tot bekannt ist, werden gar nicht erst gefragt, weil jeder Blick mit einer
+Token-Erneuerung begänne. Bei einer Anfrage pro Minute und Konto sind das einige wenige Einheiten
+eines Kontingents, das in Tausenden gezählt wird, und weit unter Microsofts Grenze je Postfach.
 
 ## Konversationsbildung
 
@@ -463,6 +509,12 @@ einen Haken gehängt werden, der auf dem verbindungshaltenden Worker läuft.
 Routing-Tabelle schickt jede Post-Ingest-Nachricht auf `enrich`; nur der Stamp bringt die Mail
 eines fertigen Kontos auf `enrich_live`. Abschicken mit `$this->router->stampsFor($result)`, und
 nur für `RecentMailPolicy::recentIds()`.
+
+**Ein Signal, das wahr bleibt, bis ein Sync gelaufen ist, ist ein Sync pro Takt.** Die „neue Mail“-
+Antwort der Posteingangs-Abfrage erlischt erst, wenn der echte Sync den Cursor bewegt, und der wartet
+auf eine gemeinsame Warteschlange. `InboxProbe` meldet deshalb jede Ankunft einmal; alles, was dort
+einen Zustand statt Ereignisse meldet, muss dasselbe tun, sonst entsteht die sich selbst füttende
+Schleife wieder, für die `ImapIdleCommand::SYNC_MIN_GAP` geschrieben wurde.
 
 **Eine zurückgehaltene Nachricht, die nichts freigibt, ist Mail, die niemand im Posteingang
 sieht.** Ihre Konversation hat keine Kategorie und steht damit in keinem Tab. Deshalb wird die

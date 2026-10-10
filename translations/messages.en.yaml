@@ -770,6 +770,7 @@ admin:
                     idle: 'IDLE'
                     manual: 'Sync button'
                     poll: 'Schedule'
+                    probe: 'Minute check'
                     push: 'Push'
                     unknown: '—'
                 col:

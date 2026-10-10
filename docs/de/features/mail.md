@@ -1,4 +1,4 @@
-<!-- translated-from: features/mail.md sha1:e5f4e03da7c3ee149c6dcf4583bba6ec87b848fe -->
+<!-- translated-from: features/mail.md sha1:97bf1dc8e00b0d28c18deafde06b467423ee23fc -->
 
 # Mail
 
@@ -660,9 +660,11 @@ löschen** (die Flamme), und er fragt vorher nach. Sonst lässt sich nichts endg
 Konversation im Posteingang oder im Archiv muss erst einmal weggeworfen worden sein, bevor das
 angeboten wird, denn es gibt kein Rückgängig, das einen Fehlklick auffängt.
 
-Im **Spam** hat die Werkzeugleiste über einer Auswahl dasselbe **Endgültig löschen** anstelle von
-**Löschen**, sodass eine Seite voll Spam ein Klick und eine Frage ist statt eines Umwegs über den
-Papierkorb und eines zweiten Löschens dort. Die Frage nennt, um wie viele Konversationen es geht. Die
+Im **Spam** und im Papierkorb hat die Werkzeugleiste über einer Auswahl dasselbe **Endgültig
+löschen** anstelle von **Löschen**. Im Spam ist eine Seite voll Spam so ein Klick und eine Frage
+statt eines Umwegs über den Papierkorb und eines zweiten Löschens dort; im Papierkorb konnte ein
+Löschen nur Mail wegwerfen, die schon weggeworfen war, und hätte die Zeilen aus der Liste genommen,
+während die Mail liegen blieb. Die Frage nennt, um wie viele Konversationen es geht. Die
 Mail wird auch vom Mailserver entfernt, nicht nur aus plMail, und lässt sich nicht zurückholen —
 **In den Posteingang** ist der Ausweg davor.
 
@@ -670,7 +672,8 @@ Gelöscht wird, was angehakt ist. Eine Auswahl, die über die Seite hinausreicht
 auswählen**, angeboten nach **Alle** —, löst hier nichts aus, damit Mail nur dann endgültig gelöscht
 wird, wenn sie auf dem Bildschirm zu sehen ist. Lösche eine Seite, dann die nächste.
 
-`#` drückt **Löschen**, das über einer Auswahl im Spam nicht da ist, und tut dort deshalb nichts. Die
+`#` drückt **Löschen**, das über einer Auswahl im Spam und im Papierkorb nicht da ist, und tut dort
+deshalb nichts. Die
 Flamme mit ihrer Frage ist der einzige Weg, dort eine Auswahl zu löschen.
 
 ## Zurückstellen

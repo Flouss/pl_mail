@@ -602,17 +602,19 @@ move. Each row there has a **Delete forever** button (the flame) beside **Move t
 asks first. Nothing else can be deleted for good: a conversation in the inbox or the archive has to be
 thrown away once before this is offered, because there is no Undo to catch a slip.
 
-In **Spam**, the toolbar above a selection has the same **Delete forever** in place of **Delete**, so
-a page of spam is one click and one question rather than a trip to the bin and a second deletion
-there. The question says how many conversations it is about. It is removed from the mail server too,
+In **Spam** and in the bin, the toolbar above a selection has the same **Delete forever** in place of
+**Delete**. In Spam that makes a page of spam one click and one question rather than a trip to the
+bin and a second deletion there; in the bin a Delete could only trash mail that was already
+trashed, so it would take the rows off the list and leave the mail where it was. The question says
+how many conversations it is about. It is removed from the mail server too,
 not only from plMail, and it cannot be brought back — **Move to inbox** is the way out beforehand.
 
 It deletes what is ticked. A selection that reaches past the page — **Select all N**, offered after
 **All** — does nothing here, so that mail is only ever deleted for good when it is on screen. Delete
 a page, then the next.
 
-`#` presses **Delete**, which is not there above a selection in Spam, so it does nothing in that
-place. The flame, with its question, is the one way to delete a selection there.
+`#` presses **Delete**, which is not there above a selection in Spam or the bin, so it does nothing
+in those places. The flame, with its question, is the one way to delete a selection there.
 
 ## Snooze
 

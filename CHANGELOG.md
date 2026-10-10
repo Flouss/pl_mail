@@ -29,6 +29,12 @@ there is no Undo. It acts on the ticked rows, not on **Select all N** across pag
 the bin already had the button. `#` used to move a ticked selection in Spam to the bin and now does
 nothing there, since the Delete it presses is gone. No migration.
 
+**Delete above a selection in the bin no longer says it deleted what it did not.** Ticking mail in
+the bin and pressing **Delete** took the rows off the list, and they were back on the next load:
+the mail was already in the bin, so there was nothing to trash, and the list reported a change
+anyway. The toolbar above a selection in the bin now offers **Delete forever** instead, as Spam
+does, with the same question and the same count. `#` does nothing there, as in Spam. No migration.
+
 **A config backup now carries how each person sorts their mail.** Settings → Categories — rules or
 the assistant, whether that overrules the provider's own categories, and whether the inbox has tabs
 at all — was never written into the file, so a restore put everyone back on rules, the provider's

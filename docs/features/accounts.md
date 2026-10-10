@@ -80,9 +80,10 @@ and it is **not** a status light. Whether an account is actually working is answ
 
 You change it with the coloured swatch on the account's row, which opens the palette of eight.
 That control is on **every** account, Gmail and Outlook ones included, which is why it is not a
-field in **Edit account**: that form is closed to them. The sidebar dot and the mark on that
-account's messages change at once. Choosing a colour another account already wears is allowed, so
-two accounts can be made a pair.
+field in **Edit account**: that form is closed to them. The sidebar dot changes at once, and every
+list you open afterwards wears the new colour on that account's messages; a list already open in
+another tab repaints when it reloads. Choosing a colour another account already wears is allowed,
+so two accounts can be made a pair.
 
 Each row offers:
 

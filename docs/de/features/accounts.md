@@ -1,4 +1,4 @@
-<!-- translated-from: features/accounts.md sha1:e832c09161da286d114dc5d8703c2c93343fff7e -->
+<!-- translated-from: features/accounts.md sha1:375bfce5035e2da51054b719d6e41503d0fc3cd2 -->
 
 # Konten und Aliase
 
@@ -94,9 +94,10 @@ nichts um, und sie ist **keine** Statusanzeige. Ob ein Konto tatsächlich funkti
 Ändern kannst du sie mit dem Farbfeld in der Zeile des Kontos, das die Palette mit den acht Farben
 öffnet. Dieses Bedienelement gibt es bei **jedem** Konto, auch bei Gmail- und Outlook-Konten — deshalb
 ist es kein Feld in **Konto bearbeiten**: Dieses Formular ist für sie gesperrt. Der Punkt in der
-Seitenleiste und die Markierung an den Nachrichten des Kontos ändern sich sofort. Eine Farbe zu
-wählen, die ein anderes Konto schon trägt, ist erlaubt — so lassen sich zwei Konten zu einem Paar
-machen.
+Seitenleiste ändert sich sofort, und jede Liste, die du danach öffnest, zeigt die neue Farbe an den
+Nachrichten des Kontos; eine Liste, die schon in einem anderen Tab offen ist, wird beim Neuladen
+umgefärbt. Eine Farbe zu wählen, die ein anderes Konto schon trägt, ist erlaubt — so lassen sich
+zwei Konten zu einem Paar machen.
 
 Jede Zeile bietet:
 

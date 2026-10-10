@@ -758,7 +758,7 @@ admin:
                 p95: '95% within'
             footnote: 'From the time the provider accepted a message to the time plMail stored it, for mail that landed in the inbox. Mail brought in by an import, and mail sent from plMail itself, is not counted.'
             heading: 'How late mail arrives'
-            lead: 'Seconds means the provider is telling plMail about new mail as it lands. Minutes means the account is being checked on the quarter-hourly schedule instead.'
+            lead: 'Seconds means the provider is telling plMail about new mail as it lands. Minutes means the account is being checked on a schedule instead: every minute for the inbox of a Gmail or Outlook account without push, every quarter of an hour for everything else.'
             no_accounts: 'No active accounts.'
             provider:
                 google: 'Gmail'

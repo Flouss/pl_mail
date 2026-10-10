@@ -769,7 +769,7 @@ admin:
                 p95: '95 % innerhalb'
             footnote: 'Von dem Moment, in dem der Anbieter eine Nachricht angenommen hat, bis plMail sie gespeichert hat – für Mail, die im Posteingang gelandet ist. Mail aus einem Import und Mail, die aus plMail selbst verschickt wurde, zählt nicht mit.'
             heading: 'Wie spät Mail ankommt'
-            lead: 'Sekunden heißt: Der Anbieter meldet plMail neue Mail, sobald sie eintrifft. Minuten heißt: Das Konto wird stattdessen im Viertelstundentakt abgefragt.'
+            lead: 'Sekunden heißt: Der Anbieter meldet plMail neue Mail, sobald sie eintrifft. Minuten heißt: Das Konto wird stattdessen nach einem Zeitplan abgefragt: jede Minute für den Posteingang eines Gmail- oder Outlook-Kontos ohne Push, alle Viertelstunde für alles andere.'
             no_accounts: 'Keine aktiven Konten.'
             provider:
                 google: 'Gmail'

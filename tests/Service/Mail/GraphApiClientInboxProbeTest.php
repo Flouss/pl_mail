@@ -15,13 +15,17 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * GraphApiClient::newestInboxMessageId(), what an Outlook account is asked once
+ * GraphApiClient::newestInboxReceivedAt(), what an Outlook account is asked once
  * a minute in place of a webhook.
  *
  * Graph has no cheap "anything new?" call that leaves the delta chain alone —
  * reading a delta link would be the obvious one, and is the wrong one, because
  * it is the real sync's cursor. The newest message in the inbox is one
- * projected id, and a change in it is the signal.
+ * projected timestamp, and a change in it is the signal.
+ *
+ * A timestamp and not an id, because receivedDateTime has a resolution of one
+ * second and nothing promises that two messages sharing one are listed in the
+ * same order twice: an id signal flips between them and queues a sync per flip.
  *
  * GraphApiClient is final, so it is built for real against a MockHttpClient.
  */
@@ -32,9 +36,9 @@ final class GraphApiClientInboxProbeTest extends TestCase
 
     public function testItAsksForTheNewestInboxMessageAndNothingElse(): void
     {
-        $client = $this->client($this->json(['value' => [['id' => 'AAA']]]));
+        $client = $this->client($this->json(['value' => [['receivedDateTime' => '2026-10-10T12:00:05Z']]]));
 
-        $client->newestInboxMessageId($this->account());
+        $client->newestInboxReceivedAt($this->account());
 
         self::assertCount(1, $this->requests);
 
@@ -46,16 +50,16 @@ final class GraphApiClientInboxProbeTest extends TestCase
         self::assertStringEndsWith('/me/mailFolders/inbox/messages', (string) parse_url($request['url'], PHP_URL_PATH));
         self::assertSame('1', (string) $query['$top']);
         self::assertSame('receivedDateTime desc', $query['$orderby']);
-        // The id and no body, which is what keeps a minute-by-minute call
-        // from being a minute-by-minute download.
-        self::assertSame('id', $query['$select']);
+        // The timestamp and no body, which is what keeps a minute-by-minute
+        // call from being a minute-by-minute download.
+        self::assertSame('receivedDateTime', $query['$select']);
     }
 
     public function testItNeverWaitsLongerThanTheSchedulerCanSpare(): void
     {
         $client = $this->client($this->json(['value' => []]));
 
-        $client->newestInboxMessageId($this->account());
+        $client->newestInboxReceivedAt($this->account());
 
         $timeout = $this->requests[0]['options']['timeout'] ?? null;
 
@@ -64,18 +68,23 @@ final class GraphApiClientInboxProbeTest extends TestCase
         self::assertLessThanOrEqual(15.0, $timeout);
     }
 
-    public function testItReturnsTheIdOfTheFirstMessage(): void
+    public function testItReturnsWhenTheNewestMessageWasReceivedAndNotWhichMessageItIs(): void
     {
-        $client = $this->client($this->json(['value' => [['id' => 'AAA'], ['id' => 'BBB']]]));
+        // An id is present in the answer on purpose: returning it is the bug,
+        // not a harmless alternative (see the class docblock).
+        $client = $this->client($this->json(['value' => [
+            ['id' => 'AAA', 'receivedDateTime' => '2026-10-10T12:00:05Z'],
+            ['id' => 'BBB', 'receivedDateTime' => '2026-10-10T12:00:05Z'],
+        ]]));
 
-        self::assertSame('AAA', $client->newestInboxMessageId($this->account()));
+        self::assertSame('2026-10-10T12:00:05Z', $client->newestInboxReceivedAt($this->account()));
     }
 
     public function testAnEmptyInboxIsNull(): void
     {
         $client = $this->client($this->json(['value' => []]));
 
-        self::assertNull($client->newestInboxMessageId($this->account()));
+        self::assertNull($client->newestInboxReceivedAt($this->account()));
     }
 
     public function testThrottlingCarriesWhatGraphSaidToWaitFor(): void
@@ -86,7 +95,7 @@ final class GraphApiClientInboxProbeTest extends TestCase
         ]));
 
         try {
-            $client->newestInboxMessageId($this->account());
+            $client->newestInboxReceivedAt($this->account());
             self::fail('a 429 must not read as an empty inbox');
         } catch (GraphThrottledException $e) {
             self::assertSame(90, $e->getRetryAfterSeconds());

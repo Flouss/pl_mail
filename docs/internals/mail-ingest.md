@@ -202,8 +202,8 @@ replace the poll.
 
 | | Gmail | Outlook |
 |---|---|---|
-| The question | `history.list` from the stored cursor, for messages *added* to the *inbox* | The id of the newest message in the inbox, one projected field |
-| What counts as news | Any such record | An id different from the one seen last time |
+| The question | `history.list` from the stored cursor, for messages *added* to the *inbox* | When the newest message in the inbox was received, one projected field |
+| What counts as news | Any such record | A later timestamp than the one seen last time |
 | First look at an account | Evidence, if the window holds an arrival | Only remembered: there is nothing to compare it with |
 | An expired cursor | One sync to recover it (the real sync re-lists the mailbox) | — |
 
@@ -212,10 +212,17 @@ a probe that advanced either would hand the sync it just asked for an empty wind
 
 **What stops it queueing a sync every minute.** The answer stays "yes" until the sync it triggered has
 run, and that sync waits on the single `ingest` consumer, which can be minutes deep. So each account
-remembers *what* it last announced — the newest history record, the newest message id — and announces
-a thing once. Mail that arrives meanwhile is a different thing and is announced in its own right, which
+remembers *what* it last announced — the newest history record, the newest message's timestamp — and
+announces a thing once. Mail that arrives meanwhile is a different thing and is announced in its own right, which
 keeps the number of syncs bounded by the number of arrivals rather than the number of ticks. The memory
 lives in the cache, so losing it costs one redundant sync and never a missed one.
+
+**Why Outlook's signal is a timestamp and not the newest message's id.** `receivedDateTime` has a
+resolution of one second, so a burst — three messages at once — puts several under one value, and
+nothing promises that the query lists them in the same order twice. An id signal flips between them and
+queues a full sync per flip until something newer arrives. A timestamp cannot flip, and nothing is lost:
+every message sharing it is in the mailbox by the time the triggered sync runs. The one thing it cannot
+see is a message landing in the same second as the newest one already seen, which waits for the poll.
 
 **What it deliberately leaves to the poll.** Spam, mail a filter kept out of the inbox, and every change
 that is not an arrival — read state, labels, deletions made elsewhere. None of those is the

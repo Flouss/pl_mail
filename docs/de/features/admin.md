@@ -1,4 +1,4 @@
-<!-- translated-from: features/admin.md sha1:2767661fff94331fe0f8e24bd3f5ffc971865832 -->
+<!-- translated-from: features/admin.md sha1:76befa7035e5b461cfcf49b6b8489da964212593 -->
 
 # Administration
 
@@ -104,7 +104,9 @@ Nachricht angenommen hat, und dem, in dem plMail sie gespeichert hat. Sekunden h
 meldet plMail neue Mail, sobald sie eintrifft — IMAP IDLE, Gmail-Push, eine Graph-Subscription. Eine
 übliche Verzögerung von fünf Minuten oder mehr wird hervorgehoben: Dieses Konto lebt von der
 Abfrage im Viertelstundentakt, was „funktioniert" — und genau deshalb würde es dir keine andere
-Seite sagen. Mail aus einem Import zählt nicht mit, ebenso wenig Mail, die aus plMail selbst
+Seite sagen. Ein Gmail- oder Outlook-Posteingang ohne Push wird stattdessen jede Minute geprüft; eine
+so lange Verzögerung dort heißt also, dass etwas anderes nicht stimmt. **Geholt durch** sagt, was die
+Nachricht geliefert hat. Mail aus einem Import zählt nicht mit, ebenso wenig Mail, die aus plMail selbst
 verschickt wurde.
 
 Die drei Verzögerungswerte gelten für Mail, die im Posteingang gelandet ist, denn nur die meldet ein

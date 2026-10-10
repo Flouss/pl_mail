@@ -1,4 +1,4 @@
-<!-- translated-from: internals/mail-ingest.md sha1:107fafc1c173c4fd8d556fefb9f54febc1bc9b1c -->
+<!-- translated-from: internals/mail-ingest.md sha1:2e5c2623c325cfe17e92b6ae549df15135efc37e -->
 # Mail-Ingest
 
 Vom Anbieter in die Datenbank: wie aus Bytes eine Zeile `Message` wird, was mit ihr geschieht,
@@ -227,8 +227,8 @@ Durchlauf nicht.
 
 | | Gmail | Outlook |
 |---|---|---|
-| Die Frage | `history.list` ab dem gespeicherten Cursor, für *hinzugefügte* Nachrichten im *Posteingang* | Die ID der neuesten Nachricht im Posteingang, ein einziges projiziertes Feld |
-| Was als Neuigkeit zählt | Jeder solche Eintrag | Eine andere ID als beim letzten Mal |
+| Die Frage | `history.list` ab dem gespeicherten Cursor, für *hinzugefügte* Nachrichten im *Posteingang* | Wann die neueste Nachricht im Posteingang empfangen wurde, ein einziges projiziertes Feld |
+| Was als Neuigkeit zählt | Jeder solche Eintrag | Ein späterer Zeitstempel als beim letzten Mal |
 | Erster Blick auf ein Konto | Ein Beleg, wenn das Fenster eine Ankunft enthält | Wird nur gemerkt: es gibt nichts zum Vergleichen |
 | Ein abgelaufener Cursor | Ein Sync, um ihn zu beheben (der echte Sync listet das Postfach neu auf) | — |
 
@@ -238,11 +238,20 @@ leeres Fenster hinterlassen.
 
 **Was sie davon abhält, jede Minute einen Sync einzureihen.** Die Antwort bleibt „Ja“, bis der
 ausgelöste Sync gelaufen ist, und der wartet auf den einen `ingest`-Consumer, der Minuten tief sein
-kann. Darum merkt sich jedes Konto, *was* es zuletzt gemeldet hat — den neuesten History-Eintrag, die
-neueste Nachrichten-ID —, und meldet eine Sache einmal. Mail, die währenddessen ankommt, ist eine
+kann. Darum merkt sich jedes Konto, *was* es zuletzt gemeldet hat — den neuesten History-Eintrag, den
+Zeitstempel der neuesten Nachricht —, und meldet eine Sache einmal. Mail, die währenddessen ankommt, ist eine
 andere Sache und wird für sich gemeldet; so ist die Zahl der Syncs durch die Zahl der Ankünfte begrenzt
 und nicht durch die Zahl der Takte. Das Gedächtnis liegt im Cache, ein Verlust kostet also einen
 überflüssigen Sync und nie einen verpassten.
+
+**Warum Outlooks Signal ein Zeitstempel ist und nicht die ID der neuesten Nachricht.**
+`receivedDateTime` hat eine Auflösung von einer Sekunde, ein Schwall — drei Nachrichten auf einmal —
+legt also mehrere unter denselben Wert, und nichts verspricht, dass die Abfrage sie zweimal in
+derselben Reihenfolge liefert. Ein ID-Signal springt zwischen ihnen hin und her und reiht pro Sprung
+einen vollen Sync ein, bis etwas Neueres eintrifft. Ein Zeitstempel kann nicht springen, und nichts
+geht verloren: Jede Nachricht mit demselben Wert ist im Postfach, wenn der ausgelöste Sync läuft. Nicht
+sehen kann er nur eine Nachricht, die in derselben Sekunde landet wie die neueste bereits gesehene; sie
+wartet auf den Durchlauf.
 
 **Was sie bewusst dem Durchlauf überlässt.** Spam, Mail, die ein Filter am Posteingang vorbeigeleitet
 hat, und jede Änderung, die keine Ankunft ist — Lesestatus, Labels, anderswo gelöschte Mail. Nichts

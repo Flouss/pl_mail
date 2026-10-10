@@ -27,15 +27,19 @@ use Symfony\Component\Clock\ClockInterface;
  *
  * THE ONE WAY THIS GOES WRONG, AND WHAT STOPS IT
  * ──────────────────────────────────────────────
- * The answer stays "yes" until the sync it triggers has run — Gmail's cursor
- * and Graph's newest message both move only then — and that sync waits on a
- * queue with one consumer, which may be minutes deep. A probe that simply
- * reported the answer would queue another full sync on the next tick, and the
- * next: ImapIdleCommand::SYNC_MIN_GAP is the record of what that looked like
- * the last time. So each account remembers WHAT it last announced, not when,
- * and announces a thing once. Mail that arrives meanwhile is a different thing
- * and is announced in its own right, which keeps the number of syncs bounded by
- * the number of arrivals rather than by the number of ticks.
+ * Gmail's answer stays "yes" until the sync it triggers has moved the cursor,
+ * and that sync waits on a queue with one consumer, which may be minutes deep.
+ * A probe that simply reported the answer would queue another full sync on the
+ * next tick, and the next: ImapIdleCommand::SYNC_MIN_GAP is the record of what
+ * that looked like the last time. So each account remembers WHAT it last
+ * announced, not when, and announces a thing once. Mail that arrives meanwhile
+ * is a different thing and is announced in its own right, which keeps the number
+ * of syncs bounded by the number of arrivals rather than by the number of ticks.
+ *
+ * That only holds if the thing is STABLE: a signal that can change without
+ * anything arriving is announced as often as it flickers. Outlook's is the
+ * newest message's timestamp for exactly that reason — see
+ * GraphApiClient::newestInboxReceivedAt().
  *
  * WHAT IT DOES NOT COVER, on purpose: spam, mail a filter kept out of the
  * inbox, and every non-arrival change (read state, labels, deletions made
@@ -159,7 +163,9 @@ final readonly class InboxProbe
                 return null;
             }
 
-            return $this->graph->newestInboxMessageId($account);
+            // The timestamp and not an id: see newestInboxReceivedAt() on why
+            // an id can flip between two messages received in the same second.
+            return $this->graph->newestInboxReceivedAt($account);
         }
 
         return null;

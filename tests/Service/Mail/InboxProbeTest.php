@@ -31,10 +31,10 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * that runs every minute has one way to do real damage, and it is the one this
  * codebase has already paid for once (ImapIdleCommand::SYNC_MIN_GAP): a signal
  * that stays true until the sync it triggered has finished queues another sync
- * on the next tick, and the next. Gmail's cursor and Graph's newest message
- * both only move when the real sync runs, which sits behind a single shared
- * queue worker. So most of the tests below are about the same arrival being
- * announced once.
+ * on the next tick, and the next. Gmail's cursor only moves when the real sync
+ * runs, which sits behind a single shared queue worker, and an Outlook signal
+ * that can flicker is announced as often as it does. So most of the tests below
+ * are about the same arrival being announced once.
  *
  * Both API clients are final and are built for real against one MockHttpClient
  * that routes by host; the clock is a MockClock so a back-off can be waited out
@@ -44,6 +44,10 @@ final class InboxProbeTest extends TestCase
 {
     private const string GMAIL_HOST = 'gmail.googleapis.com';
     private const string GRAPH_HOST = 'graph.microsoft.com';
+
+    /** Two moments a second apart, as Graph spells a receivedDateTime. */
+    private const string T1 = '2026-10-10T12:00:05Z';
+    private const string T2 = '2026-10-10T12:00:06Z';
 
     /** @var array<string, list<ResponseInterface>> host => answers, in order */
     private array $script = [];
@@ -213,7 +217,7 @@ final class InboxProbeTest extends TestCase
         // Nothing here says the newest message is unfamiliar — there is no
         // earlier look to compare it with — and a sync per account at every
         // restart would be noise.
-        $this->script[self::GRAPH_HOST][] = $this->graphNewest('AAA');
+        $this->script[self::GRAPH_HOST][] = $this->graphNewest(self::T1);
 
         self::assertFalse($this->probe->shouldSync($this->graph(10)));
     }
@@ -222,7 +226,7 @@ final class InboxProbeTest extends TestCase
     {
         $account = $this->graph(10);
 
-        $this->script[self::GRAPH_HOST] = [$this->graphNewest('AAA'), $this->graphNewest('AAA')];
+        $this->script[self::GRAPH_HOST] = [$this->graphNewest(self::T1), $this->graphNewest(self::T1)];
 
         self::assertFalse($this->probe->shouldSync($account));
         self::assertFalse($this->probe->shouldSync($account));
@@ -234,14 +238,42 @@ final class InboxProbeTest extends TestCase
         $account = $this->graph(10);
 
         $this->script[self::GRAPH_HOST] = [
-            $this->graphNewest('AAA'),
-            $this->graphNewest('BBB'),
-            $this->graphNewest('BBB'),
+            $this->graphNewest(self::T1),
+            $this->graphNewest(self::T2),
+            $this->graphNewest(self::T2),
         ];
 
         self::assertFalse($this->probe->shouldSync($account), 'remembered');
-        self::assertTrue($this->probe->shouldSync($account), 'a different newest message is mail');
+        self::assertTrue($this->probe->shouldSync($account), 'a later newest message is mail');
         self::assertFalse($this->probe->shouldSync($account), 'and a sync is already queued for it');
+    }
+
+    /**
+     * The regression this signal was changed for. Graph's receivedDateTime has
+     * a resolution of one second, so a burst of mail — three messages at once —
+     * puts several under one value, and nothing promises that the query lists
+     * them in the same order twice. Keyed by the newest message's id the probe
+     * flipped A, B, A, B and queued a full sync per flip until something newer
+     * arrived: the sync loop this class exists not to cause.
+     */
+    public function testTwoMessagesReceivedInOneSecondDoNotMakeTheSignalFlicker(): void
+    {
+        $account = $this->graph(10);
+
+        $this->script[self::GRAPH_HOST] = [
+            $this->graphNewest(self::T1, id: 'A'),
+            $this->graphNewest(self::T1, id: 'B'),
+            $this->graphNewest(self::T1, id: 'A'),
+            $this->graphNewest(self::T1, id: 'B'),
+            // The presence companion: the same account does announce real mail.
+            $this->graphNewest(self::T2, id: 'C'),
+        ];
+
+        self::assertFalse($this->probe->shouldSync($account), 'remembered');
+        self::assertFalse($this->probe->shouldSync($account), 'same second, different id: not news');
+        self::assertFalse($this->probe->shouldSync($account));
+        self::assertFalse($this->probe->shouldSync($account));
+        self::assertTrue($this->probe->shouldSync($account), 'a later second is news');
     }
 
     public function testAnEmptyInboxIsNoSync(): void
@@ -257,7 +289,7 @@ final class InboxProbeTest extends TestCase
 
         $this->script[self::GRAPH_HOST] = [
             $this->throttled(retryAfter: 90, status: 429),
-            $this->graphNewest('AAA'),
+            $this->graphNewest(self::T1),
         ];
 
         self::assertFalse($this->probe->shouldSync($account));
@@ -353,9 +385,13 @@ final class InboxProbeTest extends TestCase
         return $this->json(['historyId' => '999']);
     }
 
-    private function graphNewest(?string $id): MockResponse
+    /**
+     * What Graph answers for "the newest message in the inbox", with the id it
+     * happens to list first: the probe must not care which.
+     */
+    private function graphNewest(?string $receivedAt, string $id = 'x'): MockResponse
     {
-        return $this->json(['value' => null === $id ? [] : [['id' => $id]]]);
+        return $this->json(['value' => null === $receivedAt ? [] : [['id' => $id, 'receivedDateTime' => $receivedAt]]]);
     }
 
     private function throttled(int $retryAfter, int $status = 403): MockResponse

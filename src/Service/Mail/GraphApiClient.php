@@ -192,29 +192,42 @@ final class GraphApiClient
     // ── Messages ─────────────────────────────────────────────────────────────
 
     /**
-     * The id of the newest message in the inbox, or null for an empty one.
+     * When the newest message in the inbox was received, or null for an empty
+     * one.
      *
      * What an Outlook account is asked once a minute in place of a webhook, on
-     * an install nobody can reach from the internet. A change in this id is the
-     * signal that mail has arrived; it is not a delta query on purpose, because
-     * a delta link is the real sync's cursor and reading it here would either
-     * move it or invite the two to be confused.
+     * an install nobody can reach from the internet. A change in this value is
+     * the signal that mail has arrived; it is not a delta query on purpose,
+     * because a delta link is the real sync's cursor and reading it here would
+     * either move it or invite the two to be confused.
      *
-     * One message and one projected field, so a call every minute is an id
-     * and not a download, with a timeout of its own because it runs on the
-     * scheduler's worker beside everything else scheduled. Throttling reaches
-     * the caller as GraphThrottledException carrying Retry-After.
+     * THE TIMESTAMP, NOT THE ID OF THE NEWEST MESSAGE, and that is the point of
+     * this method. receivedDateTime has a resolution of one second, so a burst —
+     * three messages in a row, which is the case being fixed — puts several
+     * under one value, and nothing promises that `$orderby` lists them in the
+     * same order twice. An id signal would then flip between two of them from
+     * one minute to the next and queue a full sync each time, until something
+     * newer arrived. A timestamp cannot flip: every message sharing it is
+     * already in the mailbox by the time the sync it triggers runs, so nothing
+     * is lost by not telling them apart. What it cannot see is a message that
+     * lands in the same second as the newest one already seen, which waits for
+     * the quarter-hourly sync like everything else this does not cover.
+     *
+     * One message and one projected field, so a call every minute is a
+     * timestamp and not a download, with a timeout of its own because it runs
+     * on the scheduler's worker beside everything else scheduled. Throttling
+     * reaches the caller as GraphThrottledException carrying Retry-After.
      */
-    public function newestInboxMessageId(Account $account): ?string
+    public function newestInboxReceivedAt(Account $account): ?string
     {
         $body = $this->request($account, 'GET', self::ME . '/mailFolders/inbox/messages', [
-            'query'   => ['$top' => 1, '$orderby' => 'receivedDateTime desc', '$select' => 'id'],
+            'query'   => ['$top' => 1, '$orderby' => 'receivedDateTime desc', '$select' => 'receivedDateTime'],
             'timeout' => self::PROBE_TIMEOUT_SECONDS,
         ])->toArray();
 
-        $id = $body['value'][0]['id'] ?? null;
+        $receivedAt = $body['value'][0]['receivedDateTime'] ?? null;
 
-        return null === $id ? null : (string) $id;
+        return null === $receivedAt ? null : (string) $receivedAt;
     }
 
     /**

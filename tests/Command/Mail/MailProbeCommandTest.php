@@ -62,8 +62,8 @@ final class MailProbeCommandTest extends KernelTestCase
     /** What Gmail answers: the newest inbox arrival's record id, or null for none. */
     private ?string $gmailArrival = '705';
 
-    /** What Graph answers: the newest inbox message's id. */
-    private string $graphNewest = 'AAA';
+    /** What Graph answers: when the newest inbox message was received. */
+    private string $graphNewest = '2026-10-10T12:00:05Z';
 
     /** Seconds each provider request appears to take, on the test's clock. */
     private int $requestSeconds = 0;
@@ -81,7 +81,7 @@ final class MailProbeCommandTest extends KernelTestCase
         $this->dispatched     = [];
         $this->requests       = [];
         $this->gmailArrival   = '705';
-        $this->graphNewest    = 'AAA';
+        $this->graphNewest    = '2026-10-10T12:00:05Z';
         $this->requestSeconds = 0;
         $this->clock          = new MockClock('2026-10-10 12:00:00');
         $this->probe          = $this->probe();
@@ -147,7 +147,7 @@ final class MailProbeCommandTest extends KernelTestCase
         $this->tester()->execute([]);
         self::assertNotContains($account->id, $this->dispatchedAccountIds(), 'the first look only remembers');
 
-        $this->graphNewest = 'BBB';
+        $this->graphNewest = '2026-10-10T12:00:06Z';
         $this->tester()->execute([]);
 
         self::assertSame(1, $this->queuedFor($account->id));
@@ -270,7 +270,7 @@ final class MailProbeCommandTest extends KernelTestCase
                 ? (null === $this->gmailArrival
                     ? ['historyId' => '999']
                     : ['historyId' => '999', 'history' => [['id' => $this->gmailArrival]]])
-                : ['value' => [['id' => $this->graphNewest]]];
+                : ['value' => [['id' => 'm', 'receivedDateTime' => $this->graphNewest]]];
 
             return new MockResponse(json_encode($json, JSON_THROW_ON_ERROR), [
                 'http_code'        => 200,

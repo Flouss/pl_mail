@@ -83,19 +83,24 @@ final class MessageRecipientsExtensionTest extends TestCase
     }
 
     /**
-     * A host that cannot be reduced to a registrable domain — mail from a bare
-     * `localhost`, say — is compared whole rather than skipped. Both halves:
-     * a different host is reported, the same one is not.
+     * A From host that cannot be reduced to a registrable domain — mail from a
+     * bare `localhost`, say — is compared whole rather than skipped, so a
+     * Reply-To elsewhere is still reported.
      */
-    public function testAHostWithNoRegistrableDomainIsComparedWhole(): void
+    public function testAFromHostWithNoRegistrableDomainIsComparedWhole(): void
     {
         self::assertSame(
             [['name' => '', 'address' => 'help@evil.example']],
             new MessageRecipientsExtension()->replyToElsewhere($this->message('root@localhost', 'help@evil.example')),
         );
+    }
+
+    /** An address literal is an address nobody can read the organisation off. */
+    public function testAReplyToOnAnAddressLiteralIsReported(): void
+    {
         self::assertSame(
-            [],
-            new MessageRecipientsExtension()->replyToElsewhere($this->message('root@localhost', 'other@LOCALHOST')),
+            [['name' => '', 'address' => 'help@[192.0.2.1]']],
+            new MessageRecipientsExtension()->replyToElsewhere($this->message('service@paypal.com', 'help@[192.0.2.1]')),
         );
     }
 

@@ -94,7 +94,7 @@ final class MessageRecipientsExtension extends AbstractExtension
             return null;
         }
 
-        $host = strtolower(trim(substr($address, $at + 1)));
+        $host = trim(substr($address, $at + 1));
 
         if ('' === $host) {
             return null;

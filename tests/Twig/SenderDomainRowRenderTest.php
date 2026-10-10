@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Twig;
 
+use App\Domain\Enum\Mail\MessageFlag;
 use App\Domain\Enum\Mail\ThreadingMethod;
 use App\Entity\Mail\Account;
 use App\Entity\Mail\Message;
@@ -153,6 +154,29 @@ final class SenderDomainRowRenderTest extends KernelTestCase
 
         // "To: ..." is the Sent row's own phrase, so this also fails if the row
         // stops using its recipients and falls back to the sender column.
+        self::assertStringContainsString('To: Rike Kaltbach', $html);
+        self::assertSame([], $this->domainsIn($html));
+    }
+
+    /** Drafts are the same: the row names who the draft is FOR. */
+    public function testTheDraftsListNamesRecipientsWithoutDomains(): void
+    {
+        // Not the account's own address, on purpose: a draft is written by the
+        // reader, but nothing stops its from-address being one the account does
+        // not list, and that is the case that would otherwise grow a domain.
+        $thread  = $this->seedThread(['Me', 'me.elsewhere@example.test']);
+        $message = $thread->messages->first();
+
+        $message->toAddresses = [['name' => 'Rike Kaltbach', 'address' => 'rike@example.test']];
+        $message->flags       = [MessageFlag::DRAFT->value];
+        $this->em->flush();
+        $this->em->refresh($thread);
+
+        $html = $this->twig->render('_partials/_thread_row.html.twig', [
+            'thread'      => $thread,
+            'draft_scope' => true,
+        ]);
+
         self::assertStringContainsString('To: Rike Kaltbach', $html);
         self::assertSame([], $this->domainsIn($html));
     }

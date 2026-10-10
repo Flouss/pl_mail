@@ -1,4 +1,4 @@
-<!-- translated-from: features/accounts.md sha1:3c63f9c65f0a7e82c8dd84517d821aa08ddc9aa6 -->
+<!-- translated-from: features/accounts.md sha1:e832c09161da286d114dc5d8703c2c93343fff7e -->
 
 # Konten und Aliase
 
@@ -86,15 +86,23 @@ Bildschirm etwas davon stand. Zwei Entscheidungen, zwei Bedienelemente.
 
 Der farbige Punkt neben jedem Konto ist dessen **Kennfarbe**: derselbe Ton, den die Nachrichten
 dieses Kontos in den gemeinsamen Listen tragen, damit sich zwei Konten dort auf einen Blick
-unterscheiden lassen. Sie wird beim Hinzufügen vergeben und wandert danach nie wieder — die Liste
-umzusortieren färbt nichts um —, und sie ist **keine** Statusanzeige. Ob ein Konto tatsächlich
-funktioniert, beantwortet [Zustand der Konten](health.md), die einzige Stelle, die den Anspruch
-erhebt, das zu beantworten.
+unterscheiden lassen. Sie wird beim Hinzufügen vergeben — die erste von acht Farben, die noch nicht
+in Gebrauch ist — und ändert sich danach nur, wenn du sie änderst. Die Liste umzusortieren färbt
+nichts um, und sie ist **keine** Statusanzeige. Ob ein Konto tatsächlich funktioniert, beantwortet
+[Zustand der Konten](health.md), die einzige Stelle, die den Anspruch erhebt, das zu beantworten.
+
+Ändern kannst du sie mit dem Farbfeld in der Zeile des Kontos, das die Palette mit den acht Farben
+öffnet. Dieses Bedienelement gibt es bei **jedem** Konto, auch bei Gmail- und Outlook-Konten — deshalb
+ist es kein Feld in **Konto bearbeiten**: Dieses Formular ist für sie gesperrt. Der Punkt in der
+Seitenleiste und die Markierung an den Nachrichten des Kontos ändern sich sofort. Eine Farbe zu
+wählen, die ein anderes Konto schon trägt, ist erlaubt — so lassen sich zwei Konten zu einem Paar
+machen.
 
 Jede Zeile bietet:
 
 | Bedienelement | Wirkung |
 |---|---|
+| **Farbfeld** | Öffnet die Palette; die gewählte Farbe gehört dem Konto von da an — bei jedem Konto |
 | **Als primär festlegen** | Verfasst neue Nachrichten künftig aus diesem Konto — in jeder Zeile außer der primären |
 | **Konto deaktivieren** / **Konto aktivieren** | Hält die Synchronisierung an oder nimmt sie wieder auf, ohne etwas zu löschen |
 | **Konto bearbeiten** | Servereinstellungen und Passwort — nur bei Konten mit Passwort |

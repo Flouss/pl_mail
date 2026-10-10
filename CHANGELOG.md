@@ -8,6 +8,12 @@ The published image tags: `latest` follows the most recent release below,
 
 ## Unreleased
 
+**An account's colour can be changed.** The coloured dot beside each account, and the mark on its
+messages in a mixed list, was picked for you when the account was added and could never be changed.
+Settings → Mail accounts now has a colour swatch on every row — Gmail and Outlook accounts included,
+which the Edit form is closed to — that opens the palette of eight. Two accounts may share a colour
+if you want them to read as a pair. No migration.
+
 **Keyboard shortcuts, the ones Gmail uses.** `j` and `k` move through a list, `o` opens, `u` goes
 back, `x` selects, `e` archives, `#` deletes, `s` stars, `r` `a` `f` reply, reply to all and
 forward, `c` writes, `/` searches, `g` then a letter goes to a list, `z` undoes. **?** shows all of

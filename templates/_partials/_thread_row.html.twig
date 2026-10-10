@@ -496,13 +496,20 @@ be a worse regression than the one this feature fixes.
                        gives way. text-ink-muted rather than -faint, because
                        the faint token is for decoration and this is the one
                        part of the row that carries a verdict. #}
-                    <span class="min-w-0 flex items-baseline gap-x-1 text-sm {{ unread ? 'font-semibold text-ink' : 'font-normal text-ink-muted' }}">
+                    {# `max-w-[60%]` on the domain: "never shrinks" met a sender
+                       whose domain is longer than the column, and it ran
+                       straight over the subject. Capped, it truncates like
+                       anything else — but the name keeps the other 40%, so a
+                       long domain cannot push the name out altogether.
+                       `-ml-1` takes the comma back across the gap, so it
+                       reads "evil.example, Bob" and not "evil.example , Bob". #}
+                    <span class="min-w-0 overflow-hidden flex items-baseline gap-x-1 text-sm {{ unread ? 'font-semibold text-ink' : 'font-normal text-ink-muted' }}">
                         {% for s in senders %}
                             <span class="min-w-0 truncate">{{ s.name }}</span>
                             {% if s.domain %}
-                                <span class="shrink-0 text-[11px] font-normal text-ink-muted" data-sender-domain>{{ s.domain }}</span>
+                                <span class="shrink-0 max-w-[60%] truncate text-[11px] font-normal text-ink-muted" data-sender-domain>{{ s.domain }}</span>
                             {% endif %}
-                            {% if not loop.last %}<span class="shrink-0">,</span>{% endif %}
+                            {% if not loop.last %}<span class="shrink-0 -ml-1">,</span>{% endif %}
                         {% endfor %}
                     </span>
                 </span>

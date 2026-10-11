@@ -21,20 +21,21 @@ final class MaintenanceScheduleTest extends TestCase
 {
     /**
      * Mail from an OAuth account reaches plMail within a minute of the probe
-     * seeing it, and that is only true if the probe is asked every minute. The
-     * quarter-hourly sync stays beside it as the backstop for everything the
-     * probe cannot see (spam, mail filtered past the inbox, flag changes).
+     * seeing it, and the probe sees it within 30 s of its arriving, so the
+     * probe is asked every 30 s. The quarter-hourly sync stays beside it as
+     * the backstop for everything the probe cannot see (spam, mail filtered
+     * past the inbox, flag changes).
      */
-    public function testTheInboxProbeRunsEveryMinuteAndTheFullSyncStaysQuarterHourly(): void
+    public function testTheInboxProbeRunsEveryThirtySecondsAndTheFullSyncStaysQuarterHourly(): void
     {
         $triggers = $this->triggersByCommand();
 
-        self::assertSame('* * * * *', $triggers['app:mail:probe'] ?? null);
+        self::assertSame('every 30 seconds', $triggers['app:mail:probe'] ?? null);
         self::assertSame('*/15 * * * *', $triggers['app:mail:sync'] ?? null);
     }
 
     /**
-     * @return array<string, string> command line => cron expression
+     * @return array<string, string> command line => the trigger's own description (a cron expression, or "every N seconds")
      */
     private function triggersByCommand(): array
     {

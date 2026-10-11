@@ -188,20 +188,48 @@ final class MailProbeCommandTest extends KernelTestCase
 
     public function testItStopsStartingProbesOnceItsTimeIsUp(): void
     {
-        // The scheduler has one worker and the probe runs on it every minute,
-        // so a run that outlasts its minute delays itself and everything
-        // scheduled beside it. Each request takes 40 s here and the budget is
-        // 45: the first probe ends at 40 s and is within it, the second ends
-        // at 80 s and is not, so a third is never started.
+        // The scheduler has one worker and the probe runs on it every 30 s,
+        // so a run that outlasts its interval delays itself and everything
+        // scheduled beside it. Each request takes 15 s here and the budget is
+        // 20 (the 30 s interval less one 10 s request timeout): a probe is
+        // started while less than 20 s have gone, so one starts at 0 s and
+        // one at 15 s, and the third would start at 30 s, which is past it.
         $this->gmail();
         $this->gmail();
         $this->gmail();
 
-        $this->requestSeconds = 40;
+        $this->requestSeconds = 15;
 
         $this->tester()->execute([]);
 
         self::assertCount(2, $this->requests);
+    }
+
+    public function testTheBudgetLeavesRoomForOneRequestTimeoutInsideTheInterval(): void
+    {
+        // A probe is only started while less than BUDGET_SECONDS have gone, so
+        // the last one to start can still run for its request timeout before
+        // the next run is due: budget + timeout must fit the interval. The
+        // figures are pinned by hand — 30 s interval, 10 s timeout, 20 s
+        // budget — and the sum is checked against each client's own timeout,
+        // because that constant is declared in two places and either can move.
+        //
+        // What this does NOT cover: a Gmail probe may read up to five pages
+        // (PROBE_MAX_PAGES), and a Graph request is retried twice by its
+        // client, so one account can still outlast the interval. That is the
+        // case FAILURE_PAUSE_SECONDS exists for: an account that times out is
+        // paused for five minutes, so it costs one slow run, not one per tick.
+        $budget = (new \ReflectionClassConstant(MailProbeCommand::class, 'BUDGET_SECONDS'))->getValue();
+
+        self::assertSame(30, InboxProbe::INTERVAL_SECONDS);
+        self::assertSame(20, $budget);
+
+        foreach ([GmailApiClient::class, GraphApiClient::class] as $client) {
+            $timeout = (new \ReflectionClassConstant($client, 'PROBE_TIMEOUT_SECONDS'))->getValue();
+
+            self::assertSame(10.0, $timeout, $client);
+            self::assertLessThanOrEqual(InboxProbe::INTERVAL_SECONDS, $budget + $timeout, $client);
+        }
     }
 
     // ── Fixtures ──────────────────────────────────────────────────────────

@@ -22,7 +22,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
  * Look for new inbox mail on every Gmail and Microsoft account, and queue a
  * sync for the ones that have some.
  *
- * Run by the scheduler every minute. It stands in for push on an install that
+ * Run by the scheduler every InboxProbe::INTERVAL_SECONDS. It stands in for push on an install that
  * cannot be reached from the internet — see InboxProbe, which holds the logic
  * and the reasons. Like app:mail:sync it dispatches and never syncs: the fetch
  * is the ingest worker's, so this returns in seconds whatever the mailbox holds.
@@ -30,14 +30,21 @@ use Symfony\Component\Messenger\MessageBusInterface;
  * WHO IT LOOKS AT. Active OAuth accounts only: an IMAP account has IDLE and
  * nothing to ask a provider API, and an account whose grant is dead is skipped
  * because every look would start with a refresh against the identity endpoint
- * — once a minute for ever — and OAuthTokenManager has already raised the
+ * — every half minute for ever — and OAuthTokenManager has already raised the
  * "sign in again" card for it.
  *
  * HOW LONG IT MAY TAKE. It runs on the scheduler's one worker, beside every
- * other scheduled job, so a run that outlasts its minute delays itself and them.
- * Each request has its own timeout, and past BUDGET_SECONDS no further account
- * is started; the ones left are looked at next minute, and the quarter-hourly
- * sync is the backstop whatever happens here.
+ * other scheduled job, so a run that outlasts its interval delays itself and
+ * them. Each request has its own timeout, and past BUDGET_SECONDS no further
+ * account is started; the ones left are looked at next run, and the
+ * quarter-hourly sync is the backstop whatever happens here.
+ *
+ * WHAT THE BUDGET DOES NOT COVER. It is the interval less one request timeout,
+ * so the last account to start can finish its FIRST request inside the
+ * interval. A Gmail probe may read several pages and a Graph request is retried
+ * by its client, so one account can still outlast the interval; an account
+ * that times out or fails is then paused (InboxProbe::FAILURE_PAUSE_SECONDS),
+ * which keeps that to one slow run rather than one per tick.
  */
 #[AsCommand(
     name: 'app:mail:probe',
@@ -47,10 +54,13 @@ final class MailProbeCommand extends Command
 {
     /**
      * The point past which starting another account risks running into the
-     * next minute's run. A slow provider can spend a request's whole ten-second
-     * timeout, and several accounts of that is most of a minute.
+     * next run: the interval less one request's ten-second timeout, which a
+     * slow provider can spend whole. A run takes well under a second when
+     * providers answer, so this only binds when they do not. The timeout is
+     * the clients' PROBE_TIMEOUT_SECONDS, declared in each; MailProbeCommandTest
+     * keeps the sum inside the interval.
      */
-    private const int BUDGET_SECONDS = 45;
+    private const int BUDGET_SECONDS = InboxProbe::INTERVAL_SECONDS - 10;
 
     public function __construct(
         private readonly AccountRepository   $accountRepository,
@@ -83,7 +93,7 @@ final class MailProbeCommand extends Command
             }
 
             if ($this->clock->now()->getTimestamp() - $startedAt >= self::BUDGET_SECONDS) {
-                $io->note('Out of time for this minute; the remaining accounts wait for the next run.');
+                $io->note('Out of time for this run; the remaining accounts wait for the next one.');
 
                 break;
             }

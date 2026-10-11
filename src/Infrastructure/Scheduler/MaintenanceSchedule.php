@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Scheduler;
 
+use App\Service\Mail\InboxProbe;
 use Symfony\Component\Console\Messenger\RunCommandMessage;
 use Symfony\Component\Scheduler\Attribute\AsSchedule;
 use Symfony\Component\Scheduler\RecurringMessage;
@@ -53,7 +54,12 @@ final class MaintenanceSchedule implements ScheduleProviderInterface
                 // hour above. Cheap by construction (one request and a timeout
                 // per account, a budget per run), and the line above stays as
                 // the backstop for everything this cannot see.
-                RecurringMessage::cron('* * * * *', new RunCommandMessage('app:mail:probe')),
+                //
+                // Periodical rather than cron: cron cannot say less than a
+                // minute. The schedule is stateful, so a restart keeps the
+                // phase, and processOnlyLastMissedRun collapses runs the
+                // worker was too busy to take into one catch-up.
+                RecurringMessage::every(InboxProbe::INTERVAL_SECONDS, new RunCommandMessage('app:mail:probe')),
 
                 // Gmail watches last 7 days, Graph subscriptions ~3. Daily
                 // renewal with the command's own thresholds leaves ample

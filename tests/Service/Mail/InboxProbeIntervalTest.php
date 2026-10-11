@@ -87,7 +87,10 @@ final class InboxProbeIntervalTest extends TestCase
         $_SERVER[self::ENV] = '20';
 
         self::assertSame(20, $this->interval()->seconds());
-        self::assertTrue($this->interval()->isPinnedByEnvironment());
+        // Not a pin for the page: with an entry on file it cannot tell this
+        // from the entrypoint's export of an earlier save (see
+        // isPinnedByEnvironment()). What is in force is still the environment's.
+        self::assertFalse($this->interval()->isPinnedByEnvironment());
         // What is on file is still reported as such, so the form can show both.
         self::assertSame(45, $this->interval()->stored());
     }

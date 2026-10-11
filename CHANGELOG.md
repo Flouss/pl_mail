@@ -403,6 +403,7 @@ the dialog seemed to do nothing. A tag is now the choice itself: click it and th
 under it, or pick **No tag** to file it under none. The same goes for the folder a filter saves to.
 Nextcloud, Google Drive, OneDrive, Dropbox, Immich and Google Photos choose exactly as before. No
 migration.
+[#78](https://github.com/karatektus/pl_mail/pull/78), by @Flouss.
 
 **An account's colour can be changed.** The coloured dot beside each account, and the mark on its
 messages in a mixed list, was picked for you when the account was added and could never be changed.

@@ -401,7 +401,9 @@ table; the migration is reversible.
 as folders to open, but a tag has nothing inside it, so clicking one only reloaded the same list and
 the dialog seemed to do nothing. A tag is now the choice itself: click it and the attachment is filed
 under it, or pick **No tag** to file it under none. The same goes for the folder a filter saves to.
-Nextcloud, Google Drive, OneDrive, Dropbox, Immich and Google Photos choose exactly as before. No
+The upload itself was also refused ("No file was submitted") because it was sent in a form
+Paperless could not read; it now goes through. Paperless still turns down file types it cannot
+consume, a ZIP for one, and says so. Nextcloud, Google Drive, OneDrive, Dropbox, Immich and Google Photos choose exactly as before. No
 migration.
 [#78](https://github.com/karatektus/pl_mail/pull/78), by @Flouss.
 

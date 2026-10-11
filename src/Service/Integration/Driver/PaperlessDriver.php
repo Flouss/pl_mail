@@ -266,7 +266,11 @@ final readonly class PaperlessDriver implements IntegrationDriverInterface, Sear
 
         $response = $this->request($integration, 'POST', $this->url($integration, '/documents/post_document/'), [
             'headers' => $form->getPreparedHeaders()->toArray(),
-            'body'    => $form->bodyToIterable(),
+            // A string, not bodyToIterable(): a streamed body leaves chunked with
+            // no Content-Length, and Paperless's server then reads the form as
+            // empty and answers 400 "No file was submitted." to a valid PDF. The
+            // whole file is held in memory for it; attachments are mail-sized.
+            'body'    => $form->toString(),
         ]);
 
         return self::TASK_PREFIX.$this->taskId($response);

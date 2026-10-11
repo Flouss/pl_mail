@@ -124,6 +124,12 @@ final class PublicAddressControllerTest extends WebTestCase
                 'probe_interval[seconds]' => $bad,
             ]));
 
+            // The form's own refusal (422, the form on the page again), not an
+            // error page: if it let 901 through, save() would throw and
+            // nothing would be written either, and only the status would say
+            // which of the two had done the refusing.
+            self::assertResponseStatusCodeSame(422, $bad);
+            self::assertSelectorExists('form[name="probe_interval"]');
             self::assertArrayNotHasKey('MAIL_PROBE_INTERVAL_SECONDS', $this->config->read(), $bad);
         }
 
@@ -148,6 +154,35 @@ final class PublicAddressControllerTest extends WebTestCase
         self::assertSelectorNotExists('form[name="probe_interval"]');
         // The other form on the page is untouched by it.
         self::assertSelectorExists('form[name="public_url"]');
+    }
+
+    public function testAnIntervalSetInTheEnvironmentIsNotOverwrittenByAPost(): void
+    {
+        // The page offers no field while the environment pins the value, but a
+        // POST does not need the field: a stale tab, or a script. Taken from the
+        // page while nothing is pinned, so the token is a genuine one and the
+        // refusal is the pin's and not a bad token's.
+        $crawler = $this->client->request('GET', '/admin/address');
+        $token   = $crawler->filter('form[name="probe_interval"]')->form()->get('probe_interval[_token]')->getValue();
+
+        $_SERVER['MAIL_PROBE_INTERVAL_SECONDS'] = '20';
+
+        $this->client->request('POST', '/admin/address', [
+            'probe_interval' => ['seconds' => '45', '_token' => $token],
+        ]);
+
+        self::assertResponseIsSuccessful();
+        self::assertArrayNotHasKey('MAIL_PROBE_INTERVAL_SECONDS', $this->config->read());
+        self::assertSelectorExists('turbo-frame#admin-address [data-probe-interval-pinned]');
+
+        // The presence companion: the same request, unpinned, is what saves.
+        unset($_SERVER['MAIL_PROBE_INTERVAL_SECONDS']);
+
+        $this->client->request('POST', '/admin/address', [
+            'probe_interval' => ['seconds' => '45', '_token' => $token],
+        ]);
+
+        self::assertSame('45', $this->config->read()['MAIL_PROBE_INTERVAL_SECONDS'] ?? null);
     }
 
     public function testTheSectionIsReachableFromTheAdminNavigation(): void

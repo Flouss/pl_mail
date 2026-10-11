@@ -137,19 +137,12 @@ Variables:
             data-action="click->mail--thread-message#toggle"
         >
             <div class="flex items-baseline gap-2 flex-wrap">
-                {# Name and address as one unit. Wide, it is `display: contents`
-                   and the two are flex items of the row exactly as before; in a
-                   narrow pane it is one line cut with an ellipsis, so an
-                   address can no longer break mid-word into three rows. See
-                   `.thread-message-sender` in app.css. #}
-                <div class="thread-message-sender">
-                    <span class="text-sm font-semibold text-ink truncate">
-                        {{ message.fromName ?: message.fromAddress }}
-                    </span>
-                    {% if message.fromName %}
-                        <span class="text-xs text-ink-faint truncate">&lt;{{ message.fromAddress }}&gt;</span>
-                    {% endif %}
-                </div>
+                <span class="text-sm font-semibold text-ink truncate">
+                    {{ message.fromName ?: message.fromAddress }}
+                </span>
+                {% if message.fromName %}
+                    <span class="text-xs text-ink-faint truncate">&lt;{{ message.fromAddress }}&gt;</span>
+                {% endif %}
 
                 {# The labels on THIS message, not on the thread. A rule that
                    files one reply, or a label applied to a single message,

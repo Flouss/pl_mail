@@ -193,7 +193,7 @@ The stored values win and fall back to the environment, exactly as the OAuth cre
 
 Then turn on **Instant delivery** for the account under **Settings → Mail accounts**. It is per
 account and opt-in: without the topic configured the account does not use push and says so rather
-than failing. New inbox mail is then found by a check that runs every 30 seconds, `app:mail:probe`, which asks
+than failing. New inbox mail is then found by a check that runs every 30 seconds by default, `app:mail:probe`, which asks
 Gmail whether anything was added to the inbox since the last sync and queues a sync when it was —
 no public address and no Pub/Sub involved. Spam, mail a filter kept out of the inbox and changes
 made elsewhere (read, archived, deleted) still wait for the fifteen-minute sweep.

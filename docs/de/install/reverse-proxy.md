@@ -1,4 +1,4 @@
-<!-- translated-from: install/reverse-proxy.md sha1:2a999bec2af9562e1820523476b47a9788e6de91 -->
+<!-- translated-from: install/reverse-proxy.md sha1:f868afffb813f7f3069829ee39b7c42b2fe6ad90 -->
 # Hinter einem Reverse-Proxy
 
 Alles, was von außerhalb des eigenen Netzes erreichbar ist, will ein echtes Zertifikat davor, und
@@ -68,7 +68,7 @@ Scheitert eines von beidem, registrieren sich Kalender-Push und Microsoft-Graph-
 schlicht, und am Polling ändert nichts davon etwas: `app:mail:sync` läuft alle 15 Minuten und
 `app:calendar:sync --stale` alle 15 Minuten, versetzt gegen die Viertelstunde. Push sorgt nur dafür,
 dass Mail- und Kalenderänderungen sofort statt verspätet ankommen. Gmail- und Outlook-Posteingänge
-prüft außerdem alle 30 Sekunden `app:mail:probe`; keine öffentliche Adresse zu haben heißt also nicht, eine
+prüft außerdem `app:mail:probe`, standardmäßig alle 30 Sekunden; keine öffentliche Adresse zu haben heißt also nicht, eine
 Viertelstunde auf neue Mail im Posteingang zu warten.
 
 **Der typische Fehlerfall ist eine öffentliche URL mit angehängtem Pfad oder Schrägstrich am Ende.**

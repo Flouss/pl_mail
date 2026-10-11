@@ -1,4 +1,4 @@
-<!-- translated-from: providers/microsoft.md sha1:be7c8ec8000dd0ead86df9e3464113b1b728beb7 -->
+<!-- translated-from: providers/microsoft.md sha1:48490c4f42165fc201f9fcd11ab58117fe4b77f1 -->
 
 # Microsoft
 
@@ -166,7 +166,7 @@ Ressource einzureihen, und jede Entscheidung bleibt in der Sync-Engine.
 
 **Push trägt nie die Last.** Ein Kalender, der sich nicht registrieren konnte, wird alle fünfzehn
 Minuten abgerufen, und ein Konto ohne Push wird nach demselben Zeitplan synchronisiert — nur dass
-neue Mail im Posteingang binnen etwa einer Minute bemerkt wird, weil `app:mail:probe` alle 30
+neue Mail im Posteingang binnen etwa einer Minute bemerkt wird, weil `app:mail:probe` standardmäßig alle 30
 Sekunden bei Graph erfragt, wann die neueste Nachricht im Posteingang empfangen wurde, und eine
 Synchronisierung einreiht, wenn das später ist als beim letzten Mal. Dafür braucht es keine
 öffentliche Adresse.

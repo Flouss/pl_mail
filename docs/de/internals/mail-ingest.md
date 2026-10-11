@@ -1,4 +1,4 @@
-<!-- translated-from: internals/mail-ingest.md sha1:f075b76209fef0920fb3ec2893e9518114183039 -->
+<!-- translated-from: internals/mail-ingest.md sha1:ba34fdedf7291dd3f34f42ebc93bb5606416043e -->
 # Mail-Ingest
 
 Vom Anbieter in die Datenbank: wie aus Bytes eine Zeile `Message` wird, was mit ihr geschieht,
@@ -220,7 +220,7 @@ einer Firewall hat keins von beiden, und ein Konto ohne Push wurde bisher nur vo
 `app:mail:sync` synchronisiert: Mail ist sofort auf dem Handy und bis zu fünfzehn Minuten später in
 plMail.
 
-`app:mail:probe` läuft alle 30 Sekunden und stellt jedem aktiven Gmail- und Outlook-Konto eine billige
+`app:mail:probe` läuft standardmäßig alle 30 Sekunden (Admin → Adresse oder `MAIL_PROBE_INTERVAL_SECONDS`, zwischen 15 und 900) und stellt jedem aktiven Gmail- und Outlook-Konto eine billige
 Frage, über `App\Service\Mail\InboxProbe`, und reiht die gewöhnliche `SyncAccountMessage` (Trigger
 `SyncTrigger::Probe`) nur ein, wenn die Antwort Ja lautet. Es holt selbst nichts ab und ersetzt den
 Durchlauf nicht.
@@ -260,8 +260,8 @@ Durchlauf erfasst, den das hier unverändert lässt. `Message::$arrivedBy` sagt,
 geliefert hat: `probe` ist der schnelle Weg bei der Arbeit, `poll` ist Mail, die er nicht sieht.
 
 **Ein guter Nachbar sein.** Sie läuft auf dem einen Worker des Schedulers, neben jedem anderen
-geplanten Job. Jede Anfrage hat ihr eigenes Timeout von zehn Sekunden, ein Lauf beginnt nach 20
-Sekunden kein weiteres Konto mehr, und ein Konto, das scheitert, wird in Ruhe gelassen — so lange, wie
+geplanten Job. Jede Anfrage hat ihr eigenes Timeout von zehn Sekunden, ein Lauf beginnt kein weiteres Konto mehr, sobald das Intervall abzüglich eines Anfrage-Timeouts (standardmäßig 20
+Sekunden) vergangen ist, und ein Konto, das scheitert, wird in Ruhe gelassen — so lange, wie
 das `Retry-After` des Anbieters es verlangt, wenn gedrosselt wird, sonst fünf Minuten. Konten, deren
 Grant bereits als tot bekannt ist, werden gar nicht erst gefragt, weil jeder Blick mit einer
 Token-Erneuerung begänne. Bei zwei Anfragen pro Minute und Konto sind das einige wenige Einheiten

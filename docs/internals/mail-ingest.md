@@ -195,7 +195,7 @@ and both need an address the internet can reach. An install behind a firewall ha
 account without push used to be synced only by the quarter-hourly `app:mail:sync`: mail on the phone
 at once, in plMail up to fifteen minutes later.
 
-`app:mail:probe` runs every 30 seconds and asks each active Gmail and Outlook account one cheap question,
+`app:mail:probe` runs every 30 seconds by default (Admin → Address, or `MAIL_PROBE_INTERVAL_SECONDS`, between 15 and 900) and asks each active Gmail and Outlook account one cheap question,
 through `App\Service\Mail\InboxProbe`, and queues the ordinary `SyncAccountMessage` (trigger
 `SyncTrigger::Probe`) only when the answer is yes. It does not fetch anything itself and it does not
 replace the poll.
@@ -230,7 +230,7 @@ that is not an arrival — read state, labels, deletions made elsewhere. None of
 what: `probe` is the fast path working, `poll` is mail it cannot see.
 
 **Being a good neighbour.** It runs on the scheduler's single worker, beside every other scheduled job.
-Each request carries its own ten-second timeout, a run starts no further account after 20 seconds, and
+Each request carries its own ten-second timeout, a run starts no further account once the interval less one request timeout has gone (20 seconds by default), and
 an account that fails is left alone — for as long as the provider's own `Retry-After` says when
 throttled, five minutes after anything else. Accounts whose grant is already known to be dead are not
 asked at all, because every look would begin with a token refresh. At two requests a minute per account

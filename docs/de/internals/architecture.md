@@ -1,4 +1,4 @@
-<!-- translated-from: internals/architecture.md sha1:9cff3bf3abc3129e4213bf0e6e8863eab96328df -->
+<!-- translated-from: internals/architecture.md sha1:802612d5bf16191ad0a8e9e9c75101ff9108c391 -->
 # Architektur
 
 Die Schichten, was wo liegt, und die Regeln, die das so halten. Diese Seite beschreibt die
@@ -229,7 +229,7 @@ war, in dem das Projekt vorher steckte: Logs und verwaiste Blobs wuchsen ohne Gr
 | Cron | Befehl | Warum diese Taktung |
 |---|---|---|
 | `*/15 * * * *` | `app:mail:sync` | Weder Gmail-Push noch Graph-Abonnements garantieren Zustellung, und IDLE-Verbindungen brechen ab; Polling ist die Rückfallebene |
-| alle 30 Sekunden | `app:mail:probe` | Was Push ersetzt, wo niemand die Installation erreicht: ein billiger Blick in jeden Gmail- und Outlook-Posteingang, der den echten Sync nur einreiht, wenn Mail angekommen ist. Durch ein Timeout je Anfrage und ein Zeitbudget begrenzt, weil er sich den einen Worker des Schedulers teilt. Siehe [Mail-Ingest](mail-ingest.md#ohne-push-die-posteingangs-abfrage) |
+| standardmäßig alle 30 Sekunden | `app:mail:probe` | Was Push ersetzt, wo niemand die Installation erreicht: ein billiger Blick in jeden Gmail- und Outlook-Posteingang, der den echten Sync nur einreiht, wenn Mail angekommen ist. Durch ein Timeout je Anfrage und ein Zeitbudget begrenzt, weil er sich den einen Worker des Schedulers teilt. Siehe [Mail-Ingest](mail-ingest.md#ohne-push-die-posteingangs-abfrage) |
 | `7-59/15 * * * *` | `app:calendar:sync --stale` | Der Mechanismus für CalDAV und ICS-Feeds, die Rückfallebene für Google und Graph. Gegen die Viertelstunde versetzt, damit er sich nicht auf den Mail-Durchlauf stapelt — beide teilen sich einen Worker |
 | `20 * * * *` | `app:calendar:push` | Stündlich, nicht weil so schnell etwas abliefe, sondern weil die Registrierung aus *Deployment*-Gründen scheitert, die mit dem Klick, der den Kalender verbunden hat, nichts zu tun haben |
 | `* * * * *` | `app:mail:wake-snoozed` | Eine Minute ist die Einheit, in der Menschen eine Weckzeit wählen |

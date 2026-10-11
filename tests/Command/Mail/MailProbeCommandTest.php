@@ -10,12 +10,15 @@ use App\Domain\Enum\Account\MailProvider;
 use App\Domain\Enum\Mail\SyncTrigger;
 use App\Entity\Mail\Account;
 use App\Infrastructure\Messaging\Message\SyncAccountMessage;
+use App\Infrastructure\Setup\GeneratedSecretsFile;
 use App\Repository\Mail\AccountRepository;
 use App\Service\Demo\DemoMode;
 use App\Service\Gmail\GmailQuotaPacer;
 use App\Service\Mail\GmailApiClient;
 use App\Service\Mail\GraphApiClient;
 use App\Service\Mail\InboxProbe;
+use App\Service\Mail\InboxProbeInterval;
+use App\Service\Monitoring\WorkerRestartSignal;
 use App\Service\OAuth\OAuthTokenManager;
 use App\Tests\Command\MailFixtures;
 use DateTimeImmutable;
@@ -71,6 +74,9 @@ final class MailProbeCommandTest extends KernelTestCase
     private MockClock $clock;
     private InboxProbe $probe;
 
+    /** @var list<string> */
+    private array $tempFiles = [];
+
     protected function setUp(): void
     {
         self::bootKernel();
@@ -94,6 +100,14 @@ final class MailProbeCommandTest extends KernelTestCase
         if (true === $this->connection->isTransactionActive()) {
             $this->connection->rollBack();
         }
+
+        foreach ($this->tempFiles as $file) {
+            if (is_file($file)) {
+                unlink($file);
+            }
+        }
+
+        $this->tempFiles = [];
 
         parent::tearDown();
     }
@@ -205,31 +219,22 @@ final class MailProbeCommandTest extends KernelTestCase
         self::assertCount(2, $this->requests);
     }
 
-    public function testTheBudgetLeavesRoomForOneRequestTimeoutInsideTheInterval(): void
+    public function testTheBudgetFollowsTheConfiguredInterval(): void
     {
-        // A probe is only started while less than BUDGET_SECONDS have gone, so
-        // the last one to start can still run for its request timeout before
-        // the next run is due: budget + timeout must fit the interval. The
-        // figures are pinned by hand — 30 s interval, 10 s timeout, 20 s
-        // budget — and the sum is checked against each client's own timeout,
-        // because that constant is declared in two places and either can move.
-        //
-        // What this does NOT cover: a Gmail probe may read up to five pages
-        // (PROBE_MAX_PAGES), and a Graph request is retried twice by its
-        // client, so one account can still outlast the interval. That is the
-        // case FAILURE_PAUSE_SECONDS exists for: an account that times out is
-        // paused for five minutes, so it costs one slow run, not one per tick.
-        $budget = (new \ReflectionClassConstant(MailProbeCommand::class, 'BUDGET_SECONDS'))->getValue();
-
-        self::assertSame(30, InboxProbe::INTERVAL_SECONDS);
-        self::assertSame(20, $budget);
-
-        foreach ([GmailApiClient::class, GraphApiClient::class] as $client) {
-            $timeout = (new \ReflectionClassConstant($client, 'PROBE_TIMEOUT_SECONDS'))->getValue();
-
-            self::assertSame(10.0, $timeout, $client);
-            self::assertLessThanOrEqual(InboxProbe::INTERVAL_SECONDS, $budget + $timeout, $client);
+        // A 60 s interval gives a budget of 50 (60 less the 10 s request
+        // timeout), so with 15 s requests a probe is started at 0, 15, 30 and
+        // 45 s, and the fifth would start at 60 s, which is past it. The
+        // default's two out of three above is what shows this is the interval
+        // moving the budget and not the budget having been loosened for all.
+        for ($i = 0; $i < 5; $i++) {
+            $this->gmail();
         }
+
+        $this->requestSeconds = 15;
+
+        $this->tester(interval: 60)->execute([]);
+
+        self::assertCount(4, $this->requests);
     }
 
     // ── Fixtures ──────────────────────────────────────────────────────────
@@ -320,7 +325,7 @@ final class MailProbeCommandTest extends KernelTestCase
         );
     }
 
-    private function tester(bool $demo = false): CommandTester
+    private function tester(bool $demo = false, int $interval = 30): CommandTester
     {
         return new CommandTester(new MailProbeCommand(
             self::getContainer()->get(AccountRepository::class),
@@ -328,7 +333,24 @@ final class MailProbeCommandTest extends KernelTestCase
             $this->bus(),
             new DemoMode($demo, 'PT2H'),
             $this->clock,
+            $this->intervalOf($interval),
         ));
+    }
+
+    /** A setting that reads `$seconds` from a file of its own, whatever the test environment holds. */
+    private function intervalOf(int $seconds): InboxProbeInterval
+    {
+        unset($_SERVER['MAIL_PROBE_INTERVAL_SECONDS'], $_ENV['MAIL_PROBE_INTERVAL_SECONDS']);
+
+        $file = sys_get_temp_dir().'/plmail-probecmd-'.bin2hex(random_bytes(6)).'.env';
+        file_put_contents($file, "MAIL_PROBE_INTERVAL_SECONDS={$seconds}\n");
+        $this->tempFiles[] = $file;
+
+        return new InboxProbeInterval(
+            new GeneratedSecretsFile($file),
+            new WorkerRestartSignal(new ArrayAdapter()),
+            new NullLogger(),
+        );
     }
 
     private function bus(): MessageBusInterface

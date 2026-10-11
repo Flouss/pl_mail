@@ -84,6 +84,28 @@ admin:
             containers start again. If the two still differ after a restart,
             APP_PUBLIC_URL is set in the compose file, and that setting wins over
             this one.
+        probe:
+            field:
+                seconds: Seconds between checks
+                seconds_help: >-
+                    Between %min% and %max%. Shorter means new mail shows up sooner,
+                    and plMail makes more requests to Google and Microsoft. The
+                    default is 30.
+            heading: Checking for new mail
+            in_use: In use now
+            intro: >-
+                Gmail and Outlook tell plMail about new mail themselves only when
+                they can reach it from the internet. Where they cannot, plMail asks
+                each of them on a short timer instead, and syncs the moment
+                something has arrived. Other mail (spam, filtered mail, changes made
+                elsewhere) still waits for the sweep every quarter of an hour.
+            pinned: >-
+                MAIL_PROBE_INTERVAL_SECONDS is set in the environment, so it
+                decides and this page cannot change it. Change it there and restart
+                the stack.
+            save: Save interval
+            saved: 'Saved. The workers are restarting to apply it.'
+            seconds: '%seconds% seconds'
         restart_help: >-
             Restarting plMail here is enough for live updates. Restart the whole
             stack as well, so the workers register push at the new address.

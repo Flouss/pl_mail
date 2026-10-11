@@ -103,7 +103,7 @@ final class GraphApiClient
      * See GmailApiClient::PROBE_TIMEOUT_SECONDS: the same scheduler worker,
      * the same reason.
      */
-    private const float PROBE_TIMEOUT_SECONDS = 10.0;
+    private const float PROBE_TIMEOUT_SECONDS = InboxProbeInterval::REQUEST_TIMEOUT_SECONDS;
 
     public function __construct(
         // The scoped client from framework.yaml, not the default one: it

@@ -50,7 +50,7 @@ final class GmailApiClient
      * that worker for HttpClient's socket default, and a stalled provider
      * becomes a stalled schedule.
      */
-    private const float PROBE_TIMEOUT_SECONDS = 10.0;
+    private const float PROBE_TIMEOUT_SECONDS = InboxProbeInterval::REQUEST_TIMEOUT_SECONDS;
 
     /**
      * The most pages the probe will read before answering "more than I looked

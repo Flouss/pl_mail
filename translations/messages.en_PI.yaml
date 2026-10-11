@@ -85,6 +85,27 @@ admin:
             the containers start anew. If the two still differ after a rousin',
             APP_PUBLIC_URL be set in the compose file, an' that order outranks
             this one.
+        probe:
+            field:
+                seconds: Seconds atween lookouts
+                seconds_help: >-
+                    Atween %min% an' %max%. Shorter means new mail lands sooner, an'
+                    plMail hails Google an' Microsoft more often. The usual be 30.
+            heading: Watchin' for new mail
+            in_use: Flyin' now
+            intro: >-
+                Gmail an' Outlook tell plMail o' new mail themselves only when they
+                can reach her from the open sea. Where they cannot, plMail hails
+                each o' them on a short watch instead, an' syncs the moment
+                somethin' has landed. All else (spam, filtered mail, changes made
+                elsewhere) still waits for the sweep every quarter-hour.
+            pinned: >-
+                MAIL_PROBE_INTERVAL_SECONDS be set in the environment, so that order
+                outranks all, an' this page cannot change it. Change it there an'
+                rouse the stack.
+            save: Log the interval
+            saved: 'Logged — the hands be rousin'' to take it up.'
+            seconds: '%seconds% seconds'
         restart_help: >-
             Rousin' plMail here be enough for live tidings. Rouse the whole stack
             besides, so the hands register push at the new address.

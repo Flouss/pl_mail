@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Scheduler;
 
-use App\Service\Mail\InboxProbe;
+use App\Service\Mail\InboxProbeInterval;
 use Symfony\Component\Console\Messenger\RunCommandMessage;
 use Symfony\Component\Scheduler\Attribute\AsSchedule;
 use Symfony\Component\Scheduler\RecurringMessage;
@@ -33,6 +33,7 @@ final class MaintenanceSchedule implements ScheduleProviderInterface
 {
     public function __construct(
         private readonly CacheInterface $cache,
+        private readonly InboxProbeInterval $probeInterval,
     ) {
     }
 
@@ -56,10 +57,13 @@ final class MaintenanceSchedule implements ScheduleProviderInterface
                 // the backstop for everything this cannot see.
                 //
                 // Periodical rather than cron: cron cannot say less than a
-                // minute. The schedule is stateful, so a restart keeps the
+                // minute. The interval is the administrator's to set (30 s by
+                // default, see InboxProbeInterval) and is read when the
+                // scheduler boots, which saving it from the admin page
+                // arranges. The schedule is stateful, so a restart keeps the
                 // phase, and processOnlyLastMissedRun collapses runs the
                 // worker was too busy to take into one catch-up.
-                RecurringMessage::every(InboxProbe::INTERVAL_SECONDS, new RunCommandMessage('app:mail:probe')),
+                RecurringMessage::every($this->probeInterval->seconds(), new RunCommandMessage('app:mail:probe')),
 
                 // Gmail watches last 7 days, Graph subscriptions ~3. Daily
                 // renewal with the command's own thresholds leaves ample

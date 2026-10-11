@@ -22,7 +22,7 @@ use Symfony\Component\Clock\ClockInterface;
  * needs Microsoft to reach a public HTTPS address. An install that cannot be
  * reached from the internet has neither, and an account without push is synced
  * on the quarter-hourly poll: mail that is on the phone at once appears here up
- * to fifteen minutes later. This asks every INTERVAL_SECONDS instead, one cheap
+ * to fifteen minutes later. This asks every InboxProbeInterval::seconds() instead, one cheap
  * question per account, and the real sync is queued only when the answer is yes.
  *
  * THE ONE WAY THIS GOES WRONG, AND WHAT STOPS IT
@@ -50,19 +50,6 @@ use Symfony\Component\Clock\ClockInterface;
  */
 final readonly class InboxProbe
 {
-    /**
-     * How often the scheduler asks, in seconds: MaintenanceSchedule's entry
-     * and MailProbeCommand's time budget are both derived from it.
-     *
-     * Half a minute rather than every few seconds because each ask is a
-     * request per account on the scheduler's one worker, which also runs every
-     * other scheduled job; a single run takes well under a second on a handful
-     * of accounts, so the interval is a courtesy to that worker and the
-     * providers, not something it is close to. Shortening it means rereading
-     * MailProbeCommand::BUDGET_SECONDS first.
-     */
-    public const int INTERVAL_SECONDS = 30;
-
     /**
      * How long an account is left alone after any failure that said nothing
      * about when to come back. Short enough that a blip costs minutes of

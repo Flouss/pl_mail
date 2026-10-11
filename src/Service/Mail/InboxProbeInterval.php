@@ -79,10 +79,27 @@ final readonly class InboxProbeInterval
     /**
      * Whether the environment sets it, in which case the admin page cannot
      * change what is in force and says so.
+     *
+     * An environment value counts as a pin only while the generated file has no
+     * entry of its own. The entrypoint exports every line of that file into the
+     * process environment, and config/bootstrap_generated_secrets.php folds the
+     * same lines into $_SERVER, so a value this page saved comes back as "set
+     * in the environment" at the next start; reading that as a pin locked the
+     * screen against its own setting. With an entry on file, an environment
+     * value is either that export or, after a second save, the export of the
+     * previous value still held by a process that has not restarted yet, and
+     * the two cannot be told apart from here (ConfigBackupEnvironment::isShadowed
+     * compares the live value with the file's, which is right for a restore and
+     * wrong here, where the page rewrites the file while processes run).
+     *
+     * WHAT THIS DOES NOT COVER: a pin added to the compose file after a value
+     * was saved. seconds() still lets the environment win, so what is in force
+     * is right, but the page offers a form whose save changes nothing until the
+     * saved line is removed from the file.
      */
     public function isPinnedByEnvironment(): bool
     {
-        return null !== self::parse($this->environmentValue());
+        return null !== self::parse($this->environmentValue()) && null === $this->stored();
     }
 
     /**

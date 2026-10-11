@@ -29,7 +29,7 @@ mailbox and syncs the moment something changes, with a scheduled sweep every fif
 behind it.
 
 Gmail and Outlook accounts have no connection to hold open. Where push cannot reach plMail they
-are asked once a minute whether new mail has arrived in the inbox, and are synced as soon as it
+are asked every 30 seconds whether new mail has arrived in the inbox, and are synced as soon as it
 has — so a message lands within about a minute of reaching your phone, with no public address
 needed. Spam and mail filtered past the inbox still wait for the fifteen-minute sweep. See
 [Mail ingest](../internals/mail-ingest.md#without-push-the-inbox-probe).

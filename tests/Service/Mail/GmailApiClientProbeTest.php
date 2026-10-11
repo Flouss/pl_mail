@@ -18,7 +18,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * GmailApiClient::probeInboxArrivals(), the once-a-minute "is there new mail?"
+ * GmailApiClient::probeInboxArrivals(), the every-30-seconds "is there new mail?"
  * question that stands in for push on an install nobody can reach from the
  * internet.
  *

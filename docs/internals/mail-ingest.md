@@ -195,7 +195,7 @@ and both need an address the internet can reach. An install behind a firewall ha
 account without push used to be synced only by the quarter-hourly `app:mail:sync`: mail on the phone
 at once, in plMail up to fifteen minutes later.
 
-`app:mail:probe` runs every minute and asks each active Gmail and Outlook account one cheap question,
+`app:mail:probe` runs every 30 seconds and asks each active Gmail and Outlook account one cheap question,
 through `App\Service\Mail\InboxProbe`, and queues the ordinary `SyncAccountMessage` (trigger
 `SyncTrigger::Probe`) only when the answer is yes. It does not fetch anything itself and it does not
 replace the poll.
@@ -210,7 +210,7 @@ replace the poll.
 **The probe never moves a cursor.** Gmail's `historyId` and Graph's delta links belong to the real sync;
 a probe that advanced either would hand the sync it just asked for an empty window.
 
-**What stops it queueing a sync every minute.** The answer stays "yes" until the sync it triggered has
+**What stops it queueing a sync on every tick.** The answer stays "yes" until the sync it triggered has
 run, and that sync waits on the single `ingest` consumer, which can be minutes deep. So each account
 remembers *what* it last announced — the newest history record, the newest message's timestamp — and
 announces a thing once. Mail that arrives meanwhile is a different thing and is announced in its own right, which
@@ -230,10 +230,10 @@ that is not an arrival — read state, labels, deletions made elsewhere. None of
 what: `probe` is the fast path working, `poll` is mail it cannot see.
 
 **Being a good neighbour.** It runs on the scheduler's single worker, beside every other scheduled job.
-Each request carries its own ten-second timeout, a run starts no further account after 45 seconds, and
+Each request carries its own ten-second timeout, a run starts no further account after 20 seconds, and
 an account that fails is left alone — for as long as the provider's own `Retry-After` says when
 throttled, five minutes after anything else. Accounts whose grant is already known to be dead are not
-asked at all, because every look would begin with a token refresh. At one request a minute per account
+asked at all, because every look would begin with a token refresh. At two requests a minute per account
 this is a few units of a quota counted in thousands, and well inside Microsoft's per-mailbox limit.
 
 ## Threading

@@ -696,7 +696,7 @@ admin:
                 p95: '95% within'
             footnote: "From the moment the harbour took a message to the moment plMail stowed it, fer mail that landed in the inbox. Mail hauled in by an import, an' mail sent from plMail itself, be not counted."
             heading: 'How late the mail lands'
-            lead: "Seconds means the harbour be tellin' plMail o' new mail as it lands. Minutes means the berth be checked on a watch instead: every minute for the inbox o' a Gmail or Outlook berth without cannon, every quarter-hour for all else."
+            lead: "Seconds means the harbour be tellin' plMail o' new mail as it lands. Minutes means the berth be checked on a watch instead: every half minute for the inbox o' a Gmail or Outlook berth without cannon, every quarter-hour for all else."
             no_accounts: 'No berths in use.'
             provider:
                 google: 'Gmail'

@@ -1,4 +1,4 @@
-<!-- translated-from: providers/google.md sha1:ca43ff36976b86bc2832d20c21d5e0788991efe4 -->
+<!-- translated-from: providers/google.md sha1:f189cd98a73152c4e08aa12cfa19f69e7b76d3db -->
 
 # Google
 
@@ -208,8 +208,8 @@ OAuth-Zugangsdaten.
 
 Schalte danach für das Konto unter **Einstellungen → E-Mail-Konten** die **Sofortige Zustellung** ein.
 Sie gilt pro Konto und muss aktiv gewählt werden: Ohne konfiguriertes Topic nutzt das Konto kein
-Push und sagt das auch, statt zu scheitern. Neue Mail im Posteingang findet dann eine
-minütliche Prüfung, `app:mail:probe`: Sie fragt Gmail, ob seit der letzten Synchronisierung etwas
+Push und sagt das auch, statt zu scheitern. Neue Mail im Posteingang findet dann `app:mail:probe`, eine Prüfung, die alle 30 Sekunden
+läuft. Sie fragt Gmail, ob seit der letzten Synchronisierung etwas
 zum Posteingang hinzugekommen ist, und reiht eine Synchronisierung ein, wenn ja — ohne öffentliche
 Adresse und ohne Pub/Sub. Spam, Mail, die ein Filter am Posteingang vorbeigeleitet hat, und
 anderswo gemachte Änderungen (gelesen, archiviert, gelöscht) warten weiter auf den Durchlauf alle

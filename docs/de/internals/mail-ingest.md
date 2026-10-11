@@ -1,4 +1,4 @@
-<!-- translated-from: internals/mail-ingest.md sha1:2e5c2623c325cfe17e92b6ae549df15135efc37e -->
+<!-- translated-from: internals/mail-ingest.md sha1:f075b76209fef0920fb3ec2893e9518114183039 -->
 # Mail-Ingest
 
 Vom Anbieter in die Datenbank: wie aus Bytes eine Zeile `Message` wird, was mit ihr geschieht,
@@ -220,7 +220,7 @@ einer Firewall hat keins von beiden, und ein Konto ohne Push wurde bisher nur vo
 `app:mail:sync` synchronisiert: Mail ist sofort auf dem Handy und bis zu fünfzehn Minuten später in
 plMail.
 
-`app:mail:probe` läuft jede Minute und stellt jedem aktiven Gmail- und Outlook-Konto eine billige
+`app:mail:probe` läuft alle 30 Sekunden und stellt jedem aktiven Gmail- und Outlook-Konto eine billige
 Frage, über `App\Service\Mail\InboxProbe`, und reiht die gewöhnliche `SyncAccountMessage` (Trigger
 `SyncTrigger::Probe`) nur ein, wenn die Antwort Ja lautet. Es holt selbst nichts ab und ersetzt den
 Durchlauf nicht.
@@ -236,7 +236,7 @@ Durchlauf nicht.
 Sync; eine Abfrage, die einen davon vorrückte, würde dem Sync, den sie gerade angefordert hat, ein
 leeres Fenster hinterlassen.
 
-**Was sie davon abhält, jede Minute einen Sync einzureihen.** Die Antwort bleibt „Ja“, bis der
+**Was sie davon abhält, bei jedem Durchlauf einen Sync einzureihen.** Die Antwort bleibt „Ja“, bis der
 ausgelöste Sync gelaufen ist, und der wartet auf den einen `ingest`-Consumer, der Minuten tief sein
 kann. Darum merkt sich jedes Konto, *was* es zuletzt gemeldet hat — den neuesten History-Eintrag, den
 Zeitstempel der neuesten Nachricht —, und meldet eine Sache einmal. Mail, die währenddessen ankommt, ist eine
@@ -260,11 +260,11 @@ Durchlauf erfasst, den das hier unverändert lässt. `Message::$arrivedBy` sagt,
 geliefert hat: `probe` ist der schnelle Weg bei der Arbeit, `poll` ist Mail, die er nicht sieht.
 
 **Ein guter Nachbar sein.** Sie läuft auf dem einen Worker des Schedulers, neben jedem anderen
-geplanten Job. Jede Anfrage hat ihr eigenes Timeout von zehn Sekunden, ein Lauf beginnt nach 45
+geplanten Job. Jede Anfrage hat ihr eigenes Timeout von zehn Sekunden, ein Lauf beginnt nach 20
 Sekunden kein weiteres Konto mehr, und ein Konto, das scheitert, wird in Ruhe gelassen — so lange, wie
 das `Retry-After` des Anbieters es verlangt, wenn gedrosselt wird, sonst fünf Minuten. Konten, deren
 Grant bereits als tot bekannt ist, werden gar nicht erst gefragt, weil jeder Blick mit einer
-Token-Erneuerung begänne. Bei einer Anfrage pro Minute und Konto sind das einige wenige Einheiten
+Token-Erneuerung begänne. Bei zwei Anfragen pro Minute und Konto sind das einige wenige Einheiten
 eines Kontingents, das in Tausenden gezählt wird, und weit unter Microsofts Grenze je Postfach.
 
 ## Konversationsbildung

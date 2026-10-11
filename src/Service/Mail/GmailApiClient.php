@@ -43,7 +43,7 @@ final class GmailApiClient
     private const int IDS_PER_BATCH = 1000;
 
     /**
-     * How long the once-a-minute inbox probe waits on Google, in seconds.
+     * How long the inbox probe waits on Google, in seconds.
      *
      * The probe runs on the scheduler's worker, which also runs every other
      * scheduled job. Without a timeout of its own a stalled connection holds
@@ -321,7 +321,7 @@ final class GmailApiClient
      * never acted on.
      *
      * This is what stands in for Pub/Sub on an install that cannot be reached
-     * from the internet, and it runs every minute on the scheduler's worker, so
+     * from the internet, and it runs every 30 s on the scheduler's worker, so
      * it is deliberately small. One filtered request — inbox additions only —
      * with a short timeout and a page cap, where listHistory() reads the whole
      * window unfiltered and unbounded because the sync needs every change.

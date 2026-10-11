@@ -24,11 +24,11 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Whether the once-a-minute look at an OAuth account has found mail worth a
+ * Whether the periodic look at an OAuth account has found mail worth a
  * sync — and, as much, when it must say "no" or must not look at all.
  *
  * With no public address there is no push, so this stands in for it. A stand-in
- * that runs every minute has one way to do real damage, and it is the one this
+ * that runs every 30 seconds has one way to do real damage, and it is the one this
  * codebase has already paid for once (ImapIdleCommand::SYNC_MIN_GAP): a signal
  * that stays true until the sync it triggered has finished queues another sync
  * on the next tick, and the next. Gmail's cursor only moves when the real sync

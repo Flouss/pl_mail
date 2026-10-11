@@ -99,7 +99,7 @@ final class GraphApiClient
     private const string DELTA_SELECT = 'id,internetMessageId,parentFolderId';
 
     /**
-     * How long the once-a-minute inbox probe waits on Microsoft, in seconds.
+     * How long the inbox probe waits on Microsoft, in seconds.
      * See GmailApiClient::PROBE_TIMEOUT_SECONDS: the same scheduler worker,
      * the same reason.
      */
@@ -195,7 +195,7 @@ final class GraphApiClient
      * When the newest message in the inbox was received, or null for an empty
      * one.
      *
-     * What an Outlook account is asked once a minute in place of a webhook, on
+     * What an Outlook account is asked every 30 s in place of a webhook, on
      * an install nobody can reach from the internet. A change in this value is
      * the signal that mail has arrived; it is not a delta query on purpose,
      * because a delta link is the real sync's cursor and reading it here would
@@ -213,7 +213,7 @@ final class GraphApiClient
      * lands in the same second as the newest one already seen, which waits for
      * the quarter-hourly sync like everything else this does not cover.
      *
-     * One message and one projected field, so a call every minute is a
+     * One message and one projected field, so a call every 30 s is a
      * timestamp and not a download, with a timeout of its own because it runs
      * on the scheduler's worker beside everything else scheduled. Throttling
      * reaches the caller as GraphThrottledException carrying Retry-After.

@@ -82,7 +82,7 @@ final class ArrivalStamperTest extends KernelTestCase
     }
 
     /**
-     * Admin → Performance tells a message the once-a-minute probe fetched from
+     * Admin → Performance tells a message the inbox probe fetched from
      * one the quarter-hourly poll did, which is the only way to see whether the
      * fast path is what is delivering. Through a flush and a reload, because
      * the column is a short VARCHAR and the value has to fit it.

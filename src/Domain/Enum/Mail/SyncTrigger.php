@@ -33,7 +33,7 @@ enum SyncTrigger: string
     case Poll = 'poll';
 
     /**
-     * The once-a-minute `app:mail:probe`: it saw new inbox mail on a Gmail or
+     * The `app:mail:probe`: it saw new inbox mail on a Gmail or
      * Microsoft account and asked for the sync that fetches it. What stands in
      * for push on an install nobody can reach from the internet, so a message
      * that says `probe` is that substitute working, and one that says `poll`

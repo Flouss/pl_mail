@@ -35,13 +35,13 @@ use Symfony\Component\Messenger\Stamp\StampInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * `app:mail:probe`, the scheduler's once-a-minute stand-in for push.
+ * `app:mail:probe`, the scheduler's every-30-seconds stand-in for push.
  *
  * Like app:mail:sync it dispatches and never syncs, and every assertion is
  * about *what was queued*. What it adds is the choice of who to look at, which
  * is where a mistake costs something: an IMAP account has nothing to probe, an
  * account whose grant is dead would ask an identity endpoint for a new token
- * every minute for ever, and an install with many accounts must not let one
+ * every 30 seconds for ever, and an install with many accounts must not let one
  * slow provider hold the scheduler's single worker.
  *
  * The test database may hold other OAuth accounts, so every assertion is about

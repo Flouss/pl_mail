@@ -1,4 +1,4 @@
-<!-- translated-from: features/accounts.md sha1:dd31f87ab1777ab4166251dc0b7cb0ce6aef417f -->
+<!-- translated-from: features/accounts.md sha1:c391238e9e047533b6d49e609580f13c4ff316c6 -->
 
 # Konten und Aliase
 
@@ -35,7 +35,7 @@ jedem Postfach und synchronisiert in dem Moment, in dem sich etwas ändert, mit 
 Durchlauf alle fünfzehn Minuten dahinter.
 
 Gmail- und Outlook-Konten haben keine Verbindung, die sich offen halten ließe. Wo Push plMail nicht
-erreichen kann, wird einmal pro Minute nachgefragt, ob neue Mail im Posteingang angekommen ist,
+erreichen kann, wird alle 30 Sekunden nachgefragt, ob neue Mail im Posteingang angekommen ist,
 und das Konto wird synchronisiert, sobald das der Fall ist — eine Nachricht landet also etwa eine
 Minute, nachdem sie dein Handy erreicht hat, ganz ohne öffentliche Adresse. Spam und Mail, die ein
 Filter am Posteingang vorbeigeleitet hat, warten weiter auf den Durchlauf alle fünfzehn Minuten.

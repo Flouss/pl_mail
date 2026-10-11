@@ -92,6 +92,45 @@ final class InboxProbeIntervalTest extends TestCase
         self::assertSame(45, $this->interval()->stored());
     }
 
+    public function testAValueSavedFromTheScreenIsNotAPinOnceTheEntrypointHasExportedIt(): void
+    {
+        // The entrypoint exports every line of the generated file into the
+        // process environment, and config/bootstrap_generated_secrets.php folds
+        // the same lines into $_SERVER, so the value this page saved comes back
+        // as "set in the environment" at the next start. That is the page's
+        // own value, not an operator's pin, and calling it one locked the
+        // screen against its own setting.
+        file_put_contents($this->secretsFile, "MAIL_PROBE_INTERVAL_SECONDS=45
+");
+        $_SERVER[self::ENV] = '45';
+
+        self::assertFalse($this->interval()->isPinnedByEnvironment());
+        self::assertSame(45, $this->interval()->seconds());
+    }
+
+    public function testASecondSaveBeforeTheRestartIsNotAPinEither(): void
+    {
+        // 15 was saved and exported at the last start; 45 is saved now and the
+        // web process still holds 15. The two are indistinguishable from an
+        // operator's pin that happens to differ from the file, so the file
+        // having an entry at all settles it: the page wrote that entry.
+        file_put_contents($this->secretsFile, "MAIL_PROBE_INTERVAL_SECONDS=45
+");
+        $_SERVER[self::ENV] = '15';
+
+        self::assertFalse($this->interval()->isPinnedByEnvironment());
+    }
+
+    public function testAnEnvironmentValueWithNothingSavedIsAPin(): void
+    {
+        // The presence companion of the two above: with no entry on file there
+        // is nothing the environment value could have been exported from.
+        $_SERVER[self::ENV] = '20';
+
+        self::assertTrue($this->interval()->isPinnedByEnvironment());
+        self::assertSame(20, $this->interval()->seconds());
+    }
+
     public function testAnEmptyEnvironmentValueCountsAsAbsent(): void
     {
         // The TrueNAS compose passes every unconfigured value through as an

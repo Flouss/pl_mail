@@ -156,6 +156,21 @@ final class PublicAddressControllerTest extends WebTestCase
         self::assertSelectorExists('form[name="public_url"]');
     }
 
+    public function testASavedIntervalExportedBackIntoTheEnvironmentStillOffersTheForm(): void
+    {
+        // What the entrypoint does at the next start with a value this page
+        // saved: it comes back through $_SERVER. The page must still let an
+        // administrator change it.
+        $this->config->set('MAIL_PROBE_INTERVAL_SECONDS', '15');
+        $_SERVER['MAIL_PROBE_INTERVAL_SECONDS'] = '15';
+
+        $this->client->request('GET', '/admin/address');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('turbo-frame#admin-address [data-probe-interval-pinned]');
+        self::assertSelectorExists('form[name="probe_interval"]');
+    }
+
     public function testAnIntervalSetInTheEnvironmentIsNotOverwrittenByAPost(): void
     {
         // The page offers no field while the environment pins the value, but a

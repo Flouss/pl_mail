@@ -397,6 +397,12 @@ arrived that you have not been shown, the unread count says what is unread. On f
 Settings → Appearance → Message list switches it off per person. One column is added to the user
 table; the migration is reversible.
 [#54](https://github.com/karatektus/pl_mail/pull/54), by @Flouss.
+**Saving an attachment to Paperless-ngx works.** The "Save to…" chooser listed your Paperless tags
+as folders to open, but a tag has nothing inside it, so clicking one only reloaded the same list and
+the dialog seemed to do nothing. A tag is now the choice itself: click it and the attachment is filed
+under it, or pick **No tag** to file it under none. The same goes for the folder a filter saves to.
+Nextcloud, Google Drive, OneDrive, Dropbox, Immich and Google Photos choose exactly as before. No
+migration.
 
 **An account's colour can be changed.** The coloured dot beside each account, and the mark on its
 messages in a mixed list, was picked for you when the account was added and could never be changed.

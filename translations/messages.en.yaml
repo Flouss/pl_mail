@@ -2176,16 +2176,21 @@ integration:
         # folder it will save to, for mail that has not arrived yet.
         choose_for_filter: 'Choose where this filter saves attachments.'
         choose_here: 'Choose this folder'
+        choose_tag: 'Choose a tag for %file%'
         choose_this: Choose
         create: Create
         folder_name: 'Folder name'
         library: 'Library (no album)'
         new_album: 'New album'
         new_folder: 'New folder'
+        new_tag: 'New tag'
         no_albums: 'No albums yet.'
         no_subfolders: 'No folders here.'
+        no_tag: 'No tag'
+        no_tags: 'No tags yet.'
         save_here: 'Save here'
         start_over: 'Start over'
+        tag_name: 'Tag name'
     picker:
         attach: Attach
         attach_from: 'Attach from %name%'

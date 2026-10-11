@@ -2056,16 +2056,21 @@ integration:
         choose_folder: 'Pick a hold fer %file%'
         choose_for_filter: "Pick where this sieve stows its cargo."
         choose_here: 'Take this hold'
+        choose_tag: 'Pick a tag fer %file%'
         choose_this: Take it
         create: Make
         folder_name: 'Hold name'
         library: 'Whole library (no album)'
         new_album: 'New album'
         new_folder: 'New hold'
+        new_tag: 'New tag'
         no_albums: 'No albums yet, matey.'
         no_subfolders: 'No holds here.'
+        no_tag: 'No tag'
+        no_tags: 'No tags yet, matey.'
         save_here: 'Stow here'
         start_over: 'Start afresh'
+        tag_name: 'Tag name'
     picker:
         attach: 'Haul aboard'
         attach_from: 'Haul from %name%'

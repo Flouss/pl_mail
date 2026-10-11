@@ -2177,16 +2177,21 @@ integration:
         # den er später speichert — für Mail, die noch gar nicht da ist.
         choose_for_filter: 'Wähle, wohin dieser Filter Anhänge speichert.'
         choose_here: 'Diesen Ordner wählen'
+        choose_tag: 'Tag für %file% wählen'
         choose_this: Wählen
         create: Erstellen
         folder_name: 'Ordnername'
         library: 'Mediathek (kein Album)'
         new_album: 'Neues Album'
         new_folder: 'Neuer Ordner'
+        new_tag: 'Neuer Tag'
         no_albums: 'Noch keine Alben.'
         no_subfolders: 'Keine Ordner hier.'
+        no_tag: 'Kein Tag'
+        no_tags: 'Noch keine Tags.'
         save_here: 'Hier speichern'
         start_over: 'Von vorn beginnen'
+        tag_name: 'Tag-Name'
     picker:
         attach: Anhängen
         attach_from: 'Aus %name% anhängen'

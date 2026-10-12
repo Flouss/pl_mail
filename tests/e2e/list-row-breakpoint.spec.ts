@@ -14,10 +14,14 @@ import { INBOX_SUBJECTS, mailRow, seed } from "./support/config";
  * first value and was still too early: a 2560px window with the reading pane
  * open gives a list of ~65rem, where real subjects were cut after ~30 chars.
  *
- * Under 75rem the row is not one shape either: three lines below 36rem, and
- * from there up two — sender and subject sharing the first line, the preview on
- * the second. "Stacked" in the tests below means the property both of those
- * have and the one-line row does not: the preview is under the subject.
+ * Under 75rem the row is three lines at every width: sender, subject, preview.
+ * It was briefly two between 36rem and 75rem, with the sender and the subject
+ * sharing the first line in a fixed 10rem sender column — and that column is
+ * where the name AND the address domain have to fit, so a real sender came out
+ * as "Action …" beside "vtljwipuizwaemm…", at a list 830px wide with most of
+ * the row empty. Three lines give the sender the row's width. "Stacked" in the
+ * tests below means the property the one-line row lacks: the preview is under
+ * the subject, and the subject under the sender.
  *
  * Measured on the LIST's width, not the viewport's: the row is a container
  * query on #message-list. The viewports below are chosen so the list lands on
@@ -72,25 +76,28 @@ test.describe("list row layout around the one-line breakpoint", () => {
         expect(g.subject.width).toBeGreaterThan(g.row.width * 0.5);
     });
 
-    test("between 36rem and 75rem the sender shares the first line with the subject", async ({ page }) => {
-        // The in-between shape: two lines, not three. Sender and subject on the
-        // first, the preview alone on the second and starting back under the
-        // sender, so it has the row's whole width.
+    test("between 36rem and 75rem the sender has a line to itself, above the subject", async ({ page }) => {
+        // List ≈ 850px, the width where the sender was cut to "Action …" in a
+        // fixed 10rem column beside the subject.
         await openInbox(page, 1100);
         const g = await geometry(page);
 
+        // Presence companion: the list really is in the band under test.
         expect(g.list.width).toBeGreaterThan(36 * 16);
         expect(g.list.width).toBeLessThan(75 * 16);
 
-        expect(Math.abs(g.sender.y - g.subject.y)).toBeLessThan(4);
-        expect(g.subject.x).toBeGreaterThanOrEqual(g.sender.x + g.sender.width - 2);
+        // Three lines: subject under the sender, preview under the subject …
+        expect(g.subject.y).toBeGreaterThan(g.sender.y + g.sender.height - 2);
         expect(g.snippet.y).toBeGreaterThan(g.subject.y + g.subject.height - 2);
-        expect(g.snippet.x).toBeLessThan(g.subject.x);
+        // … and the sender is not held to a column: its cell is most of the
+        // row, so a long name and its domain share it without being clipped.
+        expect(g.sender.width).toBeGreaterThan(g.row.width * 0.5);
     });
 
-    test("a list under 36rem keeps all three lines", async ({ page }) => {
-        // A phone. Presence companion for the test above: the two-line shape is
-        // a band, not simply what every list under 75rem now gets.
+    test("a phone gets the same three lines as the band above", async ({ page }) => {
+        // Presence companion for the test above: below 36rem nothing changes,
+        // so the three-line shape is the whole range under 75rem and not a
+        // band that happens to start at 36rem.
         await openInbox(page, 480);
         const g = await geometry(page);
 
@@ -98,6 +105,23 @@ test.describe("list row layout around the one-line breakpoint", () => {
 
         expect(g.subject.y).toBeGreaterThan(g.sender.y + g.sender.height - 2);
         expect(g.snippet.y).toBeGreaterThan(g.subject.y + g.subject.height - 2);
+        expect(g.sender.width).toBeGreaterThan(g.row.width * 0.5);
+    });
+
+    test("an unread row keeps its dot while the row is stacked, and loses it at one line", async ({ page }) => {
+        // The dot belongs to the stacked row: a one-line row says "unread" with
+        // a bold sender and subject, so it is dropped there. It was dropped
+        // from 36rem when that band had two lines and no third for it to sit
+        // on, which is not true of a three-line row.
+        await openInbox(page, 1100);
+        const dot = mailRow(page, SUBJECT).locator("[data-row-unread-dot]");
+        await expect(dot).toBeVisible();
+
+        // Presence companion: the same row at one line has the element and
+        // hides it, so the assertion above is not true of a dot that never
+        // renders.
+        await page.setViewportSize({ width: 1600, height: 900 });
+        await expect(dot).toBeHidden();
     });
 
     test("a list past the first 58rem guess still keeps the preview under the subject", async ({ page }) => {

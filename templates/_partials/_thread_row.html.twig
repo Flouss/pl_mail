@@ -404,30 +404,23 @@ be a worse regression than the one this feature fixes.
                   aria-hidden="true"><i class="fa-solid fa-check text-xs"></i></span>
         </label>
 
-        {# Content — three shapes, chosen by the LIST's width:
+        {# Content — two shapes, chosen by the LIST's width:
 
-             below `@xl` (36rem)      three lines: sender, subject, preview
-             `@xl` up to `@rowwide`   two lines: sender and subject, then preview
-             `@rowwide` (75rem) up    one line
+             below `@rowwide` (75rem)   three lines: sender, subject, preview
+             `@rowwide` up              one line
 
-           The middle one is a grid, because the sender and the subject are not
-           siblings: the subject lives two wrappers down, beside the preview. So
-           both wrappers go `display: contents` in that band and their children
-           become cells of this grid — sender and subject on the first row, the
-           preview spanning the second. The sender column is the 10rem the
-           one-line layout gives it, so subjects line up down the list.
-
-           `@xl:@max-rowwide:` is a range, not a step: nothing here has to be
-           undone again at `@rowwide`. #}
+           There was a two-line shape between them, from 36rem, with the sender
+           and the subject sharing the first line in a fixed 10rem sender
+           column. That column has to hold the name AND the address domain, so a
+           real sender was cut to "Action …" beside "vtljwipuizwaemm…" in a
+           list 830px wide with most of the row empty. Three lines give the
+           sender the whole row; one line pays off only when there is room for
+           a sender column beside a useful subject, which is what 75rem is. #}
         <div data-row-layout
              class="flex-1 min-w-0 flex flex-col
-                    @xl:@max-rowwide:grid @xl:@max-rowwide:grid-cols-[10rem_minmax(0,1fr)] @xl:@max-rowwide:gap-x-4 @xl:@max-rowwide:gap-y-1
                     @rowwide:flex-row @rowwide:items-center @rowwide:gap-4">
 
-            {# Row 1 (three lines) / first cell of row 1 (two lines) / sender
-               column (one line). `min-w-0` is for the middle one: a grid item
-               will not shrink under its content without it, and a long sender
-               would push the column past its 10rem. #}
+            {# Row 1 (stacked) / sender column (one line). #}
             <div data-row-sender class="min-w-0 flex items-center justify-between gap-2 @rowwide:justify-start @rowwide:w-40 @rowwide:flex-shrink-0">
                 {# Sender and its marker travel together in one group, so the
                    badge sits to the LEFT of the name at both container widths.
@@ -519,9 +512,9 @@ be a worse regression than the one this feature fixes.
                that same position wedges them between a subject and a preview
                that are already competing for one line, so they drop to a line
                of their own underneath. #}
-            <div class="min-w-0 flex-1 flex flex-col @xl:@max-rowwide:contents">
-                <div class="min-w-0 flex flex-col @xl:@max-rowwide:contents @rowwide:flex-row @rowwide:items-baseline @rowwide:gap-2">
-                    <span data-row-subject class="truncate text-sm mt-1 @xl:@max-rowwide:mt-0 @rowwide:mt-0 @rowwide:flex-shrink-0 @rowwide:max-w-[45%]
+            <div class="min-w-0 flex-1 flex flex-col">
+                <div class="min-w-0 flex flex-col @rowwide:flex-row @rowwide:items-baseline @rowwide:gap-2">
+                    <span data-row-subject class="truncate text-sm mt-1 @rowwide:mt-0 @rowwide:flex-shrink-0 @rowwide:max-w-[45%]
                                  {{ unread ? 'font-semibold text-ink' : 'font-normal text-ink-soft' }}">
                         {{ subjectLine }}
                         {% if count > 1 %}
@@ -532,9 +525,7 @@ be a worse regression than the one this feature fixes.
                     {# A little air above the preview when stacked. It separates
                        the subject from the snippet, and the meta column mirrors
                        the same margin so the dot stays level with it. #}
-                    {# Two lines: the whole second row, under the sender as
-                       well as the subject. The grid's row gap is the air. #}
-                    <span class="min-w-0 flex-1 flex items-center gap-1.5 text-sm mt-1.5 @xl:@max-rowwide:mt-0 @xl:@max-rowwide:col-span-2 @rowwide:mt-0">
+                    <span class="min-w-0 flex-1 flex items-center gap-1.5 text-sm mt-1.5 @rowwide:mt-0">
                         {# A draft with a send time on it. Without this the
                            Drafts list is the one place a scheduled message
                            lives and the only place that does not say so — the
@@ -618,9 +609,9 @@ be a worse regression than the one this feature fixes.
                            saying when it goes — what is left of the snippet at
                            393px is two characters and an ellipsis, which is
                            noise where the badge is information. From `@xl` up
-                           both fit and both are shown: the two-line row gives
-                           the preview the whole width, and the one-line row
-                           always had the room.
+                           both fit and both are shown: a stacked row's third
+                           line is the whole width of a list at least 36rem
+                           wide, and the one-line row always had the room.
 
                            `@xl`, and not `@rowwide` with the rest of the
                            one-line layout: when the one-line breakpoint moved
@@ -667,13 +658,7 @@ be a worse regression than the one this feature fixes.
            content's height and distributes, so the time sits on the sender's
            line, the icons on the subject's and the dot on the preview's —
            packing from the top instead left the third item hanging below the
-           last line of text. Wide, the row is one line and so is this.
-
-           The two-line row between them needs nothing of its own here. It is
-           still the column: the unread dot is gone at that width (see the dot
-           below), which leaves the time and the star, and the grid's row gap is
-           the star's own `mt-1`, so the two sit level with the two lines of
-           text. #}
+           last line of text. Wide, the row is one line and so is this. #}
         <div data-row-meta
              class="flex flex-shrink-0 ml-2
                     flex-col items-end self-start
@@ -914,17 +899,18 @@ be a worse regression than the one this feature fixes.
                 </button>
             </div>
 
-            {# Three lines only — a wide row already says "unread" twice over,
-               with a bold sender and a bold subject, and a two-line row puts
-               those same two side by side on its first line. It also has no
-               third line for the dot to sit on: the meta column is the time
-               over the star there, level with the two rows of text.
+            {# Stacked only — a wide row already says "unread" twice over, with
+               a bold sender and a bold subject.
+
+               `data-row-unread-dot` is the hook list-row-breakpoint.spec.ts
+               finds it by: it is the one thing in this row that differs
+               between the stacked and the one-line shape and has no text.
 
                Boxed to the star's width rather than right-aligned on its own:
                the dot is 8px and the star glyph is 14, so aligning their right
                edges puts their centres 3px apart. #}
             {% if unread %}
-                <span class="@xl:hidden h-5 mt-1.5 w-3.5 flex items-center justify-center shrink-0" aria-hidden="true">
+                <span data-row-unread-dot class="@rowwide:hidden h-5 mt-1.5 w-3.5 flex items-center justify-center shrink-0" aria-hidden="true">
                     <span class="w-2 h-2 rounded-full bg-success"></span>
                 </span>
                 {# No |default: a missing key comes back from |trans as the key

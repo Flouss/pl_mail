@@ -5096,13 +5096,12 @@ label:has(> input.sr-only) {
    _thread_row.html.twig is this token, and so is the `@container` rule below,
    which reads it through `theme()` rather than repeating the number.
 
-   Below it the row is not three lines everywhere. From `@xl` (36rem) up to this
-   token it is two — sender and subject on the first, the preview on the second
-   — because three lines in a list 60rem wide spent a line on a sender name
-   with most of the row empty beside it. That band is `@xl:@max-rowwide:` in the
-   row template and needs no rule here: the preview clamp below treats it like
-   the three-line row, which is what it should do, since the preview has a
-   line of its own in both.
+   Below it the row is three lines at every width. There was a two-line shape
+   from `@xl` (36rem) up to this token, with sender and subject sharing the
+   first line in a fixed 10rem sender column, and it was taken out again: that
+   column has to hold the name AND the address domain, and in a list 830px wide
+   with most of the row empty a real sender came out as "Action …" beside
+   "vtljwipuizwaemm…". Three lines give the sender the whole row.
 */
 @theme {
     --container-rowwide: 75rem;

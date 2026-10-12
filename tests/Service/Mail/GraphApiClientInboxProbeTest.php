@@ -15,7 +15,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * GraphApiClient::newestInboxReceivedAt(), what an Outlook account is asked once
+ * GraphApiClient::newestReceivedAt(), what an Outlook account is asked once
  * a minute in place of a webhook.
  *
  * Graph has no cheap "anything new?" call that leaves the delta chain alone —
@@ -34,11 +34,11 @@ final class GraphApiClientInboxProbeTest extends TestCase
     /** @var list<array{method: string, url: string, options: array<string, mixed>}> */
     private array $requests = [];
 
-    public function testItAsksForTheNewestInboxMessageAndNothingElse(): void
+    public function testItAsksForTheNewestMessageOfTheWholeMailboxAndNothingElse(): void
     {
         $client = $this->client($this->json(['value' => [['receivedDateTime' => '2026-10-10T12:00:05Z']]]));
 
-        $client->newestInboxReceivedAt($this->account());
+        $client->newestReceivedAt($this->account());
 
         self::assertCount(1, $this->requests);
 
@@ -47,7 +47,9 @@ final class GraphApiClientInboxProbeTest extends TestCase
         parse_str((string) parse_url($request['url'], PHP_URL_QUERY), $query);
 
         self::assertSame('GET', $request['method']);
-        self::assertStringEndsWith('/me/mailFolders/inbox/messages', (string) parse_url($request['url'], PHP_URL_PATH));
+        // Every folder, so Junk Email and the folders a rule files into count.
+        // Not the inbox's: that path is what used to keep them from counting.
+        self::assertStringEndsWith('/me/messages', (string) parse_url($request['url'], PHP_URL_PATH));
         self::assertSame('1', (string) $query['$top']);
         self::assertSame('receivedDateTime desc', $query['$orderby']);
         // The timestamp and no body, which is what keeps a minute-by-minute
@@ -59,7 +61,7 @@ final class GraphApiClientInboxProbeTest extends TestCase
     {
         $client = $this->client($this->json(['value' => []]));
 
-        $client->newestInboxReceivedAt($this->account());
+        $client->newestReceivedAt($this->account());
 
         $timeout = $this->requests[0]['options']['timeout'] ?? null;
 
@@ -77,14 +79,14 @@ final class GraphApiClientInboxProbeTest extends TestCase
             ['id' => 'BBB', 'receivedDateTime' => '2026-10-10T12:00:05Z'],
         ]]));
 
-        self::assertSame('2026-10-10T12:00:05Z', $client->newestInboxReceivedAt($this->account()));
+        self::assertSame('2026-10-10T12:00:05Z', $client->newestReceivedAt($this->account()));
     }
 
     public function testAnEmptyInboxIsNull(): void
     {
         $client = $this->client($this->json(['value' => []]));
 
-        self::assertNull($client->newestInboxReceivedAt($this->account()));
+        self::assertNull($client->newestReceivedAt($this->account()));
     }
 
     public function testThrottlingCarriesWhatGraphSaidToWaitFor(): void
@@ -95,7 +97,7 @@ final class GraphApiClientInboxProbeTest extends TestCase
         ]));
 
         try {
-            $client->newestInboxReceivedAt($this->account());
+            $client->newestReceivedAt($this->account());
             self::fail('a 429 must not read as an empty inbox');
         } catch (GraphThrottledException $e) {
             self::assertSame(90, $e->getRetryAfterSeconds());

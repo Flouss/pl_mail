@@ -18,7 +18,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * GmailApiClient::probeInboxArrivals(), the every-30-seconds "is there new mail?"
+ * GmailApiClient::probeArrivals(), the every-30-seconds "is there new mail?"
  * question that stands in for push on an install nobody can reach from the
  * internet.
  *
@@ -35,11 +35,11 @@ final class GmailApiClientProbeTest extends TestCase
     /** @var list<array{method: string, url: string, options: array<string, mixed>}> */
     private array $requests = [];
 
-    public function testItAsksOnlyAboutMailAddedToTheInbox(): void
+    public function testItAsksAboutMailAddedToAnyLabel(): void
     {
         $client = $this->client([$this->page([])]);
 
-        $client->probeInboxArrivals($this->account(), '700');
+        $client->probeArrivals($this->account(), '700');
 
         self::assertCount(1, $this->requests);
 
@@ -49,18 +49,19 @@ final class GmailApiClientProbeTest extends TestCase
         self::assertSame('GET', $request['method']);
         self::assertStringEndsWith('/history', (string) parse_url($request['url'], PHP_URL_PATH));
         self::assertSame('700', $query['startHistoryId']);
-        // Both filters, because either alone is wider than the question: the
-        // type alone would include additions to every label, the label alone
-        // every kind of change to the inbox.
+        // The type, and no label. The type is what keeps the question narrow:
+        // without it every read flag the user's own phone sets is a change. The
+        // label is what used to keep spam, and mail a filter kept out of the
+        // inbox, from being an arrival at all.
         self::assertSame('messageAdded', $query['historyTypes']);
-        self::assertSame('INBOX', $query['labelId']);
+        self::assertArrayNotHasKey('labelId', $query);
     }
 
     public function testItNeverWaitsLongerThanTheSchedulerCanSpare(): void
     {
         $client = $this->client([$this->page([])]);
 
-        $client->probeInboxArrivals($this->account(), '700');
+        $client->probeArrivals($this->account(), '700');
 
         $timeout = $this->requests[0]['options']['timeout'] ?? null;
 
@@ -75,7 +76,7 @@ final class GmailApiClientProbeTest extends TestCase
         // overwhelmingly common answer.
         $client = $this->client([$this->page(null)]);
 
-        self::assertNull($client->probeInboxArrivals($this->account(), '700'));
+        self::assertNull($client->probeArrivals($this->account(), '700'));
     }
 
     public function testArrivalsAreIdentifiedByTheNewestRecord(): void
@@ -87,7 +88,7 @@ final class GmailApiClientProbeTest extends TestCase
 
         // The newest, not the first: this is the value the caller remembers to
         // tell "mail it has already queued a sync for" from "more mail".
-        self::assertSame('705', $client->probeInboxArrivals($this->account(), '700'));
+        self::assertSame('705', $client->probeArrivals($this->account(), '700'));
     }
 
     public function testAnEmptyPageWithAMoreTokenIsFollowed(): void
@@ -97,7 +98,7 @@ final class GmailApiClientProbeTest extends TestCase
             $this->page([['id' => '710', 'messagesAdded' => [['message' => ['id' => 'ccc']]]]]),
         ]);
 
-        self::assertSame('710', $client->probeInboxArrivals($this->account(), '700'));
+        self::assertSame('710', $client->probeArrivals($this->account(), '700'));
         self::assertCount(2, $this->requests);
         self::assertSame('next-1', $this->queryOf($this->requests[1]['url'])['pageToken']);
     }
@@ -110,7 +111,7 @@ final class GmailApiClientProbeTest extends TestCase
         // could not rule it out" is to let the real sync look.
         $client = $this->client(array_fill(0, 20, $this->page(null, nextPageToken: 'again')));
 
-        $newest = $client->probeInboxArrivals($this->account(), '700');
+        $newest = $client->probeArrivals($this->account(), '700');
 
         self::assertNotNull($newest);
         self::assertCount(5, $this->requests);
@@ -126,7 +127,7 @@ final class GmailApiClientProbeTest extends TestCase
         ]);
 
         try {
-            $client->probeInboxArrivals($this->account(), '700');
+            $client->probeArrivals($this->account(), '700');
             self::fail('a rejection must not read as "nothing new"');
         } catch (GmailThrottledException $e) {
             self::assertSame(120, $e->getRetryAfterSeconds());
@@ -140,7 +141,7 @@ final class GmailApiClientProbeTest extends TestCase
         ]);
 
         try {
-            $client->probeInboxArrivals($this->account(), '700');
+            $client->probeArrivals($this->account(), '700');
             self::fail('a 404 must not read as "nothing new"');
         } catch (GmailApiException $e) {
             // The caller tells an expired cursor from an outage by this.

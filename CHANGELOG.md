@@ -18,6 +18,7 @@ subject, and the preview is on a row of its own under the subject instead of sha
 a message's preview is on its own row at every width. The label chips ride in front of the preview
 at every width. The unread dot is back on the rows between 575px and 1200px. No setting; no
 migration.
+[#88](https://github.com/karatektus/pl_mail/pull/88), by @Flouss.
 
 **The tab icon is the one you picked, in Firefox too.** Settings → Appearance → Logo changed the
 icon in the app but not in the tab, which kept showing the wax seal. Every page also linked a

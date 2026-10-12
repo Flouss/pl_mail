@@ -254,7 +254,7 @@ sehen kann er nur eine Nachricht, die in derselben Sekunde landet wie die neuest
 wartet auf den Durchlauf.
 
 **Jeder Ordner, aber nicht die eigenen Entwürfe und gesendeten Kopien.** Die Abfrage fragte früher nur
-nach dem Posteingang, weil Push nicht mehr meldet; Spam und Mail, die ein Filter oder eine Regel
+nach dem Posteingang, weil Push nur das meldet; Spam und Mail, die ein Filter oder eine Regel
 woanders ablegt, warteten dadurch auf den Durchlauf — genauso „auf dem Handy und nicht in plMail“ wie
 Mail im Posteingang. Gmails Frage trägt jetzt kein Label mehr, und Outlooks ist die neueste Nachricht
 aus `/me/messages`; der Sync, den sie anstößt, liest jeden Ordner, also holt er, was die Abfrage

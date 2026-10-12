@@ -1,4 +1,4 @@
-<!-- translated-from: internals/mail-ingest.md sha1:ba34fdedf7291dd3f34f42ebc93bb5606416043e -->
+<!-- translated-from: internals/mail-ingest.md sha1:95a46f1f9e32ba9d0b561c84f1a1f1b07039e3c6 -->
 # Mail-Ingest
 
 Vom Anbieter in die Datenbank: wie aus Bytes eine Zeile `Message` wird, was mit ihr geschieht,
@@ -227,8 +227,8 @@ Durchlauf nicht.
 
 | | Gmail | Outlook |
 |---|---|---|
-| Die Frage | `history.list` ab dem gespeicherten Cursor, für *hinzugefügte* Nachrichten im *Posteingang* | Wann die neueste Nachricht im Posteingang empfangen wurde, ein einziges projiziertes Feld |
-| Was als Neuigkeit zählt | Jeder solche Eintrag | Ein späterer Zeitstempel als beim letzten Mal |
+| Die Frage | `history.list` ab dem gespeicherten Cursor, für in einem beliebigen Ordner *hinzugefügte* Nachrichten | Wann die neueste Nachricht im ganzen Postfach empfangen wurde, ein einziges projiziertes Feld |
+| Was als Neuigkeit zählt | Jeder solche Eintrag, außer einem, der nur einen Entwurf oder eine Kopie im Gesendet-Ordner hinzugefügt hat | Ein späterer Zeitstempel als beim letzten Mal |
 | Erster Blick auf ein Konto | Ein Beleg, wenn das Fenster eine Ankunft enthält | Wird nur gemerkt: es gibt nichts zum Vergleichen |
 | Ein abgelaufener Cursor | Ein Sync, um ihn zu beheben (der echte Sync listet das Postfach neu auf) | — |
 
@@ -253,11 +253,25 @@ geht verloren: Jede Nachricht mit demselben Wert ist im Postfach, wenn der ausge
 sehen kann er nur eine Nachricht, die in derselben Sekunde landet wie die neueste bereits gesehene; sie
 wartet auf den Durchlauf.
 
-**Was sie bewusst dem Durchlauf überlässt.** Spam, Mail, die ein Filter am Posteingang vorbeigeleitet
-hat, und jede Änderung, die keine Ankunft ist — Lesestatus, Labels, anderswo gelöschte Mail. Nichts
-davon ist der Fall „mein Handy hat es und plMail nicht“, und alles wird weiter vom viertelstündlichen
-Durchlauf erfasst, den das hier unverändert lässt. `Message::$arrivedBy` sagt, welcher Weg was
-geliefert hat: `probe` ist der schnelle Weg bei der Arbeit, `poll` ist Mail, die er nicht sieht.
+**Jeder Ordner, aber nicht die eigenen Entwürfe und gesendeten Kopien.** Die Abfrage fragte früher nur
+nach dem Posteingang, weil Push nicht mehr meldet; Spam und Mail, die ein Filter oder eine Regel
+woanders ablegt, warteten dadurch auf den Durchlauf — genauso „auf dem Handy und nicht in plMail“ wie
+Mail im Posteingang. Gmails Frage trägt jetzt kein Label mehr, und Outlooks ist die neueste Nachricht
+aus `/me/messages`; der Sync, den sie anstößt, liest jeden Ordner, also holt er, was die Abfrage
+meldet. Gmail speichert einen Entwurf bei jedem Speichern als *neue* Nachricht, deshalb ist ein
+Eintrag, dessen Nachrichten alle Entwürfe oder gesendete Kopien ohne Posteingangs-Label sind, keine
+Ankunft (`GmailApiClient::probeArrivals()`); sonst wäre ein Entwurf, an dem jemand tippt, alle paar
+Sekunden ein voller Sync. Outlooks Anfrage trägt keinen `$filter`, der Entwürfe ausschließt, weil
+Graph einen `$filter` neben einem `$orderby` auf einer Eigenschaft, die der Filter nicht aufführt,
+ablehnen kann und ein abgelehnter Blick das Konto fünf Minuten pausiert: Ein neuer Entwurf oder eine
+gesendete Nachricht ist dort ein zusätzlicher Sync.
+
+**Was sie bewusst dem Durchlauf überlässt.** Jede Änderung, die keine Ankunft ist — Lesestatus,
+Labels, anderswo gelöschte Mail. Nichts davon ist der Fall „mein Handy hat es und plMail nicht“, und
+alles wird weiter vom viertelstündlichen Durchlauf erfasst, den das hier unverändert lässt.
+`Message::$arrivedBy` sagt, welcher Weg was geliefert hat: `probe` ist der schnelle Weg bei der Arbeit,
+`poll` ist, was er nicht sieht. Gmail-Push meldet weiterhin nur den Posteingang (die Überwachung ist
+auf dieses Label registriert); bei einem Gmail-Konto mit Push sieht den Rest also nur die Abfrage.
 
 **Ein guter Nachbar sein.** Sie läuft auf dem einen Worker des Schedulers, neben jedem anderen
 geplanten Job. Jede Anfrage hat ihr eigenes Timeout von zehn Sekunden, ein Lauf beginnt kein weiteres Konto mehr, sobald das Intervall abzüglich eines Anfrage-Timeouts (standardmäßig 20

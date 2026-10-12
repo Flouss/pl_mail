@@ -1,4 +1,4 @@
-<!-- translated-from: providers/google.md sha1:780b9fc1ad101595f6e1afc0fd7ba8876c4d4c10 -->
+<!-- translated-from: providers/google.md sha1:178cadfd4b2aa859abcf3289b649d52b3ed60bb6 -->
 
 # Google
 
@@ -208,11 +208,11 @@ OAuth-Zugangsdaten.
 
 Schalte danach für das Konto unter **Einstellungen → E-Mail-Konten** die **Sofortige Zustellung** ein.
 Sie gilt pro Konto und muss aktiv gewählt werden: Ohne konfiguriertes Topic nutzt das Konto kein
-Push und sagt das auch, statt zu scheitern. Neue Mail im Posteingang findet dann `app:mail:probe`, eine Prüfung, die standardmäßig alle 30 Sekunden
-läuft. Sie fragt Gmail, ob seit der letzten Synchronisierung etwas
-zum Posteingang hinzugekommen ist, und reiht eine Synchronisierung ein, wenn ja — ohne öffentliche
-Adresse und ohne Pub/Sub. Spam, Mail, die ein Filter am Posteingang vorbeigeleitet hat, und
-anderswo gemachte Änderungen (gelesen, archiviert, gelöscht) warten weiter auf den Durchlauf alle
+Push und sagt das auch, statt zu scheitern. Neue Mail findet dann `app:mail:probe`, eine Prüfung, die standardmäßig alle 30 Sekunden
+läuft. Sie fragt Gmail, ob seit der letzten Synchronisierung in einem beliebigen Ordner eine
+Nachricht hinzugekommen ist, und reiht eine Synchronisierung ein, wenn ja — ohne öffentliche
+Adresse und ohne Pub/Sub. Spam und Mail, die ein Filter am Posteingang vorbeigeleitet hat, zählen;
+eigene Entwürfe und gesendete Kopien nicht. Anderswo gemachte Änderungen (gelesen, archiviert, gelöscht) warten weiter auf den Durchlauf alle
 fünfzehn Minuten.
 
 Ein Gmail-Watch hält höchstens sieben Tage. plMail erneuert jeden Watch, der innerhalb des nächsten

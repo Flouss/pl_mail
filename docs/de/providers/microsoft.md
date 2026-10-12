@@ -1,4 +1,4 @@
-<!-- translated-from: providers/microsoft.md sha1:48490c4f42165fc201f9fcd11ab58117fe4b77f1 -->
+<!-- translated-from: providers/microsoft.md sha1:2df8ed4cbf729747c33da248c36f097b6b176930 -->
 
 # Microsoft
 
@@ -166,11 +166,11 @@ Ressource einzureihen, und jede Entscheidung bleibt in der Sync-Engine.
 
 **Push trägt nie die Last.** Ein Kalender, der sich nicht registrieren konnte, wird alle fünfzehn
 Minuten abgerufen, und ein Konto ohne Push wird nach demselben Zeitplan synchronisiert — nur dass
-neue Mail im Posteingang binnen etwa einer Minute bemerkt wird, weil `app:mail:probe` standardmäßig alle 30
-Sekunden bei Graph erfragt, wann die neueste Nachricht im Posteingang empfangen wurde, und eine
-Synchronisierung einreiht, wenn das später ist als beim letzten Mal. Dafür braucht es keine
-öffentliche Adresse.
-Spam, gefilterte Mail und anderswo gemachte Änderungen warten weiter auf den Durchlauf. Um die
+neue Mail in einem beliebigen Ordner (auch Spam und gefilterte Mail) binnen etwa einer Minute bemerkt
+wird, weil `app:mail:probe` standardmäßig alle 30 Sekunden bei Graph erfragt, wann die neueste
+Nachricht im ganzen Postfach empfangen wurde, und eine Synchronisierung einreiht, wenn das später ist
+als beim letzten Mal. Dafür braucht es keine öffentliche Adresse. Auch ein neuer Entwurf oder eine
+gesendete Nachricht zählt, als ein zusätzlicher Sync. Anderswo gemachte Änderungen warten weiter auf den Durchlauf. Um die
 Registrierung sofort anzustoßen:
 
 ```bash

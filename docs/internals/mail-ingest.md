@@ -202,8 +202,8 @@ replace the poll.
 
 | | Gmail | Outlook |
 |---|---|---|
-| The question | `history.list` from the stored cursor, for messages *added* to the *inbox* | When the newest message in the inbox was received, one projected field |
-| What counts as news | Any such record | A later timestamp than the one seen last time |
+| The question | `history.list` from the stored cursor, for messages *added* in any folder | When the newest message in the whole mailbox was received, one projected field |
+| What counts as news | Any such record, except one that only added a draft or a copy in the sent folder | A later timestamp than the one seen last time |
 | First look at an account | Evidence, if the window holds an arrival | Only remembered: there is nothing to compare it with |
 | An expired cursor | One sync to recover it (the real sync re-lists the mailbox) | — |
 
@@ -224,10 +224,22 @@ queues a full sync per flip until something newer arrives. A timestamp cannot fl
 every message sharing it is in the mailbox by the time the triggered sync runs. The one thing it cannot
 see is a message landing in the same second as the newest one already seen, which waits for the poll.
 
-**What it deliberately leaves to the poll.** Spam, mail a filter kept out of the inbox, and every change
-that is not an arrival — read state, labels, deletions made elsewhere. None of those is the
-"my phone has it and plMail does not" case, and `Message::$arrivedBy` says which path delivered
-what: `probe` is the fast path working, `poll` is mail it cannot see.
+**Any folder, but not the user's own drafts and sent copies.** The probe used to ask about the inbox
+alone, because that is all push announces, which left spam and mail a filter or rule files elsewhere
+waiting for the poll: as much "on the phone and not in plMail" as inbox mail. Gmail's question now has
+no label, and Outlook's is the newest message of `/me/messages`; the sync either wakes reads every
+folder, so what the probe announces is what it fetches. Gmail saves a draft as a *new* message on
+every save, so a record whose messages are all drafts, or sent copies that are not also in the inbox,
+is not an arrival (`GmailApiClient::probeArrivals()`); left in, one draft being typed would be a full
+sync every few seconds. Outlook's query carries no `$filter` to leave drafts out, because Graph can
+refuse a `$filter` beside an `$orderby` it does not list and a refused look pauses the account for
+five minutes: a new draft or sent message there is one extra sync.
+
+**What it deliberately leaves to the poll.** Every change that is not an arrival — read state, labels,
+deletions made elsewhere. None of those is the "my phone has it and plMail does not" case, and
+`Message::$arrivedBy` says which path delivered what: `probe` is the fast path working, `poll` is
+what it cannot see. Gmail push still announces the inbox alone (the watch is registered on that
+label), so on a Gmail account that has push as well, only the probe sees the rest.
 
 **Being a good neighbour.** It runs on the scheduler's single worker, beside every other scheduled job.
 Each request carries its own ten-second timeout, a run starts no further account once the interval less one request timeout has gone (20 seconds by default), and

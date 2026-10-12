@@ -57,14 +57,15 @@ final class GraphApiClientInboxProbeTest extends TestCase
         self::assertSame('receivedDateTime', $query['$select']);
     }
 
-    public function testItSendsNoFilterSoThatItCannotBeRefusedForOne(): void
+    public function testItLeavesDraftsOut(): void
     {
-        // A draft being written is in /me/messages, and `isDraft eq false`
-        // would leave it out. It is left in on purpose: Graph can answer 400 to
-        // a $filter beside an $orderby on a property the filter does not list,
-        // nothing here can try that against Microsoft, and a 400 is a failed
-        // look, which pauses the account for five minutes. A probe that breaks
-        // is a worse trade than one extra sync for a new draft.
+        // A draft being written is in /me/messages, and an edit of one may well
+        // make it the newest message again and again: a sync per save. The
+        // filter is the one thing that keeps it out. Graph is known to refuse
+        // some $filter + $orderby pairs, so this exact pair was sent to two real
+        // Outlook accounts on 2026-10-12 and answered 200 with the same newest
+        // message as without it; it is pinned here because a refusal is a failed
+        // look, which pauses the account for five minutes.
         $client = $this->client($this->json(['value' => []]));
 
         $client->newestReceivedAt($this->account());
@@ -72,7 +73,7 @@ final class GraphApiClientInboxProbeTest extends TestCase
         parse_str((string) parse_url($this->requests[0]['url'], PHP_URL_QUERY), $query);
 
         self::assertSame('receivedDateTime desc', $query['$orderby'], 'the question is still the newest message');
-        self::assertArrayNotHasKey('$filter', $query);
+        self::assertSame('isDraft eq false', $query['$filter']);
     }
 
     public function testItNeverWaitsLongerThanTheSchedulerCanSpare(): void

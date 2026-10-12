@@ -231,9 +231,11 @@ no label, and Outlook's is the newest message of `/me/messages`; the sync either
 folder, so what the probe announces is what it fetches. Gmail saves a draft as a *new* message on
 every save, so a record whose messages are all drafts, or sent copies that are not also in the inbox,
 is not an arrival (`GmailApiClient::probeArrivals()`); left in, one draft being typed would be a full
-sync every few seconds. Outlook's query carries no `$filter` to leave drafts out, because Graph can
-refuse a `$filter` beside an `$orderby` it does not list and a refused look pauses the account for
-five minutes: a new draft or sent message there is one extra sync.
+sync every few seconds. Outlook's query leaves drafts out with `$filter=isDraft eq false`. Graph
+refuses some `$filter` and `$orderby` pairs and a refused look pauses the account for five minutes, so
+this pair was sent to two live Outlook accounts (both personal; a work or school account has not been
+tried) and answered 200. A message just sent has a `receivedDateTime` about a second after it was sent,
+so a send there is one extra sync.
 
 **What it deliberately leaves to the poll.** Every change that is not an arrival — read state, labels,
 deletions made elsewhere. None of those is the "my phone has it and plMail does not" case, and

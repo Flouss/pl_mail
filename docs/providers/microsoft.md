@@ -153,8 +153,8 @@ sync engine.
 and an account without push is synced on the same schedule — except that new mail, in any folder
 (spam and filtered mail included), is noticed within about a minute, because `app:mail:probe` asks
 Graph every 30 seconds (by default) when the newest message in the mailbox was received and queues a
-sync when that is later than last time. That needs no public address. A new draft or sent message
-counts too, as one extra sync. Changes made elsewhere still wait for the sweep. To ask for
+sync when that is later than last time. That needs no public address. Drafts do not count; a message
+you send does, as one extra sync. Changes made elsewhere still wait for the sweep. To ask for
 registration immediately:
 
 ```bash

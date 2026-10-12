@@ -1,4 +1,4 @@
-<!-- translated-from: providers/microsoft.md sha1:2df8ed4cbf729747c33da248c36f097b6b176930 -->
+<!-- translated-from: providers/microsoft.md sha1:e946718fa9e2434f4ef69bc0ca475f50bcbfedca -->
 
 # Microsoft
 
@@ -169,8 +169,8 @@ Minuten abgerufen, und ein Konto ohne Push wird nach demselben Zeitplan synchron
 neue Mail in einem beliebigen Ordner (auch Spam und gefilterte Mail) binnen etwa einer Minute bemerkt
 wird, weil `app:mail:probe` standardmäßig alle 30 Sekunden bei Graph erfragt, wann die neueste
 Nachricht im ganzen Postfach empfangen wurde, und eine Synchronisierung einreiht, wenn das später ist
-als beim letzten Mal. Dafür braucht es keine öffentliche Adresse. Auch ein neuer Entwurf oder eine
-gesendete Nachricht zählt, als ein zusätzlicher Sync. Anderswo gemachte Änderungen warten weiter auf den Durchlauf. Um die
+als beim letzten Mal. Dafür braucht es keine öffentliche Adresse. Entwürfe zählen nicht; eine
+Nachricht, die Sie senden, zählt, als ein zusätzlicher Sync. Anderswo gemachte Änderungen warten weiter auf den Durchlauf. Um die
 Registrierung sofort anzustoßen:
 
 ```bash

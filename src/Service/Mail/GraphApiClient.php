@@ -206,15 +206,21 @@ final class GraphApiClient
      * for the quarter-hourly sweep. The sync that a change here wakes reads
      * every folder (GraphFolderSyncer), so what this announces it will fetch.
      *
-     * WHAT THAT LETS IN, and what is not filtered out: a draft being written and
-     * a message just sent are in `/me/messages` too, each a new newest message
-     * and so one extra sync. A `$filter=isDraft eq false` would leave drafts
-     * out, and is not sent: Graph can answer 400 to a `$filter` beside an
-     * `$orderby` on a property the filter does not list, and a 400 is a failed
-     * look, which pauses the account for five minutes (InboxProbe). A probe
-     * that breaks costs more than a sync for each new draft or send, which is
-     * bounded by what the user does and not by the clock. NOT VERIFIED against
-     * Microsoft: see the pull request.
+     * DRAFTS ARE LEFT OUT, SENT MESSAGES ARE NOT. A draft being written is in
+     * `/me/messages`, and an edit of one may make it the newest message over
+     * and over: a full sync per save. `$filter=isDraft eq false` keeps it out.
+     * A message just sent carries a receivedDateTime about a second after its
+     * sentDateTime, so each send is one extra sync, bounded by what the user
+     * does and not by the clock.
+     *
+     * THE FILTER IS CHECKED, NOT ASSUMED. Graph refuses some `$filter` and
+     * `$orderby` pairs, and a refusal is a failed look, which pauses the
+     * account for five minutes (InboxProbe). This pair was sent to two live
+     * Outlook accounts on 2026-10-12 and answered 200 with the same newest
+     * message as without the filter. Both are personal Microsoft accounts: a
+     * work or school account has not been tried. What was NOT observed is a
+     * draft being edited (neither account had one), so that an edit moves
+     * receivedDateTime is the reason for the filter, not something seen.
      *
      * THE TIMESTAMP, NOT THE ID OF THE NEWEST MESSAGE, and that is the point of
      * this method. receivedDateTime has a resolution of one second, so a burst —
@@ -236,7 +242,12 @@ final class GraphApiClient
     public function newestReceivedAt(Account $account): ?string
     {
         $body = $this->request($account, 'GET', self::ME . '/messages', [
-            'query'   => ['$top' => 1, '$orderby' => 'receivedDateTime desc', '$select' => 'receivedDateTime'],
+            'query'   => [
+                '$top'     => 1,
+                '$orderby' => 'receivedDateTime desc',
+                '$select'  => 'receivedDateTime',
+                '$filter'  => 'isDraft eq false',
+            ],
             'timeout' => self::PROBE_TIMEOUT_SECONDS,
         ])->toArray();
 

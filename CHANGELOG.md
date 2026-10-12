@@ -62,7 +62,7 @@ account one cheap question — has any mail arrived? — and queues the ordinary
 answer is yes. One small request per account every 30 seconds; an account that is throttled or failing is
 left alone for as long as the provider says, or five minutes. It looks at every folder, so spam and mail
 a filter or rule files elsewhere arrive as fast as inbox mail; on Gmail your own drafts and sent copies
-do not count, and on Outlook a new draft or sent message is one extra sync. Changes made elsewhere
+do not count, and on Outlook drafts do not count while a message you send is one extra sync. Changes made elsewhere
 (read, archived, deleted) still wait for the quarter-hourly sync, which is unchanged. Admin →
 Performance shows which path delivered a message: `probe` is the new check (labelled "Mail check"),
 `poll` is the sweep. No migration.

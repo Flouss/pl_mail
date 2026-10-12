@@ -1,4 +1,4 @@
-<!-- translated-from: internals/mail-ingest.md sha1:95a46f1f9e32ba9d0b561c84f1a1f1b07039e3c6 -->
+<!-- translated-from: internals/mail-ingest.md sha1:51f3e6b7669b74831ac43896ecca38a416ee6082 -->
 # Mail-Ingest
 
 Vom Anbieter in die Datenbank: wie aus Bytes eine Zeile `Message` wird, was mit ihr geschieht,
@@ -261,10 +261,12 @@ aus `/me/messages`; der Sync, den sie anstößt, liest jeden Ordner, also holt e
 meldet. Gmail speichert einen Entwurf bei jedem Speichern als *neue* Nachricht, deshalb ist ein
 Eintrag, dessen Nachrichten alle Entwürfe oder gesendete Kopien ohne Posteingangs-Label sind, keine
 Ankunft (`GmailApiClient::probeArrivals()`); sonst wäre ein Entwurf, an dem jemand tippt, alle paar
-Sekunden ein voller Sync. Outlooks Anfrage trägt keinen `$filter`, der Entwürfe ausschließt, weil
-Graph einen `$filter` neben einem `$orderby` auf einer Eigenschaft, die der Filter nicht aufführt,
-ablehnen kann und ein abgelehnter Blick das Konto fünf Minuten pausiert: Ein neuer Entwurf oder eine
-gesendete Nachricht ist dort ein zusätzlicher Sync.
+Sekunden ein voller Sync. Outlooks Anfrage lässt Entwürfe mit `$filter=isDraft eq false` weg. Graph
+lehnt manche Paare aus `$filter` und `$orderby` ab, und ein abgelehnter Blick pausiert das Konto fünf
+Minuten; deshalb wurde genau dieses Paar an zwei echte Outlook-Konten geschickt (beide privat; ein
+Geschäfts- oder Schulkonto wurde nicht probiert) und mit 200 beantwortet. Eine gerade gesendete
+Nachricht hat ein `receivedDateTime` etwa eine Sekunde nach dem Senden, ein Senden ist dort also ein
+zusätzlicher Sync.
 
 **Was sie bewusst dem Durchlauf überlässt.** Jede Änderung, die keine Ankunft ist — Lesestatus,
 Labels, anderswo gelöschte Mail. Nichts davon ist der Fall „mein Handy hat es und plMail nicht“, und

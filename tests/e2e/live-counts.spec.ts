@@ -1,5 +1,5 @@
 import { test, expect } from "./support/test";
-import { INBOX_SUBJECTS, TEST_USER, consoleCommand, mailRow, seed } from "./support/config";
+import { INBOX_SUBJECTS, TEST_USER, bulkMore, consoleCommand, mailRow, seed } from "./support/config";
 
 /**
  * The numbers beside the list keep up with the list.
@@ -71,7 +71,7 @@ test("a lone sync event still moves the badge after a recent refresh", async ({ 
 
     // A write, which refreshes the counts immediately and so starts the window.
     await tick(page, INBOX_SUBJECTS.read);
-    await page.locator(TOOLBAR).getByRole("button", { name: /read/i }).first().click();
+    await bulkMore(page, "Mark as read");
     await expect(page.locator(INBOX_BADGE).first()).toHaveText("3");
 
     // Now the server changes underneath, and one event announces it — inside
@@ -103,7 +103,7 @@ test.describe("counters after a bulk action", () => {
         await tick(page, INBOX_SUBJECTS.read);
         await tick(page, INBOX_SUBJECTS.star);
 
-        await page.getByRole("button", { name: "Mark as read" }).first().click();
+        await bulkMore(page, "Mark as read");
 
         // toPass rather than a fixed wait: the assertion is that it arrives on
         // its own, and how fast is not the contract. Well inside any polling
@@ -124,13 +124,13 @@ test.describe("counters after a bulk action", () => {
 
         await tick(page, INBOX_SUBJECTS.read);
         await tick(page, INBOX_SUBJECTS.star);
-        await page.getByRole("button", { name: "Mark as read" }).first().click();
+        await bulkMore(page, "Mark as read");
         await expect(page.locator(INBOX_BADGE).first()).toHaveText("2", { timeout: 5000 });
 
         // Same two rows, back the other way.
         await tick(page, INBOX_SUBJECTS.read);
         await tick(page, INBOX_SUBJECTS.star);
-        await page.getByRole("button", { name: "Mark as unread" }).first().click();
+        await bulkMore(page, "Mark as unread");
 
         await expect(page.locator(INBOX_BADGE).first()).toHaveText("4", { timeout: 5000 });
         await expect(mailRow(page, INBOX_SUBJECTS.read)).toHaveAttribute("data-unread", "true");
@@ -161,7 +161,7 @@ test.describe("counters after a bulk action", () => {
         });
 
         await tick(page, INBOX_SUBJECTS.trash);
-        await page.getByRole("button", { name: "Mark as read" }).first().click();
+        await bulkMore(page, "Mark as read");
 
         await expect
             .poll(() => fragmentFetches, { timeout: 5000 })
@@ -199,8 +199,9 @@ test.describe("counters after reading one mail", () => {
      * would pass the read case alone.
      */
     test("the row's own mark-read button moves the badge, and back again", async ({ page }) => {
-        // The row action strip is `hidden @xl:flex` — a container query on the
-        // list pane — so it does not exist at all in a narrow window.
+        // Wide, so the row is one line and the action strip sits where this
+        // test has always clicked it. Narrower lists show it too, on hover —
+        // list-row-breakpoint.spec.ts holds that.
         await page.setViewportSize({ width: 1600, height: 900 });
         await page.goto("/mail/inbox");
         await expect(mailRow(page, INBOX_SUBJECTS.read)).toBeVisible();

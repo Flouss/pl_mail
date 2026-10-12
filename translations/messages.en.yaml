@@ -773,7 +773,7 @@ admin:
                 account: 'Account'
                 arrives_by: 'Arrives by'
                 elsewhere: 'Not in the inbox'
-                elsewhere_hint: 'Spam and mail a filter filed elsewhere: how many, and their typical delay. Providers only announce inbox mail, so the rest waits for the schedule.'
+                elsewhere_hint: 'Spam and mail a filter filed elsewhere: how many, and their typical delay. Push only announces inbox mail; the mail check finds the rest on Gmail and Outlook, and elsewhere it waits for the schedule.'
                 max: 'Longest'
                 median: 'Typical delay'
                 messages: 'Inbox mail'
@@ -792,7 +792,7 @@ admin:
                     idle: 'IDLE'
                     manual: 'Sync button'
                     poll: 'Schedule'
-                    probe: 'Inbox check'
+                    probe: 'Mail check'
                     push: 'Push'
                     unknown: '—'
                 col:
@@ -805,7 +805,7 @@ admin:
                     underway: 'Already under way for'
                     underway_hint: 'From the date the message carries to the provider accepting it: a sender that queued it, or dated it early. Nothing plMail could have shortened.'
                 empty: 'No mail arrived in this period.'
-                footnote: 'Slowest first. Mail outside the inbox is never announced by the provider, so up to fifteen minutes there is the schedule working as intended. What brought a message in is recorded from this version on.'
+                footnote: 'Slowest first. Mail outside the inbox is never announced by push, so on an account without the mail check up to fifteen minutes there is the schedule working as intended. What brought a message in is recorded from this version on.'
                 heading: 'The slowest in this period'
                 in:
                     elsewhere: 'Elsewhere'

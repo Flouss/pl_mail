@@ -20,7 +20,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
- * Look for new inbox mail on every Gmail and Microsoft account, and queue a
+ * Look for new mail, in any folder, on every Gmail and Microsoft account, and queue a
  * sync for the ones that have some.
  *
  * Run by the scheduler every InboxProbeInterval::seconds() — 30 unless an
@@ -50,7 +50,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
  */
 #[AsCommand(
     name: 'app:mail:probe',
-    description: 'Look for new inbox mail on Gmail and Microsoft accounts and queue a sync for those that have some',
+    description: 'Look for new mail in any folder on Gmail and Microsoft accounts and queue a sync for those that have some',
 )]
 final class MailProbeCommand extends Command
 {
@@ -72,7 +72,7 @@ final class MailProbeCommand extends Command
         // As app:mail:sync, and for the same reason: a demo instance's accounts
         // point at documentation domains.
         if (true === $this->demoMode->isEnabled()) {
-            $io->note('Demo mode is on — the inbox probe is disabled.');
+            $io->note('Demo mode is on — the mail probe is disabled.');
 
             return Command::SUCCESS;
         }

@@ -33,11 +33,14 @@ enum SyncTrigger: string
     case Poll = 'poll';
 
     /**
-     * The `app:mail:probe`: it saw new inbox mail on a Gmail or
+     * The `app:mail:probe`: it saw new mail, in any folder, on a Gmail or
      * Microsoft account and asked for the sync that fetches it. What stands in
      * for push on an install nobody can reach from the internet, so a message
      * that says `probe` is that substitute working, and one that says `poll`
-     * is mail it could not see (spam, mail filtered past the inbox).
+     * is mail it could not see: a change that is not an arrival, an account
+     * that is not Gmail or Outlook, or a probe that was not running. (Spam and
+     * mail filtered past the inbox used to be in that list, until the probe
+     * stopped being limited to the inbox.)
      *
      * Five characters because `message.arrived_by` is a VARCHAR(10).
      */

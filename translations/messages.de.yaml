@@ -785,7 +785,7 @@ admin:
                 account: 'Konto'
                 arrives_by: 'Kommt an über'
                 elsewhere: 'Nicht im Posteingang'
-                elsewhere_hint: 'Spam und Mail, die ein Filter woanders abgelegt hat: wie viele, und ihre übliche Verzögerung. Anbieter melden nur Mail im Posteingang, der Rest wartet auf den Takt.'
+                elsewhere_hint: 'Spam und Mail, die ein Filter woanders abgelegt hat: wie viele, und ihre übliche Verzögerung. Push meldet nur Mail im Posteingang; die Postfachprüfung findet den Rest bei Gmail und Outlook, anderswo wartet er auf den Takt.'
                 max: 'Längste'
                 median: 'Übliche Verzögerung'
                 messages: 'Mail im Posteingang'
@@ -804,7 +804,7 @@ admin:
                     idle: 'IDLE'
                     manual: 'Sync-Knopf'
                     poll: 'Takt'
-                    probe: 'Posteingangsprüfung'
+                    probe: 'Postfachprüfung'
                     push: 'Push'
                     unknown: '—'
                 col:
@@ -817,7 +817,7 @@ admin:
                     underway: 'Schon unterwegs seit'
                     underway_hint: 'Vom Datum, das die Nachricht trägt, bis zur Annahme durch den Anbieter: ein Absender, der sie zurückgehalten oder zu früh datiert hat. Daran hätte plMail nichts verkürzen können.'
                 empty: 'In diesem Zeitraum ist keine Mail angekommen.'
-                footnote: 'Die langsamsten zuerst. Mail außerhalb des Posteingangs meldet der Anbieter nie, bis zu fünfzehn Minuten sind dort also der Takt, wie er gedacht ist. Wodurch eine Nachricht geholt wurde, wird ab dieser Version festgehalten.'
+                footnote: 'Die langsamsten zuerst. Mail außerhalb des Posteingangs meldet Push nie, bei einem Konto ohne die Postfachprüfung sind bis zu fünfzehn Minuten dort also der Takt, wie er gedacht ist. Wodurch eine Nachricht geholt wurde, wird ab dieser Version festgehalten.'
                 heading: 'Die langsamsten in diesem Zeitraum'
                 in:
                     elsewhere: 'Woanders'

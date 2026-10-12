@@ -13,7 +13,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Whether one OAuth account has new inbox mail worth a sync, found by asking
+ * Whether one OAuth account has new mail worth a sync, in any folder, found by asking
  * the provider rather than waiting to be told.
  *
  * WHY THIS EXISTS
@@ -39,14 +39,21 @@ use Symfony\Component\Clock\ClockInterface;
  * That only holds if the thing is STABLE: a signal that can change without
  * anything arriving is announced as often as it flickers. Outlook's is the
  * newest message's timestamp for exactly that reason — see
- * GraphApiClient::newestInboxReceivedAt().
+ * GraphApiClient::newestReceivedAt().
  *
- * WHAT IT DOES NOT COVER, on purpose: spam, mail a filter kept out of the
- * inbox, and every non-arrival change (read state, labels, deletions made
- * elsewhere). None of those is the "my phone has it and plMail doesn't" case,
- * and all of them are still picked up by the quarter-hourly poll, which this
- * leaves exactly as it was. The signal memory is in the cache, so losing it is
- * one redundant sync, never a missed one.
+ * WHAT IT COVERS: mail arriving in any folder — the inbox, spam, and wherever
+ * a filter or rule files it. It used to be the inbox alone, because that is all
+ * push announces; but "my phone has it and plMail doesn't" is as true of spam,
+ * and the wait for the quarter-hourly poll was the same fifteen minutes.
+ * Gmail's own drafts and sent copies are not arrivals — see
+ * GmailApiClient::probeArrivals(). Gmail push still announces the inbox alone
+ * (the watch is registered on that label, GmailWatchService::LABEL), so for a
+ * Gmail account that has push as well, only this probe sees the rest.
+ *
+ * WHAT IT DOES NOT COVER, on purpose: every non-arrival change (read state,
+ * labels, deletions made elsewhere). They are still picked up by the
+ * quarter-hourly poll, which this leaves exactly as it was. The signal memory
+ * is in the cache, so losing it is one redundant sync, never a missed one.
  */
 final readonly class InboxProbe
 {
@@ -124,7 +131,7 @@ final readonly class InboxProbe
     }
 
     /**
-     * A token for what the provider reports as the newest inbox arrival, or
+     * A token for what the provider reports as the newest arrival, or
      * null when there is nothing to report or nothing to ask about.
      */
     private function signalOf(Account $account): ?string
@@ -139,7 +146,7 @@ final readonly class InboxProbe
             }
 
             try {
-                return $this->gmail->probeInboxArrivals($account, $cursor);
+                return $this->gmail->probeArrivals($account, $cursor);
             } catch (GmailThrottledException $throttled) {
                 throw $throttled;
             } catch (GmailApiException $failure) {
@@ -163,9 +170,9 @@ final readonly class InboxProbe
                 return null;
             }
 
-            // The timestamp and not an id: see newestInboxReceivedAt() on why
+            // The timestamp and not an id: see newestReceivedAt() on why
             // an id can flip between two messages received in the same second.
-            return $this->graph->newestInboxReceivedAt($account);
+            return $this->graph->newestReceivedAt($account);
         }
 
         return null;

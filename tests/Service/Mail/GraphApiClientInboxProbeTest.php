@@ -20,8 +20,8 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  *
  * Graph has no cheap "anything new?" call that leaves the delta chain alone —
  * reading a delta link would be the obvious one, and is the wrong one, because
- * it is the real sync's cursor. The newest message in the inbox is one
- * projected timestamp, and a change in it is the signal.
+ * it is the real sync's cursor. The newest message in the mailbox, whichever
+ * folder it is in, is one projected timestamp, and a change in it is the signal.
  *
  * A timestamp and not an id, because receivedDateTime has a resolution of one
  * second and nothing promises that two messages sharing one are listed in the
@@ -57,6 +57,24 @@ final class GraphApiClientInboxProbeTest extends TestCase
         self::assertSame('receivedDateTime', $query['$select']);
     }
 
+    public function testItSendsNoFilterSoThatItCannotBeRefusedForOne(): void
+    {
+        // A draft being written is in /me/messages, and `isDraft eq false`
+        // would leave it out. It is left in on purpose: Graph can answer 400 to
+        // a $filter beside an $orderby on a property the filter does not list,
+        // nothing here can try that against Microsoft, and a 400 is a failed
+        // look, which pauses the account for five minutes. A probe that breaks
+        // is a worse trade than one extra sync for a new draft.
+        $client = $this->client($this->json(['value' => []]));
+
+        $client->newestReceivedAt($this->account());
+
+        parse_str((string) parse_url($this->requests[0]['url'], PHP_URL_QUERY), $query);
+
+        self::assertSame('receivedDateTime desc', $query['$orderby'], 'the question is still the newest message');
+        self::assertArrayNotHasKey('$filter', $query);
+    }
+
     public function testItNeverWaitsLongerThanTheSchedulerCanSpare(): void
     {
         $client = $this->client($this->json(['value' => []]));
@@ -82,7 +100,7 @@ final class GraphApiClientInboxProbeTest extends TestCase
         self::assertSame('2026-10-10T12:00:05Z', $client->newestReceivedAt($this->account()));
     }
 
-    public function testAnEmptyInboxIsNull(): void
+    public function testAnEmptyMailboxIsNull(): void
     {
         $client = $this->client($this->json(['value' => []]));
 

@@ -192,14 +192,29 @@ final class GraphApiClient
     // ── Messages ─────────────────────────────────────────────────────────────
 
     /**
-     * When the newest message in the inbox was received, or null for an empty
-     * one.
+     * When the newest message in the mailbox was received, in whichever folder
+     * it is, or null for an empty one.
      *
-     * What an Outlook account is asked every 30 s in place of a webhook, on
-     * an install nobody can reach from the internet. A change in this value is
-     * the signal that mail has arrived; it is not a delta query on purpose,
+     * What an Outlook account is asked every few seconds in place of a webhook,
+     * on an install nobody can reach from the internet. A change in this value
+     * is the signal that mail has arrived; it is not a delta query on purpose,
      * because a delta link is the real sync's cursor and reading it here would
      * either move it or invite the two to be confused.
+     *
+     * THE WHOLE MAILBOX, which is what this method used to not ask: it read the
+     * inbox folder, so Junk Email and the folders a rule files into were left
+     * for the quarter-hourly sweep. The sync that a change here wakes reads
+     * every folder (GraphFolderSyncer), so what this announces it will fetch.
+     *
+     * WHAT THAT LETS IN, and what is not filtered out: a draft being written and
+     * a message just sent are in `/me/messages` too, each a new newest message
+     * and so one extra sync. A `$filter=isDraft eq false` would leave drafts
+     * out, and is not sent: Graph can answer 400 to a `$filter` beside an
+     * `$orderby` on a property the filter does not list, and a 400 is a failed
+     * look, which pauses the account for five minutes (InboxProbe). A probe
+     * that breaks costs more than a sync for each new draft or send, which is
+     * bounded by what the user does and not by the clock. NOT VERIFIED against
+     * Microsoft: see the pull request.
      *
      * THE TIMESTAMP, NOT THE ID OF THE NEWEST MESSAGE, and that is the point of
      * this method. receivedDateTime has a resolution of one second, so a burst —
@@ -218,9 +233,9 @@ final class GraphApiClient
      * on the scheduler's worker beside everything else scheduled. Throttling
      * reaches the caller as GraphThrottledException carrying Retry-After.
      */
-    public function newestInboxReceivedAt(Account $account): ?string
+    public function newestReceivedAt(Account $account): ?string
     {
-        $body = $this->request($account, 'GET', self::ME . '/mailFolders/inbox/messages', [
+        $body = $this->request($account, 'GET', self::ME . '/messages', [
             'query'   => ['$top' => 1, '$orderby' => 'receivedDateTime desc', '$select' => 'receivedDateTime'],
             'timeout' => self::PROBE_TIMEOUT_SECONDS,
         ])->toArray();

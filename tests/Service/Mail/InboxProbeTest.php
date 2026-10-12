@@ -116,6 +116,34 @@ final class InboxProbeTest extends TestCase
         self::assertTrue($this->probe->shouldSync($account), 'mail that arrived while the first sync waited is new');
     }
 
+    public function testSpamIsASyncToo(): void
+    {
+        // It used to wait for the quarter-hourly sweep: the probe asked about the
+        // inbox, and Gmail files spam under SPAM.
+        $this->script[self::GMAIL_HOST][] = $this->gmailArrival('705', ['SPAM', 'UNREAD']);
+
+        self::assertTrue($this->probe->shouldSync($this->gmail(1)));
+    }
+
+    public function testADraftBeingWrittenIsNeverASync(): void
+    {
+        // Each save of a Gmail draft is a new message with a new history record.
+        // Announced, that is a full sync every few seconds for as long as
+        // somebody types.
+        $account = $this->gmail(1);
+
+        $this->script[self::GMAIL_HOST] = [
+            $this->gmailArrival('705', ['DRAFT']),
+            $this->gmailArrival('706', ['DRAFT']),
+            // The presence companion: the same account does announce mail.
+            $this->gmailArrival('707', ['SPAM', 'UNREAD']),
+        ];
+
+        self::assertFalse($this->probe->shouldSync($account), 'a draft');
+        self::assertFalse($this->probe->shouldSync($account), 'and the next save of it');
+        self::assertTrue($this->probe->shouldSync($account), 'but mail is mail');
+    }
+
     public function testTheCursorBelongsToTheRealSyncAndIsNeverMoved(): void
     {
         // If the probe advanced it, the sync it just asked for would find the
@@ -276,7 +304,7 @@ final class InboxProbeTest extends TestCase
         self::assertTrue($this->probe->shouldSync($account), 'a later second is news');
     }
 
-    public function testAnEmptyInboxIsNoSync(): void
+    public function testAnEmptyMailboxIsNoSync(): void
     {
         $this->script[self::GRAPH_HOST][] = $this->graphNewest(null);
 
@@ -373,10 +401,20 @@ final class InboxProbeTest extends TestCase
         return $account;
     }
 
-    private function gmailArrival(string $newestRecordId): MockResponse
+    /**
+     * @param list<string>|null $labelIds null leaves the key out, as an older
+     *                                    fixture here did: not ruled out, so an arrival
+     */
+    private function gmailArrival(string $newestRecordId, ?array $labelIds = null): MockResponse
     {
+        $message = ['id' => 'm-' . $newestRecordId];
+
+        if (null !== $labelIds) {
+            $message['labelIds'] = $labelIds;
+        }
+
         return $this->json(['historyId' => '999', 'history' => [
-            ['id' => $newestRecordId, 'messagesAdded' => [['message' => ['id' => 'm-' . $newestRecordId]]]],
+            ['id' => $newestRecordId, 'messagesAdded' => [['message' => $message]]],
         ]]);
     }
 
@@ -386,7 +424,7 @@ final class InboxProbeTest extends TestCase
     }
 
     /**
-     * What Graph answers for "the newest message in the inbox", with the id it
+     * What Graph answers for "the newest message in the mailbox", with the id it
      * happens to list first: the probe must not care which.
      */
     private function graphNewest(?string $receivedAt, string $id = 'x'): MockResponse

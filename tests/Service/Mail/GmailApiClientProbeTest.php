@@ -23,8 +23,9 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * internet.
  *
  * Two properties carry the feature and both are asserted here rather than
- * assumed: the question is narrow (inbox additions only — anything wider
- * would wake the sync for every read flag the user's own phone sets), and it
+ * assumed: the question is narrow (messages added, in any folder but not the
+ * user's own drafts and sent copies — anything wider would wake the sync for
+ * every read flag the user's own phone sets), and it
  * is cheap and bounded (one small request, a short timeout, a page cap),
  * because it runs on the scheduler's worker beside everything else scheduled.
  *
@@ -91,6 +92,84 @@ final class GmailApiClientProbeTest extends TestCase
         self::assertSame('705', $client->probeArrivals($this->account(), '700'));
     }
 
+    public function testSpamAndMailAFilterKeptOutOfTheInboxAreArrivals(): void
+    {
+        // Gmail files spam under SPAM and a skip-the-inbox filter under nothing
+        // but UNREAD (and, for the tabs, a CATEGORY_ label). Both were invisible
+        // to the probe while it asked for INBOX alone.
+        $client = $this->client([
+            $this->page([$this->added('701', ['SPAM', 'UNREAD'])]),
+            $this->page([$this->added('702', ['CATEGORY_PROMOTIONS', 'UNREAD'])]),
+        ]);
+
+        self::assertSame('701', $client->probeArrivals($this->account(), '700'));
+        self::assertSame('702', $client->probeArrivals($this->account(), '700'));
+    }
+
+    public function testADraftAndASentCopyAreNotArrivals(): void
+    {
+        // Gmail writes a draft as a NEW message on every save, so one being
+        // typed is a messageAdded every few seconds, and the user's own sends
+        // are one each. Neither is mail that came in.
+        $client = $this->client([
+            $this->page([$this->added('701', ['DRAFT']), $this->added('702', ['SENT'])]),
+            // The presence companion: the same two, with real mail beside them.
+            $this->page([$this->added('701', ['DRAFT']), $this->added('702', ['SENT']), $this->added('703', ['SPAM', 'UNREAD'])]),
+        ]);
+
+        self::assertNull($client->probeArrivals($this->account(), '700'), 'nothing here came in');
+        self::assertSame('703', $client->probeArrivals($this->account(), '700'), 'and the mail beside them did');
+    }
+
+    public function testTheSignalIsTheNewestRecordThatCameInNotTheNewestRecord(): void
+    {
+        // The caller remembers this value to tell "already announced" from
+        // "more mail". A draft saved after the last arrival must not move it,
+        // or every save would be announced as a new arrival.
+        $client = $this->client([$this->page([$this->added('701', ['INBOX', 'UNREAD']), $this->added('709', ['DRAFT'])])]);
+
+        self::assertSame('701', $client->probeArrivals($this->account(), '700'));
+    }
+
+    public function testAMessageSentToYourselfIsAnArrival(): void
+    {
+        // SENT and INBOX together: the copy in the sent folder is not news, the
+        // one in the inbox is.
+        $client = $this->client([$this->page([$this->added('701', ['SENT', 'INBOX', 'UNREAD'])])]);
+
+        self::assertSame('701', $client->probeArrivals($this->account(), '700'));
+    }
+
+    public function testARecordWithOneMessageThatCameInIsAnArrival(): void
+    {
+        $client = $this->client([$this->page([
+            ['id' => '701', 'messagesAdded' => [
+                ['message' => ['id' => 'a', 'labelIds' => ['DRAFT']]],
+                ['message' => ['id' => 'b', 'labelIds' => ['INBOX']]],
+            ]],
+        ])]);
+
+        self::assertSame('701', $client->probeArrivals($this->account(), '700'));
+    }
+
+    public function testAnAdditionThatNamesNoLabelsIsAnArrival(): void
+    {
+        // "Could not rule it out" is a reason to let the real sync look, the
+        // same call the page cap makes below.
+        $client = $this->client([$this->page([['id' => '701', 'messagesAdded' => [['message' => ['id' => 'a']]]]])]);
+
+        self::assertSame('701', $client->probeArrivals($this->account(), '700'));
+    }
+
+    public function testARecordThatListsNoMessagesIsAnArrival(): void
+    {
+        // Only a record that SAYS every message it added was a draft or a sent
+        // copy is left out. One that says nothing is not ruled out.
+        $client = $this->client([$this->page([['id' => '701']])]);
+
+        self::assertSame('701', $client->probeArrivals($this->account(), '700'));
+    }
+
     public function testAnEmptyPageWithAMoreTokenIsFollowed(): void
     {
         $client = $this->client([
@@ -150,6 +229,18 @@ final class GmailApiClientProbeTest extends TestCase
     }
 
     // ── Fixtures ──────────────────────────────────────────────────────────
+
+    /**
+     * One history record that added one message with these labels.
+     *
+     * @param list<string> $labelIds
+     *
+     * @return array<string, mixed>
+     */
+    private function added(string $recordId, array $labelIds): array
+    {
+        return ['id' => $recordId, 'messagesAdded' => [['message' => ['id' => 'm-' . $recordId, 'labelIds' => $labelIds]]]];
+    }
 
     /**
      * @param list<array<string, mixed>>|null $history

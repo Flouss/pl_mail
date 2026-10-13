@@ -85,6 +85,20 @@ RUN set -eux; \
         gd \
 	;
 
+# rsvg-convert, which draws the logo's PNG icons (BrandingController::raster()):
+# the home-screen and install icons of a PWA. iOS takes nothing but a PNG for
+# its home-screen icon, and Android's launcher wants one too, while the logo is
+# an SVG with 330 faces.
+#
+# librsvg, not Imagick: Imagick's SVG reader here is its built-in one, which
+# paints a gradient stroke black, so every colourway that is a gradient came out
+# as a flat black glyph. librsvg draws what a browser draws. Its own layer, after
+# the PHP extensions, so the compiled layers above stay cached.
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends \
+	librsvg2-bin \
+	&& rm -rf /var/lib/apt/lists/*
+
 # https://getcomposer.org/doc/03-cli.md#composer-allow-superuser
 ENV COMPOSER_ALLOW_SUPERUSER=1
 

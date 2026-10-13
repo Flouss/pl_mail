@@ -8,6 +8,7 @@ use App\Domain\Enum\Theme\LogoMotif;
 use App\Domain\Enum\Theme\LogoStyle;
 use App\Infrastructure\Routing\LogoPaintRequirement;
 use App\Service\Appearance\LogoIcons;
+use App\Service\Appearance\LogoRaster;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,8 +18,8 @@ use Symfony\Component\Routing\Requirement\EnumRequirement;
 
 /**
  * The logo, drawn three ways: as the icon tile, as the tab icon, and as the
- * top bar wears it. Beside them, the install manifest that names the tile as
- * the app's icon.
+ * top bar wears it. Beside them, the tile as a PNG, and the install manifest
+ * that names those PNGs as the app's icons.
  *
  * plMail's logo has three hundred and thirty faces (Settings → Appearance →
  * Logo: ten icons, each in its own design or thirty-two colourways), and every
@@ -35,7 +36,7 @@ use Symfony\Component\Routing\Requirement\EnumRequirement;
  * already fetched correctly (the one the page loaded with). Drawn from the URL,
  * there is nothing for the save to race.
  *
- * All four are public and, at the current drawing version, immutable. See
+ * All five are public and, at the current drawing version, immutable. See
  * serve() for why that is safe.
  */
 final class BrandingController extends AbstractController
@@ -56,9 +57,10 @@ final class BrandingController extends AbstractController
     private const int UNVERSIONED = 3_600;
 
     public function __construct(
-        private readonly LogoIcons $icons,
+        private readonly LogoIcons  $icons,
+        private readonly LogoRaster $raster,
         #[Autowire('%kernel.project_dir%')]
-        private readonly string    $projectDir,
+        private readonly string     $projectDir,
     ) {}
 
     /**
@@ -108,21 +110,19 @@ final class BrandingController extends AbstractController
     }
 
     /**
-     * The install manifest: public/manifest.webmanifest with the choice's tile
-     * for its icon.
+     * The install manifest: public/manifest.webmanifest with the choice's PNG
+     * tiles for its icons.
      *
      * Everything but the icons is read from that file, so the app's name, start
      * page and colours have one home, and the file stays what an installer that
      * never loaded a page would find.
      *
-     * The icon is the one SVG tile and nothing beside it. The static file
-     * listed three PNGs of the wax seal, and a launcher chooses among a
-     * manifest's icons the way Firefox chooses a tab icon (see
-     * _favicon.html.twig): a second candidate that is the same for everyone
-     * wins for someone. An SVG has no size, so `any`.
-     *
-     * iOS does not read this for its home-screen icon; it wants a PNG
-     * `apple-touch-icon`, which has no per-choice route (see app.html.twig).
+     * The icons are the choice's and nothing else. The static file listed three
+     * PNGs of the wax seal, and a launcher chooses among a manifest's icons the
+     * way Firefox chooses a tab icon (see _favicon.html.twig): a second
+     * candidate that is the same for everyone wins for someone. So: the rounded
+     * tile at 192 and 512 for `any`, and the ground-to-the-edge form at 512 for
+     * `maskable`, which a launcher cuts to its own shape (see raster()).
      */
     #[Route(
         '/branding/manifest/{motif}/{paint}.webmanifest',
@@ -139,6 +139,51 @@ final class BrandingController extends AbstractController
             'manifest.' . LogoIcons::choice($motif, $style),
             fn (): string => $this->manifestJson($motif, $style),
             'application/manifest+json',
+        );
+    }
+
+    /**
+     * The tile as a PNG.
+     *
+     * `tile` is the rounded square, `bleed` the ground out to every edge for
+     * what rounds or masks it itself: iOS's home-screen icon (which paints a
+     * transparent corner black) and a manifest's maskable icon. Drawn by
+     * rsvg-convert from the same SVG the icon route serves, so the two cannot
+     * disagree about a choice; see LogoRaster for why it is not Imagick.
+     *
+     * Sizes are the ones asked for: 180 (apple-touch-icon), 192 and 512 (a
+     * manifest's). Anything else 404s at the router, which is also what bounds
+     * the number of pictures a stranger can make this process draw.
+     */
+    #[Route(
+        '/branding/raster/{form}/{size}/{motif}/{paint}.png',
+        name: 'app_branding_raster',
+        requirements: [
+            'form'  => 'tile|bleed',
+            'size'  => '180|192|512',
+            'motif' => new EnumRequirement(LogoMotif::class),
+            'paint' => new LogoPaintRequirement(),
+        ],
+        methods: ['GET'],
+    )]
+    public function raster(Request $request, string $form, string $size, LogoMotif $motif, string $paint): Response
+    {
+        $style = LogoStyle::tryFrom($paint);
+        $bleed = 'bleed' === $form;
+        $pixels = (int) $size;
+        $choice = LogoIcons::choice($motif, $style);
+
+        return $this->serve(
+            $request,
+            sprintf('raster.%s.%d.%s', $form, $pixels, $choice),
+            // The drawing's version is in the cache key as well as in the URL:
+            // the picture is cached on this side for as long as it lives.
+            fn (): string => $this->raster->png(
+                sprintf('%s.%s.%s', $form, $choice, $this->icons->version()),
+                fn (): string => $this->tile($motif, $style, $bleed),
+                $pixels,
+            ),
+            'image/png',
         );
     }
 
@@ -219,18 +264,27 @@ final class BrandingController extends AbstractController
             flags: JSON_THROW_ON_ERROR,
         );
 
-        $manifest['icons'] = [[
-            'src'     => $this->icons->url($motif, $paint),
-            'sizes'   => 'any',
-            'type'    => 'image/svg+xml',
-            'purpose' => 'any',
-        ]];
+        $icon = fn (string $form, int $size, string $purpose): array => [
+            'src'     => $this->icons->rasterUrl($form, $size, $motif, $paint),
+            'sizes'   => sprintf('%dx%d', $size, $size),
+            'type'    => 'image/png',
+            'purpose' => $purpose,
+        ];
+
+        $manifest['icons'] = [
+            $icon('tile', 192, 'any'),
+            $icon('tile', 512, 'any'),
+            $icon('bleed', 512, 'maskable'),
+        ];
 
         return json_encode($manifest, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
     }
 
-    /** One tile: the glyph on its ground, clipped to the rounded square. */
-    private function tile(LogoMotif $motif, ?LogoStyle $paint): string
+    /**
+     * One tile: the glyph on its ground, clipped to the rounded square, or
+     * with the ground out to every edge when $bleed (see icon.svg.twig).
+     */
+    private function tile(LogoMotif $motif, ?LogoStyle $paint, bool $bleed = false): string
     {
         [$parts, $glyphRamp, $tileRamp] = self::fill($motif->paints($paint));
 
@@ -239,6 +293,7 @@ final class BrandingController extends AbstractController
             'p'          => $parts,
             'glyph_ramp' => $glyphRamp,
             'tile_ramp'  => $tileRamp,
+            'bleed'      => $bleed,
         ]);
     }
 

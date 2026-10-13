@@ -78,50 +78,92 @@ final class BrandingManifestTest extends WebTestCase
     }
 
     /**
-     * The point of the route. The install icon is the choice's tile, and the
-     * only icon: a second, static candidate is how the wax seal outvoted the
-     * tab icon in Firefox, and a launcher picks among a manifest's icons the
-     * same way.
+     * The point of the route: the installed app's icons are the choice's.
+     *
+     * PNGs, because Android's launcher and iOS want a raster and the logo is an
+     * SVG (BrandingRasterTest): the rounded tile at the two sizes a manifest is
+     * expected to carry, and the ground-to-the-edge form as the maskable icon,
+     * which a launcher cuts to its own shape. One picture per purpose and size,
+     * all of them the choice's: a static candidate beside them is how the wax
+     * seal outvoted the tab icon in Firefox.
      */
-    public function testTheInstallIconIsTheChoicesTile(): void
+    public function testTheInstallIconsAreTheChoicesPngs(): void
     {
         $client = static::createClient();
 
         $manifest = $this->manifest($client, '/branding/manifest/blue-horn/original.webmanifest');
 
-        // The presence companion: no icons at all would pass the check below.
-        self::assertCount(1, $manifest['icons'], 'exactly one install icon');
+        // The presence companion: no icons at all would pass the loop below.
+        self::assertCount(3, $manifest['icons'], 'a tile at 192 and 512, and the maskable 512');
 
-        $icon = $manifest['icons'][0];
+        $expected = [
+            ['tile', 192, 'any'],
+            ['tile', 512, 'any'],
+            ['bleed', 512, 'maskable'],
+        ];
 
-        self::assertSame('image/svg+xml', $icon['type']);
-        self::assertSame('any', $icon['sizes'], 'an SVG has no size of its own');
-        self::assertSame('any', $icon['purpose']);
-        self::assertStringStartsWith('/branding/icon/blue-horn/original.svg?v=', $icon['src']);
+        foreach ($expected as $i => [$form, $size, $purpose]) {
+            $icon = $manifest['icons'][$i];
 
-        // And what that URL serves is a tile in the horn's own colours, not the
-        // wax seal's.
-        $client->request('GET', $icon['src']);
+            self::assertSame('image/png', $icon['type']);
+            self::assertSame($size . 'x' . $size, $icon['sizes']);
+            self::assertSame($purpose, $icon['purpose']);
+            self::assertStringStartsWith(
+                sprintf('/branding/raster/%s/%d/blue-horn/original.png?v=', $form, $size),
+                $icon['src'],
+            );
 
-        self::assertResponseIsSuccessful();
-        self::assertSame('image/svg+xml', $client->getResponse()->headers->get('Content-Type'));
+            // And the URL serves what it says it is.
+            $client->request('GET', $icon['src']);
 
-        $svg = (string) $client->getResponse()->getContent();
+            self::assertResponseIsSuccessful();
+            self::assertSame('image/png', $client->getResponse()->headers->get('Content-Type'));
 
-        foreach (LogoMotif::BlueHorn->paints(null) as $hex) {
-            if (is_string($hex)) {
-                self::assertStringContainsString($hex, $svg);
-            }
+            $info = getimagesizefromstring((string) $client->getResponse()->getContent());
+
+            self::assertIsArray($info);
+            self::assertSame($size, $info[0]);
         }
     }
 
-    public function testThePaintIsInTheInstallIconsUrl(): void
+    public function testThePaintIsInTheInstallIconsUrls(): void
     {
         $client = static::createClient();
 
         $manifest = $this->manifest($client, '/branding/manifest/pl/postal.webmanifest');
 
-        self::assertStringStartsWith('/branding/icon/pl/postal.svg?v=', $manifest['icons'][0]['src']);
+        self::assertCount(3, $manifest['icons']);
+
+        foreach ($manifest['icons'] as $icon) {
+            self::assertStringContainsString('/pl/postal.png?v=', $icon['src']);
+        }
+    }
+
+    /**
+     * iOS ignores the manifest for its home-screen icon and reads the page's
+     * apple-touch-icon, which has to be a PNG. iOS rounds the corners itself and
+     * paints a transparent one black, hence the form that fills the square.
+     */
+    public function testTheHomeScreenIconOfIosFollowsTheChoice(): void
+    {
+        [$client, $user] = $this->signedIn();
+
+        $user->appearance->logoMotif    = LogoMotif::BlueHorn;
+        $user->appearance->logoOriginal = true;
+        static::getContainer()->get(EntityManagerInterface::class)->flush();
+
+        $link = $client->request('GET', '/mail/inbox')->filter('link[rel="apple-touch-icon"]');
+
+        self::assertCount(1, $link);
+        self::assertStringStartsWith('/branding/raster/bleed/180/blue-horn/original.png?v=', (string) $link->attr('href'));
+    }
+
+    public function testAnAnonymousPageLinksTheDefaultHomeScreenIcon(): void
+    {
+        $link = static::createClient()->request('GET', '/login')->filter('link[rel="apple-touch-icon"]');
+
+        self::assertCount(1, $link);
+        self::assertStringStartsWith('/branding/raster/bleed/180/wax-seal/original.png?v=', (string) $link->attr('href'));
     }
 
     /** Everything but the icons is the static manifest's, so the two cannot drift. */
@@ -159,8 +201,12 @@ final class BrandingManifestTest extends WebTestCase
 
         $manifest = $this->manifest($client, '/branding/manifest/blue-horn/original.webmanifest');
 
-        self::assertStringContainsString('blue-horn', $manifest['icons'][0]['src']);
-        self::assertStringNotContainsString('postal', $manifest['icons'][0]['src']);
+        self::assertCount(3, $manifest['icons']);
+
+        foreach ($manifest['icons'] as $icon) {
+            self::assertStringContainsString('/blue-horn/', $icon['src']);
+            self::assertStringNotContainsString('postal', $icon['src']);
+        }
     }
 
     /**

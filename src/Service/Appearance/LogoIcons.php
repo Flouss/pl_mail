@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Appearance;
 
+use App\Controller\BrandingController;
 use App\Domain\Enum\Theme\LogoMotif;
 use App\Domain\Enum\Theme\LogoStyle;
 use App\Domain\Helper\ColourHelper;
@@ -67,8 +68,22 @@ final class LogoIcons
         'public/manifest.webmanifest',
     ];
 
-    /** @var list<class-string> */
-    private const array CLASSES = [LogoMotif::class, LogoStyle::class, Colourway::class, ColourHelper::class];
+    /**
+     * Beside the recipes and colours, the two classes that turn a drawing into
+     * a PNG kept on the server (LogoRaster, BrandingController): that cache's
+     * key carries this version, so a fix in how a picture is rasterised must
+     * move it, or the old rendering would be served from the cache until it aged out.
+     *
+     * @var list<class-string>
+     */
+    private const array CLASSES = [
+        LogoMotif::class,
+        LogoStyle::class,
+        Colourway::class,
+        ColourHelper::class,
+        LogoRaster::class,
+        BrandingController::class,
+    ];
 
     private ?string $version = null;
 
@@ -110,6 +125,19 @@ final class LogoIcons
     }
 
     /**
+     * One choice as a PNG, for the places that take nothing else: iOS's
+     * home-screen icon and a manifest's launcher icons.
+     *
+     * $form is `tile` (the rounded square, a manifest's `any` icon) or `bleed`
+     * (the ground to every edge, for what cuts its own corners: iOS and a
+     * maskable icon); $size is 180, 192 or 512, the sizes the route accepts.
+     */
+    public function rasterUrl(string $form, int $size, LogoMotif $motif, ?LogoStyle $paint = null): string
+    {
+        return $this->generate('app_branding_raster', $motif, $paint, ['form' => $form, 'size' => $size]);
+    }
+
+    /**
      * The top bar's logo for one choice: the glyph bare, for light chrome or
      * for dark.
      */
@@ -141,7 +169,7 @@ final class LogoIcons
      * parameter comes after it: the appearance pane builds each colourway's
      * URL by swapping that one segment in the motif's own URL.
      *
-     * @param array<string, int> $query
+     * @param array<string, int|string> $query
      */
     private function generate(string $route, LogoMotif $motif, ?LogoStyle $paint, array $query = []): string
     {

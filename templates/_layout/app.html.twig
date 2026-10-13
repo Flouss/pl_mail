@@ -93,11 +93,12 @@
        needs the apple-touch-icon specifically — it ignores the manifest icons.
 
        The manifest is a route with the choice in its URL, like the tab icon
-       (see BrandingController::manifest()): the installed app's icon is the
-       one picked in Settings → Appearance. The apple-touch-icon cannot follow
-       yet — iOS takes only a PNG, and nothing here draws a PNG per choice. #}
+       (see BrandingController::manifest()): the installed app's icons are the
+       one picked in Settings → Appearance. So is the apple-touch-icon, as a
+       PNG that fills its square: iOS rounds the corners itself and paints a
+       transparent one black (see BrandingController::raster()). #}
     <link rel="manifest" href="{{ logo_manifest_url(appearance().effectiveLogoMotif, appearance().effectiveLogoPaint) }}">
-    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <link rel="apple-touch-icon" href="{{ logo_raster_url('bleed', 180, appearance().effectiveLogoMotif, appearance().effectiveLogoPaint) }}">
     {# The token the fetch-based endpoints check. Stimulus controllers that
        build their own request body cannot carry a form field, so they read this
        and send it as X-CSRF-Token. Every such endpoint validates against the

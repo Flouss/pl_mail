@@ -8,12 +8,13 @@ The published image tags: `latest` follows the most recent release below,
 
 ## Unreleased
 
-**The installed app has the icon you picked.** The tab icon followed Settings → Appearance →
-Logo, but an app installed to the desktop or an Android home screen kept the wax seal, because
-its icon came from one fixed file. The install manifest now names your choice's icon, and a new
-pick reaches it before you reload. Reinstall (or let the browser refresh the app) to see it.
-iPhone and iPad are unchanged: iOS only takes a PNG for its home-screen icon, and plMail does
-not draw one per choice yet. No migration.
+**The installed app has the icon you picked, on iPhone and Android too.** The tab icon followed
+Settings → Appearance → Logo, but an app installed to the desktop or a home screen kept the wax
+seal, because its icons came from fixed files. The install manifest and the iOS home-screen icon now
+name your choice, drawn as PNGs, and a new pick reaches them before you reload. An app that is
+already installed keeps its old icon until the browser refreshes it or you reinstall. The image now
+carries `librsvg2-bin` (about 60 MB) to draw them: **rebuild the image**, and a custom image needs
+that package. No migration.
 
 ## v0.3.4 — 2026-10-13
 

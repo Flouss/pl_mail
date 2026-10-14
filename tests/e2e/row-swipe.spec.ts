@@ -33,6 +33,9 @@ const DROP_PAUSE_MS = 150;
 const ROWS = '[data-list-region="rows"]';
 const CONTENT = "[data-swipe-content]";
 
+/** A revealed action. Drawn only while its row is open, so visibility is the test for "shown". */
+const COMMIT_BUTTON = "[data-swipe-commit]";
+
 /** Where a left drag starts: near the right edge, clear of the avatar on the left. */
 const LEFT_START = 0.9;
 /** Where a right drag starts: clear of the star on the right, on the avatar's side. */
@@ -239,13 +242,21 @@ test.describe("row swipe on a phone", () => {
             }
         });
 
-        await drag(page, archived, "left", 0.85);
-        await page.waitForTimeout(300);
-        await drag(page, archived, "right", 0.85);
+        // A full drag to the left, which would archive an ordinary row. Here nothing may happen:
+        // checked first, by name, so a write fails with its URL rather than as a timeout later.
+        await drag(page, archived, "left", 0.85, { pause: DROP_PAUSE_MS });
         await page.waitForTimeout(300);
 
+        expect(requests, "a left drag in Archive posted a write").toEqual([]);
+        await expect(archived.locator(`[data-swipe-panel="left"] ${COMMIT_BUTTON}`), "a left panel is drawn in Archive").toBeHidden();
+        await expect(archived, "the row in Archive left the list").toHaveCount(1);
+        await expect(archived, "a left drag in Archive moved the row").not.toHaveAttribute("data-swipe-side", /.+/);
+
+        await drag(page, archived, "right", 0.85, { pause: DROP_PAUSE_MS });
+        await page.waitForTimeout(300);
+
+        expect(requests, "a right drag in Archive posted a write").toEqual([]);
         expect(await content.boundingBox(), "neither direction moved the row").toEqual(before);
-        expect(requests, "neither direction posted").toEqual([]);
 
         // Presence companion: back in the Inbox, the same thread does swipe.
         expect((await ajaxPost(page, `/status/thread/${id}/restore`)).ok()).toBe(true);
@@ -279,6 +290,11 @@ test.describe("row swipe on a phone", () => {
 
         // Upwards, so the pull controller (which reads a downward drag from the top) is not involved.
         await finger.move(0, -120);
+
+        // Checked while the finger is still down: a vertical move must never claim the row as a
+        // swipe. Checked after the lift, this would pass for a row that claimed and then let go.
+        await expect(row, "a vertical drag claimed the row as a swipe").not.toHaveAttribute("data-swipe-side", /.+/);
+
         await finger.up();
         await page.waitForTimeout(200);
 
@@ -345,41 +361,133 @@ test.describe("row swipe on a phone", () => {
 
 });
 
-test.describe("row swipe with a mouse on a desktop", () => {
-    // Overrides the phone device for this block: a desktop window and a mouse, no touch.
-    test.use({ viewport: { width: 1280, height: 800 }, isMobile: false, hasTouch: false });
+/**
+ * Desktop width is inert for both pointers, and phone width is not.
+ *
+ * Each case drags at a desktop window (1280px, so not below 48rem) by a mouse or by a
+ * touch, and asserts nothing happened: no swipe state on the row, no transform, no
+ * action panel shown, no write posted. Then the window is made phone-width and a TOUCH
+ * drag of the same distance, on the same row, acts. The presence half is a touch and not
+ * a mouse because a mouse never acts on a phone either: touch is the only pointer that does.
+ *
+ * hasTouch is on for the whole block, because a CDP finger needs a touch-capable context.
+ */
+test.describe("row swipe at desktop width is inert, and a phone width is not", () => {
+    test.use({ viewport: { width: 1280, height: 800 }, isMobile: false, hasTouch: true });
 
-    test("a mouse drag across a row does nothing", async ({ page }) => {
-        await openInbox(page);
-
-        const row = mailRow(page, INBOX_SUBJECTS.archive);
-        const box = await row.boundingBox();
-        const requests: string[] = [];
+    /** Writes to /status/ posted from now on, in order. */
+    function watchWrites(page: Page): string[] {
+        const writes: string[] = [];
 
         page.on("request", (request) => {
             if (request.method() === "POST" && request.url().includes("/status/")) {
-                requests.push(request.url());
+                writes.push(request.url());
             }
         });
 
-        // Presence: the mouse moves reached the page, so the drag below was delivered and ignored.
-        await page.evaluate(() => {
-            const win = window as unknown as { __mouseMoves: number };
+        return writes;
+    }
 
-            win.__mouseMoves = 0;
-            document.addEventListener("mousemove", () => (win.__mouseMoves += 1));
-        });
+    /** A mouse drag by `fraction` of the row's width, leftwards. */
+    async function mouseDrag(page: Page, row: Locator, fraction: number, { pause = 0 } = {}): Promise<void> {
+        const box = await row.boundingBox();
 
-        await page.mouse.move(box!.x + box!.width * 0.9, box!.y + box!.height / 2);
+        expect(box, "the row is rendered").not.toBeNull();
+
+        const y = box!.y + box!.height / 2;
+
+        await page.mouse.move(box!.x + box!.width * LEFT_START, y);
         await page.mouse.down();
-        await page.mouse.move(box!.x + box!.width * 0.05, box!.y + box!.height / 2, { steps: 12 });
+        await page.mouse.move(box!.x + box!.width * (LEFT_START - fraction), y, { steps: 12 });
+
+        if (pause > 0) {
+            await page.waitForTimeout(pause);
+        }
+
         await page.mouse.up();
+    }
+
+    /** Nothing happened: asserted per fact, and the write check last, after the settle. */
+    async function expectInert(page: Page, row: Locator, writes: string[]): Promise<void> {
         await page.waitForTimeout(300);
 
-        expect(await page.evaluate(() => (window as unknown as { __mouseMoves: number }).__mouseMoves), "the mouse moves arrived").toBeGreaterThan(0);
+        await expect(row, "the row shows a swipe state").not.toHaveAttribute("data-swipe-side", /.+/);
+        await expect(row.locator(CONTENT), "the row was moved").toHaveCSS("transform", "none");
+        await expect(row.locator(`[data-swipe-panel] ${COMMIT_BUTTON}`).first(), "an action panel is shown").toBeHidden();
+        expect(writes, "a write was posted").toEqual([]);
+    }
 
-        await expect(row).not.toHaveAttribute("data-swipe-side", /.+/);
-        expect(requests).toEqual([]);
+    test("a mouse drag that would open a row does nothing here, and a touch drag at phone width does", async ({ page }) => {
+        await openInbox(page);
+
+        const writes = watchWrites(page);
+
+        await mouseDrag(page, mailRow(page, INBOX_SUBJECTS.archive), 0.5, { pause: DROP_PAUSE_MS });
+        await expectInert(page, mailRow(page, INBOX_SUBJECTS.archive), writes);
+
+        // Presence: the same row, at phone width, by touch, opens.
+        await page.setViewportSize({ width: 393, height: 727 });
+        await drag(page, mailRow(page, INBOX_SUBJECTS.archive), "left", 0.5, { pause: DROP_PAUSE_MS });
+
+        await expect(mailRow(page, INBOX_SUBJECTS.archive)).toHaveAttribute("data-swipe-side", "left");
+        await expect(mailRow(page, INBOX_SUBJECTS.archive).locator(`[data-swipe-panel="left"] ${COMMIT_BUTTON}`)).toBeVisible();
+        expect(writes, "opening is not a write").toEqual([]);
+    });
+
+    test("a mouse drag past full does nothing here, and a touch drag at phone width commits", async ({ page }) => {
+        await openInbox(page);
+
+        const writes = watchWrites(page);
+        const id = await threadId(mailRow(page, INBOX_SUBJECTS.archive));
+
+        await mouseDrag(page, mailRow(page, INBOX_SUBJECTS.archive), 0.85, { pause: DROP_PAUSE_MS });
+        await expectInert(page, mailRow(page, INBOX_SUBJECTS.archive), writes);
+
+        // Presence: at phone width, the same distance by touch commits.
+        await page.setViewportSize({ width: 393, height: 727 });
+
+        const posted = page.waitForRequest((request) => request.method() === "POST" && new URL(request.url()).pathname === archiveUrl(id));
+
+        await drag(page, mailRow(page, INBOX_SUBJECTS.archive), "left", 0.85, { pause: DROP_PAUSE_MS });
+        await posted;
+
+        await expect(mailRow(page, INBOX_SUBJECTS.archive)).toHaveCount(0);
+    });
+
+    test("a touch drag that would open a row does nothing at desktop width, and at phone width it does", async ({ page }) => {
+        await openInbox(page);
+
+        const writes = watchWrites(page);
+
+        await drag(page, mailRow(page, INBOX_SUBJECTS.archive), "left", 0.5, { pause: DROP_PAUSE_MS });
+        await expectInert(page, mailRow(page, INBOX_SUBJECTS.archive), writes);
+
+        // Presence: the same drag, after the window is made phone-width, opens the row.
+        await page.setViewportSize({ width: 393, height: 727 });
+        await drag(page, mailRow(page, INBOX_SUBJECTS.archive), "left", 0.5, { pause: DROP_PAUSE_MS });
+
+        await expect(mailRow(page, INBOX_SUBJECTS.archive)).toHaveAttribute("data-swipe-side", "left");
+        expect(writes, "opening is not a write").toEqual([]);
+    });
+
+    test("a touch drag past full does nothing at desktop width, and at phone width it commits", async ({ page }) => {
+        await openInbox(page);
+
+        const writes = watchWrites(page);
+        const id = await threadId(mailRow(page, INBOX_SUBJECTS.archive));
+
+        await drag(page, mailRow(page, INBOX_SUBJECTS.archive), "left", 0.85, { pause: DROP_PAUSE_MS });
+        await expectInert(page, mailRow(page, INBOX_SUBJECTS.archive), writes);
+
+        // Presence: the same drag at phone width commits.
+        await page.setViewportSize({ width: 393, height: 727 });
+
+        const posted = page.waitForRequest((request) => request.method() === "POST" && new URL(request.url()).pathname === archiveUrl(id));
+
+        await drag(page, mailRow(page, INBOX_SUBJECTS.archive), "left", 0.85, { pause: DROP_PAUSE_MS });
+        await posted;
+
+        await expect(mailRow(page, INBOX_SUBJECTS.archive)).toHaveCount(0);
     });
 });
 

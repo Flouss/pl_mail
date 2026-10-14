@@ -744,6 +744,38 @@ class Message extends MessageModel
     }
 
     /**
+     * A stored draft that the provider says has been sent.
+     *
+     * Sync stores a draft once, as an unsent draft, and never rebuilds a stored
+     * row, so sending it from Outlook or Gmail left it flagged `\Draft` with no
+     * sentAt: the editor would open it, the send queue would send it again, and
+     * discarding it would delete the sent copy at the provider. This is the one
+     * place that says what "was sent" means for the row, for every provider.
+     *
+     * The thread is ranked by $at, as the local send does (ThreadOrderingOnSendTest),
+     * but never moved backwards. Its category is not re-adopted: that is the
+     * threader's, and a draft's reply context was settled when it was written.
+     *
+     * Anything that is not an unsent draft is left exactly as it is, since the
+     * sync asks about every stored message the provider says is not a draft.
+     */
+    public function settleAsSent(DateTimeImmutable $at): void
+    {
+        if (false === $this->isDraft()) {
+            return;
+        }
+
+        $this->removeFlag(MessageFlag::DRAFT);
+        $this->sentAt ??= $at;
+
+        $thread = $this->thread;
+
+        if (null !== $thread && (null === $thread->lastMessageAt || $at > $thread->lastMessageAt)) {
+            $thread->lastMessageAt = $at;
+        }
+    }
+
+    /**
      * Whether a read receipt was asked for on this message.
      *
      * A method rather than reading $readReceiptRequested directly, because the

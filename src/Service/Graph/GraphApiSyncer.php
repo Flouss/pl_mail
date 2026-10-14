@@ -650,6 +650,15 @@ final class GraphApiSyncer
 
         $message->addLabel($label);
 
+        // Filed in Sent Items, so it was sent. A delta says nothing about
+        // isDraft and a stored message is never rebuilt, so this is the only
+        // place a draft sent from Outlook (same id under immutable ids) is
+        // heard. Trash and Drafts are not it: a draft thrown away or put back
+        // is still unsent.
+        if (LabelRole::Sent === $label->role) {
+            $message->settleAsSent(new DateTimeImmutable());
+        }
+
         // A folder move on the Microsoft side changes Email.mailboxIds, which
         // is the single most visible thing a JMAP client watches for. Without
         // this the message silently moves in Outlook and never in ltt.rs.

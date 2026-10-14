@@ -10,6 +10,7 @@ use App\Domain\Enum\Mail\GmailSkipReason;
 use App\Domain\DTO\Mail\IngestedMessage;
 use App\Domain\DTO\Mail\RemoteFlagState;
 use App\Domain\Helper\MessageIdHelper;
+use DateTimeImmutable;
 use App\Entity\Mail\Account;
 use App\Entity\Mail\Message;
 use App\Jmap\State\JmapObjectType;
@@ -513,6 +514,13 @@ final readonly class SyncGmailMessageBatchHandler
         );
 
         if (true === $ownsFlags) {
+            // A stored draft whose message no longer carries DRAFT was sent
+            // (Gmail swaps DRAFT for SENT on the same message). Before the
+            // refresh below, which rewrites the flags from what it is given.
+            if (false === in_array('DRAFT', $labelIds, true)) {
+                $existing->settleAsSent(new DateTimeImmutable());
+            }
+
             // One row at a time because enrichment is one row at a time, and
             // this is the call that recounts the thread, updates the unread
             // badge and records the JMAP change — as well as declining to

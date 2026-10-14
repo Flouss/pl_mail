@@ -21,9 +21,15 @@ import { seed } from "./support/config";
 test.use({ ...devices["Pixel 5"] });
 
 // The base seed has four inbox threads, which cannot overflow a phone's list. Sixty
-// messages overflow it, so the scroll case has something to scroll.
+// messages overflow it, so the scroll case has something to scroll. --messages adds
+// to the bulk mailbox rather than replacing it, so each test starts from a clear one
+// and the last test leaves none behind for the next spec on this worker.
 test.beforeEach(() => {
-    seed("seed-bulk --messages=60");
+    seed("seed-bulk --clear", "seed-bulk --messages=60");
+});
+
+test.afterAll(() => {
+    seed("seed-bulk --clear");
 });
 
 const PULL_PAST = 180;

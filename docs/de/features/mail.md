@@ -1,4 +1,4 @@
-<!-- translated-from: features/mail.md sha1:553fe662dcb0e449c0826935ba083bf0b2db7b1e -->
+<!-- translated-from: features/mail.md sha1:edc2d16a6d9526a3aadc0ccb7cc07c241ed28ebd -->
 
 # Mail
 
@@ -663,6 +663,16 @@ Knopf oben auf dem Bildschirm dreht sich, solange er läuft, und der Hinweis dre
 Berührung ist der Knopf der Ersatz: ein benannter Knopf für Tastatur und Bildschirmleser, und die
 Meldung zur Synchronisierung sagt, wann ein Lauf beginnt und endet.
 
+Auf dem Telefon lässt sich eine Zeile auch wischen. Zieh sie nach rechts, und sie wird als gelesen
+markiert, oder als ungelesen, wenn sie schon gelesen ist; zieh sie nach links, und sie wird
+archiviert. Über ein Drittel der Zeilenbreite wartet die Aktion hinter der Zeile, und Drücken führt
+sie aus. Über zwei Drittel, oder ein schneller Wisch über das erste Drittel, geschieht sie beim
+Loslassen. Ein Tippen irgendwo anders schließt eine offene Zeile, und dieses Tippen tut sonst nichts.
+Wo die eigenen Knöpfe der Zeile nichts anbieten, bietet auch ein Wisch nichts: nicht bei einem
+Entwurf und nicht im Archiv, im Papierkorb oder bei Spam. Ohne Berührung erledigen das
+Kontrollkästchen der Zeile (ihr Avatar) und die Leiste dieselbe Arbeit, **Archivieren** und **Mehr**
+für eine Auswahl eingeschlossen. Die beiden Richtungen sind vorerst fest.
+
 ### Tastenkürzel
 
 Die einzelnen Tasten, die Gmail benutzt, funktionieren auch hier. Mit **?** bekommst du überall die
@@ -1268,4 +1278,18 @@ Code noch geht — das kann nur die Mail, aus der er stammt.
 Trackpad und jedes Fenster ab der Tablet-Breite ziehen nie. Ein Ziehen beginnt nur, wenn die Liste
 ganz oben steht, und nicht bei offener Seitenleiste; von weiter unten scrollt dieselbe Bewegung nur.
 Reduzierte Bewegung nimmt dem Hinweis das Gleiten und sonst nichts, der Auslösepunkt bleibt gleich.
+
+**Ein Wisch ist eine Fingergeste auf dem Telefon, und seine Richtungen sind echte Richtungen.** Eine
+Maus wischt nie, in keiner Breite, und ab der Tablet-Breite wischt nichts. Rechts heißt zum rechten
+Bildschirmrand, unabhängig von der Sprache, denn eine Sprache von rechts nach links wird nicht
+mitgeliefert. Wer eine ergänzt, muss entscheiden, wie sich die beiden Seiten spiegeln.
+
+**Eine Aktualisierung lässt eine Zeile, die du festhältst, wo sie ist.** Eine Zeile unter deinem
+Finger oder eine offene Zeile behält ihren Zustand, während eine Synchronisierung oder eine
+Aktualisierung die Liste neu zeichnet. Die Änderung an dieser Zeile kommt, wenn du sie schließt. Eine
+Aktualisierung, die die Zeile entfernt, nimmt sie von der Liste.
+
+**Löschen ist kein Wisch.** Ein voller Zug hat kein Tippen davor, und eine Zeile im Papierkorb hat
+kein eigenes Rückgängig. Das Löschen bleibt daher bei den Knöpfen der Zeile und im Papierkorb, wo
+zuerst getippt werden muss.
 

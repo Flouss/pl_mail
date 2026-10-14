@@ -8,6 +8,14 @@ The published image tags: `latest` follows the most recent release below,
 
 ## Unreleased
 
+**On a phone, archiving a mail or marking it read meant opening it first.** The row's buttons show on
+hover, and a phone has no hover, so they never appeared in the list. A row now swipes: drag it to the
+right to mark it read or unread, and to the left to archive it, past a third of its width to reveal
+the action or past two thirds to do it straight away. It is for a finger on a phone-width screen only;
+a mouse and wider windows behave as before. A swipe offers nothing on a draft or in the archive, the
+bin or spam, as the row's own buttons do, and trashing is not a swipe. The two directions are fixed
+for now. No schema change, no deployment change.
+
 **On a phone, syncing the inbox meant reaching for the button at the top of the screen.**
 Pulling the mail list down from its top now syncs it, through the same sync as that button: drag
 past the *Release to sync* indicator and let go, and the sync icon spins while the run lasts. It is

@@ -11,7 +11,8 @@ The published image tags: `latest` follows the most recent release below,
 **On a phone, a mail row's actions were only reachable through buttons that appear on hover, and a phone
 has no hover.** Archive, delete, snooze, move and label were in the row's strip, which a phone never shows.
 Holding a row for about half a second now opens an action sheet with every action the row offers, the same
-ones the strip and the swipe offer, in the same places. Move to, Label as and Snooze open their pickers over
+ones the strip and the swipe offer, in the same places. Move to (on a conversation, not a single message),
+Label as and Snooze open their pickers over
 the sheet, and Select ticks the row for a bulk action. A row is no longer a native drag on a phone, so iOS
 does not lift it during the hold. Trash in the sheet has no Undo, as the strip's trash button has none, and
 delete forever is offered only with the delete-now buttons switched on under Settings → Mail → Disposal. The
@@ -39,7 +40,8 @@ and the config backup carries them.
 Pulling the mail list down from its top now syncs it, through the same sync as that button: drag
 past the *Release to sync* indicator and let go, and the sync icon spins while the run lasts. It is
 for a finger on a phone-width screen only. A mouse, a trackpad and wider windows behave as before, a
-list scrolled down scrolls as it always did, and a pull while the sidebar is open does nothing.
+list scrolled down scrolls as it always did, and a pull while the sidebar, an open row or the action sheet
+is up does nothing.
 Reduced motion removes the indicator's slide. No schema change, no deployment change.
 
 **A Gmail import takes in everything in the mailbox, not only mail addressed to the account.**

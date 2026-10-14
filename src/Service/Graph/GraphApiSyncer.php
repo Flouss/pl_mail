@@ -572,12 +572,16 @@ final class GraphApiSyncer
 
             // Read state used to stop here. The comment above this block said
             // the only cheap thing that could have changed was location, and it
-            // was wrong: a Graph delta entry carries the whole message resource,
-            // isRead and flag included, so a message read in Outlook announced
-            // itself in this very payload and plMail dropped it. Mail read on a
+            // was wrong: a Graph delta entry carries the properties the chain
+            // was begun with, and with isRead and flag among them a message read
+            // in Outlook announced itself in this very payload. Mail read on a
             // phone stayed unread here, exactly as it did on IMAP, and for the
             // same reason — nothing ever re-read the state of a row it already
             // had.
+            //
+            // That holds only for a chain begun with them: GraphApiClient::
+            // DELTA_SELECT. One begun without is sent no entry at all for a
+            // message that was merely read, so this block cannot make up for it.
             $state = $this->flagStateOf($account, $graphId, $item);
 
             if (null !== $state) {

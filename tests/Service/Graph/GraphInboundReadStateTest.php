@@ -306,6 +306,53 @@ final class GraphInboundReadStateTest extends KernelTestCase
         );
     }
 
+    /**
+     * The half of a folder's second life that the migration relies on. Every
+     * folder's link is cleared once (Version20261014110000), so the folder is
+     * the import's and is listed from the top; the listing carries each
+     * message's isRead, and a message it already has is settled by it, not
+     * skipped as "known". Then the folder is followed again, by the link the
+     * listing ends with.
+     *
+     * Both reads are asserted — the message read here and unread there, and
+     * the other way round — because a listing that only ever agreed with one
+     * of them would pass either alone.
+     */
+    public function testAFolderListedAgainSettlesTheReadStateOfWhatItAlreadyHas(): void
+    {
+        $readHere   = $this->seedMessage(seen: true);
+        $unreadHere = $this->seedMessage(seen: false, graphId: 'AAkALgAAother');
+
+        $page = new MockResponse(json_encode([
+            'value' => [
+                ['id' => self::GRAPH_ID, 'parentFolderId' => self::INBOX_FOLDER, 'isRead' => false],
+                ['id' => 'AAkALgAAother', 'parentFolderId' => self::INBOX_FOLDER, 'isRead' => true],
+            ],
+            '@odata.deltaLink' => 'https://graph.microsoft.com/v1.0/me/mailFolders/x/messages/delta?$deltatoken=renewed',
+        ], JSON_THROW_ON_ERROR), ['response_headers' => ['content-type' => 'application/json']]);
+
+        // What the migration leaves: no link, and the folder planned for the import.
+        $this->account->graphDeltaLinks = [];
+        $this->account->graphImport     = [['folder' => self::INBOX_FOLDER, 'since' => time(), 'next' => null]];
+        $this->em->flush();
+
+        $this->syncerAnswering($page)->importPage($this->account);
+
+        $this->em->clear();
+
+        $readHere   = $this->em->find(Message::class, $readHere->id);
+        $unreadHere = $this->em->find(Message::class, $unreadHere->id);
+        $account    = $this->em->find(Account::class, $this->account->id);
+
+        self::assertNull($readHere->seenAt, 'read here, unread on the server: the server\'s word is taken');
+        self::assertNotNull($unreadHere->seenAt, 'unread here, read on the server: the server\'s word is taken');
+        self::assertSame(
+            'https://graph.microsoft.com/v1.0/me/mailFolders/x/messages/delta?$deltatoken=renewed',
+            $account->graphDeltaLinks[self::INBOX_FOLDER] ?? null,
+            'the listing ends by handing the folder the link it is followed with from now on',
+        );
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────
 
     /**
@@ -317,6 +364,25 @@ final class GraphInboundReadStateTest extends KernelTestCase
      */
     private function syncDelta(array $extra): void
     {
+        $syncer = $this->syncerAnswering($this->deltaPage($extra));
+
+        // Folders that are already being followed. One without a delta link is
+        // the import's and would not be asked for changes at all — see
+        // GraphImportTest for that half.
+        $this->account->graphDeltaLinks = array_fill_keys([self::INBOX_FOLDER], 'https://graph.microsoft.com/v1.0/me/mailFolders/x/messages/delta?$deltatoken=old');
+
+        $syncer->sync($this->account, [self::INBOX_FOLDER]);
+
+        $this->em->flush();
+    }
+
+    /**
+     * What a folder's delta, or its listing, says about the message.
+     *
+     * @param array<string,mixed> $extra
+     */
+    private function deltaPage(array $extra): MockResponse
+    {
         $delta = [
             'value' => [array_merge([
                 'id'             => self::GRAPH_ID,
@@ -325,13 +391,18 @@ final class GraphInboundReadStateTest extends KernelTestCase
             '@odata.deltaLink' => 'https://graph.microsoft.com/v1.0/me/mailFolders/x/messages/delta?$deltatoken=new',
         ];
 
+        return new MockResponse(json_encode($delta, JSON_THROW_ON_ERROR), [
+            'response_headers' => ['content-type' => 'application/json'],
+        ]);
+    }
+
+    private function syncerAnswering(MockResponse $response): GraphApiSyncer
+    {
         $container = self::getContainer();
 
-        $syncer = new GraphApiSyncer(
+        return new GraphApiSyncer(
             new GraphApiClient(
-                new MockHttpClient([new MockResponse(json_encode($delta, JSON_THROW_ON_ERROR), [
-                    'response_headers' => ['content-type' => 'application/json'],
-                ])]),
+                new MockHttpClient([$response]),
                 $container->get('App\Service\OAuth\OAuthTokenManager'),
             ),
             $container->get('App\Service\Graph\GraphFolderResolver'),
@@ -347,18 +418,9 @@ final class GraphInboundReadStateTest extends KernelTestCase
             $container->get('App\Service\Label\ThreadLabelSynchronizer'),
             new \App\Service\Mail\SyncNotifier($this->hub, new \Psr\Log\NullLogger()),
         );
-
-        // Folders that are already being followed. One without a delta link is
-        // the import's and would not be asked for changes at all — see
-        // GraphImportTest for that half.
-        $this->account->graphDeltaLinks = array_fill_keys([self::INBOX_FOLDER], 'https://graph.microsoft.com/v1.0/me/mailFolders/x/messages/delta?$deltatoken=old');
-
-        $syncer->sync($this->account, [self::INBOX_FOLDER]);
-
-        $this->em->flush();
     }
 
-    private function seedMessage(bool $seen, bool $flagged = false): Message
+    private function seedMessage(bool $seen, bool $flagged = false, string $graphId = self::GRAPH_ID): Message
     {
         $thread                    = new MessageThread();
         $thread->account           = $this->account;
@@ -373,7 +435,7 @@ final class GraphInboundReadStateTest extends KernelTestCase
         $message->thread         = $thread;
         $message->subject        = 'Read elsewhere';
         $message->fromAddress    = 'sender@example.test';
-        $message->graphId        = self::GRAPH_ID;
+        $message->graphId        = $graphId;
         $message->receivedAt     = new DateTimeImmutable('-1 hour');
         $message->sentAt         = $message->receivedAt;
         $message->hasAttachments = false;

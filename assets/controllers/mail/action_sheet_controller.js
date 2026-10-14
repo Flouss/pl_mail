@@ -53,6 +53,11 @@ export default class extends Controller {
     };
 
     connect() {
+        // Set before anything can return early, so disconnect() (which runs for the early return too)
+        // never reads a field connect() did not reach.
+        this._shell = null;
+        this._liftsShell = false;
+
         this._row = document.getElementById(this.rowDomIdValue);
 
         // A row that is no longer there (a refresh took it between the hold and this) has no sheet.
@@ -77,8 +82,10 @@ export default class extends Controller {
         // lives under the sidebar drawer's shell, so making that inert covers the whole page.
         this._shell = document.getElementById("message-list")?.closest(SHELL) ?? null;
 
-        if (this._shell !== null) {
+        // Only an inert this sheet set is lifted on close: a shell that was already inert belongs to someone else.
+        if (this._shell !== null && this._shell.inert === false) {
             this._shell.inert = true;
+            this._liftsShell = true;
         }
 
         this._onKeydown = (event) => {
@@ -129,7 +136,7 @@ export default class extends Controller {
         document.removeEventListener("keydown", this._onKeydown);
         unregisterSurface(SURFACE);
 
-        if (this._shell !== null) {
+        if (this._liftsShell) {
             this._shell.inert = false;
         }
 
@@ -256,10 +263,23 @@ export default class extends Controller {
         labels?.setAttribute("data-mail--label-menu-label-ids-value", this._labelIds);
     }
 
-    /** Close when the row has left the list, or is leaving it. */
+    /**
+     * Close when the row has left the list, or is leaving it. A stream that redraws the row (a label
+     * tick, a star) replaces its node under the same DOM id, so the row is looked up again by that id,
+     * and the sheet follows the new node: the sheet closes only when the id is gone, or the row leaves.
+     */
     #checkRow() {
-        if (this._row.isConnected === false || this._row.hasAttribute("data-leaving")) {
+        const current = document.getElementById(this.rowDomIdValue);
+
+        if (current === null || current.hasAttribute("data-leaving")) {
             this.close();
+
+            return;
+        }
+
+        if (current !== this._row) {
+            this._row = current;
+            this._returnTo = current.querySelector("[data-thread-select]");
         }
     }
 

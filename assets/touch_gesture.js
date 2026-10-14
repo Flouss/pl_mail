@@ -159,7 +159,7 @@ export function openSurface(except = null) {
  * refusal is silent: the caller does nothing, and the touch stays with whatever
  * the browser would do with it.
  *
- * @param {string} kind  "pull", "swipe", or "dismiss" (a touch that only closes an open row)
+ * @param {string} kind  "pull", "swipe", "dismiss" (a touch that only closes an open row), or "hold"
  * @param {{ except?: string|null }} [options]  a surface the claim may ignore
  * @returns {boolean} true when the caller now owns the sequence
  */

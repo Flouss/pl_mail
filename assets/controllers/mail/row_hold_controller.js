@@ -162,6 +162,11 @@ export default class extends Controller {
 
         this._consumeClickUntil = 0;
 
+        // A one-finger touchstart begins a new sequence, so whatever this controller still holds is
+        // stale: its touchend or touchcancel may never reach us (the row it was on was removed). Its
+        // timer goes, its pressed marks go, and its claim is released, before anything new is armed.
+        this.#abandon();
+
         if (window.matchMedia(MOBILE).matches !== true) {
             return;
         }
@@ -235,14 +240,30 @@ export default class extends Controller {
             return;
         }
 
-        const intent = active.sequence.move(active.dx, active.dy, performance.now() - active.origin.t);
+        // A row a refresh removed under the finger is no hold: nothing is claimed and nothing opens.
+        // A row a refresh removed under the finger is no hold: nothing is claimed and nothing opens.
+        if (active.row.isConnected === false) {
+            this.#release(active);
+            this._active = null;
+
+            return;
+        }
+
+        const elapsed = performance.now() - active.origin.t;
+        const intent = active.sequence.move(active.dx, active.dy, elapsed);
 
         if (intent !== Intent.HOLD) {
             // A decided swipe or scroll is the other gestures' business. This sequence is done with.
             if (intent !== Intent.UNDECIDED) {
                 this.#release(active);
                 this._active = null;
+
+                return;
             }
+
+            // Still undecided: the timer can fire a little early (performance.now() and the timer do not
+            // agree to the millisecond), and nothing else would ask again. Ask again for what is left.
+            this.#arm(active, HOLD_MS - elapsed);
 
             return;
         }
@@ -258,6 +279,15 @@ export default class extends Controller {
         active.held = true;
         this.#release(active, { keepPressed: true });
         this.#open(active.row);
+    }
+
+    /**
+     * Ask #decide again after `ms` (replacing any timer already armed). Nothing is armed when the time
+     * is up already: a sequence that is still undecided then is one the arbiter will not hold.
+     */
+    #arm(active, ms) {
+        clearTimeout(active.timer);
+        active.timer = ms > 0 ? setTimeout(() => this.#decide(), ms) : null;
     }
 
     /** Clear the timer and, unless the hold is kept, the pressed marks. */

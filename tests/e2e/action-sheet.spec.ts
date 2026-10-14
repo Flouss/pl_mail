@@ -96,17 +96,16 @@ test.describe("long press opens the action sheet on a phone", () => {
         await expect(row).toBeVisible();
     });
 
-    test("a move past the slop before the hold cancels it; the same press without the move opens the sheet", async ({ page }) => {
+    test("a 20px drag at 200ms cancels the hold and reads as a scroll; the same press without the drag opens the sheet", async ({ page }) => {
         await openInbox(page);
 
         const row = mailRow(page, INBOX_SUBJECTS.archive);
 
         // 20px down at t0 + 200: reach 20 > 8 cancels the hold, and 20 >= 10 decides the sequence
-        // vertical (a scroll or pull), so the hold never comes at t0 + 450.
-        //
-        // The boundary at 8 and 9 px is not reachable here: Chromium does not deliver a touchmove
-        // that moves less than its own touch slop, so the page never sees a 9px move. That
-        // boundary is proved at the arbiter (touch-gesture-arbiter.spec.ts: (9,0,200) then (9,0,500)).
+        // vertical (a scroll or pull), so the hold never comes at t0 + 450. This test does not prove
+        // the slop boundary itself: a move of 8 to 10px is never delivered here, because Chromium
+        // does not send a touchmove inside its own touch slop. The boundary (9px at 200ms cancels,
+        // 9px at 500ms is past the window) is proved at the arbiter, in touch-gesture-arbiter.spec.ts.
         const moved = await pressRow(page, row);
 
         await page.clock.runFor(200);
@@ -396,13 +395,166 @@ test.describe("a background refresh does not disturb the sheet", () => {
     });
 });
 
+test.describe("a row that leaves under a held finger", () => {
+    test("a row removed before its hold fires opens no sheet and throws nothing, and the next hold opens one", async ({ page }) => {
+        const errors: string[] = [];
+
+        page.on("pageerror", (error) => errors.push(error.message));
+        page.on("console", (message) => {
+            if (message.type() === "error") {
+                errors.push(message.text());
+            }
+        });
+
+        await openInbox(page);
+
+        const row = mailRow(page, INBOX_SUBJECTS.archive);
+        const finger = await pressRow(page, row);
+
+        // The row goes while the finger is down and before the 450ms hold is decided. The touch
+        // targets the removed node, so nothing from here on reaches the hold's touchend.
+        await row.evaluate((element) => element.remove());
+        await expect(row).toHaveCount(0);
+
+        await page.clock.runFor(500);
+        await finger.up();
+
+        await expect(sheet(page)).toHaveCount(0);
+        expect(errors, "a removed row opens no sheet and throws nothing").toEqual([]);
+
+        // The removed row claimed nothing: a pull is granted before any other touch lands. (The next
+        // touch would release a stale claim anyway, so this is checked first.)
+        expect(await pullIsGranted(page), "a removed row's hold claims nothing").toBe(true);
+
+        // Presence companion: a hold on a row that is still there opens the sheet, so the
+        // zero above is the removed row and not a hold that never fires.
+        const other = mailRow(page, INBOX_SUBJECTS.read);
+        const again = await pressRow(page, other);
+
+        await page.clock.runFor(500);
+        await again.up();
+
+        await expect(sheet(page)).toHaveCount(1);
+        expect(errors, "the next hold throws nothing either").toEqual([]);
+
+        await page.keyboard.press("Escape");
+        await expect(sheet(page)).toHaveCount(0);
+
+        // And a pull from the top is granted afterwards: the stale hold holds no claim.
+        expect(await pullIsGranted(page)).toBe(true);
+    });
+
+    test("a held row removed under the finger leaves no hold claim behind: a later touch releases it, and a pull is granted", async ({ page }) => {
+        await openInbox(page);
+
+        const row = mailRow(page, INBOX_SUBJECTS.archive);
+        const finger = await pressRow(page, row);
+
+        await page.clock.runFor(500);
+
+        // Presence: the hold opened the sheet, which claims the surface while the finger is down.
+        await expect(dialog(page)).toBeVisible();
+        expect(await openSurfaceOf(page)).toBe("sheet");
+
+        // The row goes under the finger. The sheet closes with it, and the finger's touchend never
+        // reaches the hold, so the hold's claim is still held when the finger lifts.
+        await row.evaluate((element) => element.remove());
+        await expect(sheet(page)).toHaveCount(0);
+        await finger.up();
+
+        // A new touch on the list begins a new sequence, which abandons the stale hold's claim.
+        const rows = await page.locator(ROWS_SELECTOR).boundingBox();
+        const next = await Finger.down(page, rows!.x + rows!.width / 2, rows!.y + 20);
+
+        expect(await pullIsGranted(page), "the stale hold's claim was released by the new touch").toBe(true);
+
+        await next.up();
+    });
+});
+
+/** The list's rows scroller, as the list frame draws it. */
+const ROWS_SELECTOR = '[data-list-region="rows"]';
+
+/** The DOM id of a seeded label's entry in the label menus, found by its name. */
+async function labelIdNamed(page: Page, name: string): Promise<string> {
+    const id = await page.locator("[data-label-id]").filter({ hasText: name }).first().getAttribute("data-label-id");
+
+    expect(id, `the label "${name}" is listed`).not.toBeNull();
+
+    return id!;
+}
+
 test.describe("the label picker in the sheet", () => {
+    // seed-mail (the top-level beforeEach) wipes the account's threads; the label is user-scoped and
+    // seed-label puts it on the account again, so the row can carry it.
+    test.beforeEach(() => {
+        seed("seed-label");
+    });
+
     test("Label as ticks exactly the labels this row carries", async ({ page }) => {
         await openInbox(page);
 
         const row = mailRow(page, INBOX_SUBJECTS.archive);
-        const ids = (await row.getAttribute("data-label-ids")) ?? "";
-        const carried = ids === "" ? 0 : ids.split(",").length;
+        const id = await threadIdOf(row);
+        const label = await labelIdNamed(page, "E2E Label");
+
+        // The row gets the label on the server. A reload draws the row with it in data-label-ids.
+        expect((await ajaxPost(page, `/status/thread/${id}/label`, { labelId: Number(label), attach: true })).ok()).toBe(true);
+
+        await openInbox(page);
+        await expect(mailRow(page, INBOX_SUBJECTS.archive)).toHaveAttribute("data-label-ids", label);
+
+        const finger = await pressRow(page, mailRow(page, INBOX_SUBJECTS.archive));
+
+        await page.clock.runFor(500);
+        await finger.up();
+
+        await dialog(page).getByRole("button", { name: "Label as", exact: true }).click();
+
+        const panel = sheet(page).locator('[data-mail--label-menu-target="panel"]');
+
+        await expect(panel).toBeVisible();
+
+        // Presence: the user's labels are listed. The ticks are counted and compared by id, so a sheet
+        // that ticks nothing, or the wrong label, fails by name.
+        await expect(panel.locator("[data-label-id]")).not.toHaveCount(0);
+
+        const ticked = await panel.locator('[data-attached="true"]').evaluateAll((els) => els.map((el) => el.getAttribute("data-label-id")));
+
+        expect(ticked, "the sheet ticks exactly the labels the row carries").toEqual([label]);
+    });
+
+    test("ticking one label keeps the sheet open, and the picker ticks a second one", async ({ page }) => {
+        await openInbox(page);
+
+        // A second label, made through the sidebar's Create label, as a person does. The name is
+        // unique per run, so a repeat run does not collide with the label an earlier run made.
+        const created = `E2E Second ${Date.now()}`;
+
+        // The modal's form loads on timers, and the fake clock is paused for this file, so the clock
+        // runs for the creation only. openInbox() pauses it again.
+        await page.clock.resume();
+
+        // On a phone the sidebar is a drawer: open it with the burger, then close it again.
+        await page.locator('[data-ui--sidebar-drawer-target="burger"]').click();
+        await page.locator("#sidebar-drawer").getByRole("button", { name: "Create label" }).click();
+
+        const modal = page.locator("#modal-backdrop");
+
+        await expect(modal).toBeVisible();
+        await expect(modal.locator("#modal").getByLabel("Name")).toBeVisible();
+        await modal.locator("#modal").getByLabel("Name").fill(created);
+        await modal.getByRole("button", { name: "Save" }).click();
+        await expect(modal).toBeHidden();
+        await page.keyboard.press("Escape");
+
+        await openInbox(page);
+
+        const first = await labelIdNamed(page, "E2E Label");
+        const second = await labelIdNamed(page, created);
+
+        const row = mailRow(page, INBOX_SUBJECTS.archive);
+        const id = await threadIdOf(row);
         const finger = await pressRow(page, row);
 
         await page.clock.runFor(500);
@@ -414,9 +566,47 @@ test.describe("the label picker in the sheet", () => {
 
         await expect(panel).toBeVisible();
 
-        // Presence: the user's labels are listed. The ticks are the row's own, counted.
-        await expect(panel.locator("[data-label-id]")).not.toHaveCount(0);
-        await expect(panel.locator('[data-attached="true"]')).toHaveCount(carried);
+        // Presence: the row node the sheet was opened for, which the tick's stream replaces.
+        await page.evaluate((domId) => {
+            (window as unknown as { __openedRow: Element | null }).__openedRow = document.getElementById(domId);
+        }, `thread_${id}`);
+
+        const firstTick = page.waitForResponse((response) => response.url().includes(`/status/thread/${id}/label`));
+
+        await panel.locator(`[data-label-id="${first}"]`).click();
+        await firstTick;
+
+        // The stream is applied on the page's timers and frames, which the paused fake clock does not
+        // run. Move it on in steps until the row carries the tick, so the stream lands the way it does
+        // on a phone, and the wait ends on the row, not on a fixed time.
+        await expect
+            .poll(async () => {
+                await page.clock.runFor(50);
+
+                return mailRow(page, INBOX_SUBJECTS.archive).getAttribute("data-label-ids");
+            }, { timeout: 5_000 })
+            .toBe(first);
+
+        // Presence: the stream has landed on the row (data-label-ids is only ever set by it), and the
+        // stream replaced the node the sheet was opened for, so that node is no longer in the document.
+        await expect(mailRow(page, INBOX_SUBJECTS.archive)).toHaveAttribute("data-label-ids", first);
+        expect(
+            await page.evaluate(() => (window as unknown as { __openedRow: Element | null }).__openedRow?.isConnected ?? null),
+            "the tick replaced the opened row",
+        ).toBe(false);
+
+        // Ticking one label leaves the sheet open, though its row was redrawn: the row is still there.
+        await expect(sheet(page), "ticking one label leaves the sheet open").toHaveCount(1);
+        await expect(panel.locator(`[data-label-id="${first}"]`)).toHaveAttribute("data-attached", "true");
+
+        // The picker can tick a second label in the same open sheet.
+        const secondTick = page.waitForResponse((response) => response.url().includes(`/status/thread/${id}/label`));
+
+        await panel.locator(`[data-label-id="${second}"]`).click();
+        await secondTick;
+
+        await expect(sheet(page)).toHaveCount(1);
+        await expect(panel.locator(`[data-label-id="${second}"]`)).toHaveAttribute("data-attached", "true");
     });
 });
 

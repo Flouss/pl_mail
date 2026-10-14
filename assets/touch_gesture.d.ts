@@ -11,6 +11,7 @@ export type IntentValue = "undecided" | "hold" | "vertical" | "left" | "right";
 export const DIRECTION_LOCK_PX: number;
 export const HOLD_MS: number;
 export const HOLD_SLOP_PX: number;
+export const CLICK_WINDOW_MS: number;
 
 export const Intent: {
     readonly UNDECIDED: "undecided";

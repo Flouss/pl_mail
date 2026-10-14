@@ -5663,7 +5663,7 @@ html[data-dnd-active] [data-dnd-ghost] {
     }
 }
 
-.swipe-panel {
+[data-swipe-panel] {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -5691,7 +5691,7 @@ li[data-swipe-side="left"] > [data-swipe-panel="left"] {
 }
 
 /* The button is a fixed 96px, the same figure the controller rests an open row at. */
-.swipe-panel__action {
+[data-swipe-commit] {
     flex: 0 0 96px;
     display: flex;
     flex-direction: column;
@@ -5704,11 +5704,11 @@ li[data-swipe-side="left"] > [data-swipe-panel="left"] {
     cursor: pointer;
 }
 
-[data-swipe-panel="right"] .swipe-panel__action {
+[data-swipe-panel="right"] [data-swipe-commit] {
     background: rgb(var(--rgb-success));
 }
 
-[data-swipe-panel="left"] .swipe-panel__action {
+[data-swipe-panel="left"] [data-swipe-commit] {
     background: rgb(var(--rgb-info));
 }
 

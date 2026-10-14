@@ -192,24 +192,6 @@ export default class extends Controller {
         unregisterSurface(SURFACE);
     }
 
-    /**
-     * The revealed button's click: commit its own URL and body on this row. The
-     * close comes first, so the row is back at rest before the stream redraws it.
-     */
-    commit(event) {
-        event.stopPropagation();
-
-        const button = event.currentTarget;
-        const row = button.closest(ROW);
-
-        if (row === null) {
-            return;
-        }
-
-        this.#close();
-        this.#post(row, button.dataset.swipeUrl, JSON.parse(button.dataset.swipeBody || "{}"));
-    }
-
     // ── Private ───────────────────────────────────────────────────────────
 
     #onStart = (event) => this.#touchStart(event);
@@ -418,9 +400,31 @@ export default class extends Controller {
         }
     }
 
-    /** A click the last touch asked to be consumed. The commit button is never one of them. */
+    /**
+     * The revealed button's click, commits its own URL and body on this row. Handled
+     * here rather than by a Stimulus action on the button, so the markup carries no
+     * action attribute for every row. The close comes first, so the row is back at
+     * rest before the stream redraws it.
+     *
+     * Otherwise, a click the last touch asked to be consumed is stopped here.
+     */
     #click(event) {
-        if (this._consumeClick === false || event.target.closest?.(COMMIT)) {
+        const commit = event.target.closest?.(COMMIT);
+
+        if (commit) {
+            const row = commit.closest(ROW);
+
+            event.stopPropagation();
+
+            if (row !== null) {
+                this.#close();
+                this.#post(row, commit.dataset.swipeUrl, JSON.parse(commit.dataset.swipeBody || "{}"));
+            }
+
+            return;
+        }
+
+        if (this._consumeClick === false) {
             return;
         }
 

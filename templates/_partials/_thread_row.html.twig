@@ -318,14 +318,14 @@ be a worse regression than the one this feature fixes.
        direction is live here". The button's URL and body are the route's own;
        the controller posts them through mail--message-row, the same path the
        strip's buttons use. Hidden until the row is open (app.css). #}
-    {% set swipeRight = swipe_action(item, 'right', draft) %}
-    {% set swipeLeft = swipe_action(item, 'left', draft) %}
-    {% if swipeRight %}
+    {%- set swipeRight = swipe_action(item, 'right', draft) -%}
+    {%- set swipeLeft = swipe_action(item, 'left', draft) -%}
+    {%- if swipeRight -%}
         {% include '_partials/_swipe_panel.html.twig' with { side: 'right', swipe: swipeRight } only %}
-    {% endif %}
-    {% if swipeLeft %}
+    {%- endif -%}
+    {%- if swipeLeft -%}
         {% include '_partials/_swipe_panel.html.twig' with { side: 'left', swipe: swipeLeft } only %}
-    {% endif %}
+    {%- endif -%}
 
     {# Full-row clickable overlay #}
 <a

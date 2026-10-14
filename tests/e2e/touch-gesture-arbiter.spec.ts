@@ -115,7 +115,8 @@ test.describe("touch gesture arbiter: decisions", () => {
 
 test.describe("touch gesture arbiter: claims and open surfaces", () => {
     test.afterEach(() => {
-        releaseSequence();
+        releaseSequence("pull");
+        releaseSequence("swipe");
         unregisterSurface("test-surface");
     });
 
@@ -123,10 +124,22 @@ test.describe("touch gesture arbiter: claims and open surfaces", () => {
         expect(claimSequence("pull")).toBe(true);
         expect(claimSequence("swipe")).toBe(false);
 
-        releaseSequence();
+        expect(releaseSequence("pull")).toBe(true);
 
         // Presence companion: the rejection above is only meaningful if a released
         // sequence is claimable again.
+        expect(claimSequence("swipe")).toBe(true);
+    });
+
+    test("a release by someone who does not hold the claim releases nothing", () => {
+        expect(claimSequence("pull")).toBe(true);
+
+        // A touchend from a sequence that never claimed must not free another consumer's claim.
+        expect(releaseSequence("swipe")).toBe(false);
+        expect(claimSequence("swipe")).toBe(false);
+
+        // Presence companion: the owner's own release does free it.
+        expect(releaseSequence("pull")).toBe(true);
         expect(claimSequence("swipe")).toBe(true);
     });
 

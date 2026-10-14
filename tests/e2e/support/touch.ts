@@ -55,9 +55,33 @@ export class Finger {
         this.y += dy;
     }
 
+    /**
+     * Put a second finger down at (x, y), beside the first, which stays where it is.
+     * One touchstart carries every point that is down, as the browser sends it.
+     */
+    async addFinger(x: number, y: number): Promise<void> {
+        await this.cdp.send("Input.dispatchTouchEvent", {
+            type: "touchStart",
+            touchPoints: [
+                { x: this.x, y: this.y },
+                { x, y },
+            ],
+        });
+    }
+
     /** Lift the finger, and detach the session. */
     async up(): Promise<void> {
         await this.cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+        await this.cdp.detach();
+    }
+
+    /**
+     * The system takes the touch: a call, a notification, a gesture of its own. The
+     * browser sends touchcancel, never touchend, so the page must not treat it as a
+     * finger that lifted. CDP's touchCancel is the browser's own event for this.
+     */
+    async cancel(): Promise<void> {
+        await this.cdp.send("Input.dispatchTouchEvent", { type: "touchCancel", touchPoints: [] });
         await this.cdp.detach();
     }
 }

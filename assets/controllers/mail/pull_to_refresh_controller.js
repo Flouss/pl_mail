@@ -8,8 +8,8 @@ import { Intent, claimSequence, createSequence, releaseSequence } from "../../to
  * The list is the only thing that moves, and it does not move: the indicator is
  * what slides down with the finger, so no row is touched while a pull is in
  * progress. Release past the threshold runs the topbar's sync button, through its
- * own controller, and shows the same spinning icon while that button reports a
- * run in progress, whichever control started it.
+ * own controller, and the indicator rests in view with a spinning icon while that
+ * button reports a run in progress, whichever control started it.
  *
  * Mounted on #message-list, outside the list frame, so it survives a frame swap.
  * Touches are read on that element, and the rows scroller is found at touchstart
@@ -33,13 +33,20 @@ import { Intent, claimSequence, createSequence, releaseSequence } from "../../to
  *   RELEASE_DISPLAYED_PX = 70. Letting go past it syncs. Finger travel that
  *     reaches it is 70 / 0.5 = 140px. So a finger of 180px releases (displayed
  *     90) and one of 120px does not (displayed 60).
+ *   SYNC_RESTING_PX = 48. Where the indicator rests while a run is open.
  *
  * Thresholds are measured on finger displacement from touchstart, never on the
  * rendered translation, so easing does not move them.
  *
+ * A pull ends in one of two ways, and only one of them can sync:
+ *   - touchend, of the finger that was pulling: release past the threshold syncs;
+ *   - touchcancel (the system took the touch), or a second finger landing during
+ *     the pull: the pull is ABORTED. The indicator returns to idle, the claim is
+ *     released, and nothing syncs.
+ *
  * Touch moves are listened to with passive: false only while a sequence might be
  * a pull: the listener is added at touchstart when the list is at its top, and
- * removed as soon as the sequence is decided against a pull, or at touchend. A
+ * removed as soon as the sequence is decided against a pull, or when it ends. A
  * touchmove that is part of a pull is cancelable, and preventDefault is called
  * only then, so a scroll that is not a pull is left to the browser.
  *
@@ -57,6 +64,14 @@ const PULL_RESISTANCE = 0.5;
 /** Displayed distance at which letting go starts a sync. */
 const RELEASE_DISPLAYED_PX = 70;
 
+/**
+ * Where the indicator rests while a run is open, measured from the top of the list.
+ * The pill is 25px tall (6px padding each side around a 13px line), so its top is
+ * 48 - 25 = 23px below the list's top: in view, clear of the edge, and below the
+ * topbar's own line. Resting at 0 would leave it hidden, which is what this fixes.
+ */
+const SYNC_RESTING_PX = 48;
+
 /** The list's scroller, as the list frame draws it. */
 const ROWS = '[data-list-region="rows"]';
 
@@ -73,12 +88,28 @@ const STATE = Object.freeze({
     SYNCING: "syncing",
 });
 
+/**
+ * Where the indicator rests, as a transform. Hidden when idle; at the pull's own
+ * distance while pulling; at SYNC_RESTING_PX while a run is open, so the spinner is
+ * in view for as long as the sync is.
+ */
+function restingTransform(state, displayed) {
+    if (state === STATE.IDLE) {
+        return "";
+    }
+
+    const travel = state === STATE.SYNCING ? SYNC_RESTING_PX : displayed;
+
+    return `translateY(calc(-100% + ${travel}px))`;
+}
+
 export default class extends Controller {
     static targets = ["indicator", "icon"];
 
     connect() {
         this._syncing = false;
         this._pulling = false;
+        this._claimed = false;
         this._sequence = null;
         this._rows = null;
         this._displayed = 0;
@@ -86,12 +117,13 @@ export default class extends Controller {
         this._onStart = this._touchStart.bind(this);
         this._onMove = this._touchMove.bind(this);
         this._onEnd = this._touchEnd.bind(this);
+        this._onCancel = this._touchCancel.bind(this);
         this._onStarted = () => this._setSyncing(true);
         this._onStopped = () => this._setSyncing(false);
 
         this.element.addEventListener("touchstart", this._onStart, { passive: true });
         this.element.addEventListener("touchend", this._onEnd, { passive: true });
-        this.element.addEventListener("touchcancel", this._onEnd, { passive: true });
+        this.element.addEventListener("touchcancel", this._onCancel, { passive: true });
         document.addEventListener("mail--sync-now:started", this._onStarted);
         document.addEventListener("mail--sync-now:stopped", this._onStopped);
 
@@ -99,12 +131,11 @@ export default class extends Controller {
     }
 
     disconnect() {
-        this._disarm();
-        releaseSequence();
+        this._abort();
 
         this.element.removeEventListener("touchstart", this._onStart);
         this.element.removeEventListener("touchend", this._onEnd);
-        this.element.removeEventListener("touchcancel", this._onEnd);
+        this.element.removeEventListener("touchcancel", this._onCancel);
         document.removeEventListener("mail--sync-now:started", this._onStarted);
         document.removeEventListener("mail--sync-now:stopped", this._onStopped);
     }
@@ -121,10 +152,18 @@ export default class extends Controller {
     }
 
     _touchStart(event) {
+        // A second finger, or more, ends any pull in progress. It is never a pull, and
+        // whatever the first finger does afterwards cannot sync it.
+        if (event.touches.length !== 1) {
+            this._abort();
+
+            return;
+        }
+
         this._sequence = null;
         this._rows = null;
 
-        if (event.touches.length !== 1 || window.matchMedia(MOBILE).matches !== true) {
+        if (window.matchMedia(MOBILE).matches !== true) {
             return;
         }
 
@@ -171,6 +210,7 @@ export default class extends Controller {
                 return;
             }
 
+            this._claimed = true;
             this._pulling = true;
         }
 
@@ -182,24 +222,33 @@ export default class extends Controller {
         this._render();
     }
 
+    /**
+     * touchend: the finger lifted. Only a pull this controller holds can sync, and
+     * only past the threshold. A touchend for a sequence that never claimed releases
+     * nothing: the claim, if any, belongs to someone else.
+     */
     _touchEnd() {
-        const wasPulling = this._pulling;
-
         this._disarm();
-        releaseSequence();
 
-        if (wasPulling === false) {
+        if (this._claimed === false) {
             return;
         }
 
-        this._pulling = false;
+        const released = this._displayed >= RELEASE_DISPLAYED_PX;
 
-        if (this._displayed >= RELEASE_DISPLAYED_PX) {
+        this._release();
+
+        if (released) {
             this._syncNow();
         }
 
         this._displayed = 0;
         this._render();
+    }
+
+    /** touchcancel: the system took the touch. The pull is aborted, and nothing syncs. */
+    _touchCancel() {
+        this._abort();
     }
 
     /**
@@ -221,6 +270,24 @@ export default class extends Controller {
     _disarm() {
         this.element.removeEventListener("touchmove", this._onMove);
         this._sequence = null;
+    }
+
+    /** Give back this controller's claim, if it holds one. Never another consumer's. */
+    _release() {
+        if (this._claimed) {
+            releaseSequence("pull");
+            this._claimed = false;
+        }
+
+        this._pulling = false;
+    }
+
+    /** A pull that did not end in a release: listeners off, claim released, indicator home. No sync. */
+    _abort() {
+        this._disarm();
+        this._release();
+        this._displayed = 0;
+        this._render();
     }
 
     _setSyncing(on) {
@@ -249,9 +316,7 @@ export default class extends Controller {
         const indicator = this.indicatorTarget;
 
         indicator.dataset.state = state;
-        // Idle sits above the list, out of sight; the pull moves it down by what
-        // the finger has displayed.
-        indicator.style.transform = state === STATE.IDLE ? "" : `translateY(calc(-100% + ${this._displayed}px))`;
+        indicator.style.transform = restingTransform(state, this._displayed);
         // Under reduced motion the slide back is a jump, not an animation.
         indicator.style.transition = motionIsOff() ? "none" : "";
 

@@ -17,7 +17,7 @@
  *      so a hold cannot be started by a finger that wandered and then rested.
  *
  *   2. The claim. One consumer owns a sequence. claimSequence() refuses a second
- *      claimant until releaseSequence() is called at touchend or touchcancel.
+ *      claimant until its holder calls releaseSequence(kind) at touchend or touchcancel.
  *
  *   3. The open surface. A surface (the sidebar drawer, and later an open row or
  *      the action sheet) registers a predicate that reads its own state, so
@@ -150,7 +150,20 @@ export function claimSequence(kind) {
     return true;
 }
 
-/** Release the claim, at touchend and touchcancel. */
-export function releaseSequence() {
+/**
+ * Release the claim, if `kind` holds it. A caller that does not hold the claim
+ * releases nothing and is told so: a touchend from a sequence that never claimed
+ * must not free the claim of a consumer that is still mid-gesture.
+ *
+ * @param {string} kind  the consumer releasing, which must be the one that claimed
+ * @returns {boolean} true when the claim was held by `kind` and is now released
+ */
+export function releaseSequence(kind) {
+    if (claimedBy !== kind) {
+        return false;
+    }
+
     claimedBy = null;
+
+    return true;
 }

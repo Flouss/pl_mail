@@ -37,6 +37,7 @@ const PULL_SHORT = 120;
 
 const ROWS = '[data-list-region="rows"]';
 const INDICATOR = '[data-mail--pull-to-refresh-target="indicator"]';
+const ICON = '[data-mail--pull-to-refresh-target="icon"]';
 const BURGER = '[data-ui--sidebar-drawer-target="burger"]';
 
 const isSync = (url: URL) => url.pathname === "/mail/sync";
@@ -48,8 +49,10 @@ const isStatus = (url: URL) => url.pathname === "/mail/sync/status";
  * `pending` is what the status endpoint reports: 0 lets the button finish, 1
  * keeps it running for the length of the test.
  */
-async function mockSync(page: Page, { pending = 0 } = {}): Promise<{ posts: number }> {
-    const counter = { posts: 0 };
+async function mockSync(page: Page, { pending = 0 } = {}): Promise<{ posts: number; pending: number }> {
+    // `pending` is read on every status answer, so a test can end a run it started by
+    // setting it to 0 while the run is open.
+    const counter = { posts: 0, pending };
 
     await page.route(isSync, async (route) => {
         if (route.request().method() === "POST") {
@@ -59,7 +62,7 @@ async function mockSync(page: Page, { pending = 0 } = {}): Promise<{ posts: numb
         await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ dispatched: 1 }) });
     });
     await page.route(isStatus, (route) =>
-        route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ pending }) }),
+        route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ pending: counter.pending }) }),
     );
 
     return counter;
@@ -236,6 +239,116 @@ test.describe("pull to refresh on a phone", () => {
 
         expect(cancelable).toHaveLength(8);
         expect(cancelable.every((value) => value === true), `cancelable per move: ${cancelable}`).toBe(true);
+    });
+
+    test("while a sync runs after a release the indicator rests in view and spins, and slides away when it stops", async ({ page }) => {
+        const sync = await mockSync(page, { pending: 1 });
+
+        await openInbox(page);
+
+        const start = await rowsStart(page);
+        const finger = await Finger.down(page, start.x, start.y);
+
+        await finger.move(0, PULL_PAST);
+        await finger.up();
+
+        const indicator = page.locator(INDICATOR);
+        const list = page.locator("#message-list");
+
+        await expect.poll(() => sync.posts).toBe(1);
+        await expect(indicator).toHaveAttribute("data-state", "syncing");
+
+        // Derivation: the pill is 25px tall in the layout (6px padding each side around a 13px line),
+        // and the rest offset is 48px, so its top is 48 - 25 = 23px below the list's top.
+        // A pill that rests where the hidden one sits would have its bottom at the list's
+        // top, and fail the first check.
+        // Wait for the indicator's own transition to finish: the slide from the release point
+        // to the rest point is 200ms, and a box read mid-slide proves nothing about where it
+        // rests. Only the indicator's own animations count: the spinning icon is a child, and
+        // the spin runs for as long as the sync does, so the page as a whole never settles.
+        await expect
+            .poll(() => indicator.evaluate((el) => el.getAnimations().length), { timeout: 2_000 })
+            .toBe(0);
+
+        const listBox = await list.boundingBox();
+        const box = await indicator.boundingBox();
+        const viewport = page.viewportSize();
+
+        expect(listBox).not.toBeNull();
+        expect(box).not.toBeNull();
+        expect(box!.y, "the indicator rests below the top of the list").toBeGreaterThanOrEqual(listBox!.y);
+        expect(box!.y + box!.height, "the indicator is in the viewport").toBeLessThanOrEqual(viewport!.height);
+        await expect(page.locator(ICON)).toHaveClass(/fa-spin/);
+
+        // End the run. The stopped event takes the indicator back out of sight, above the
+        // list's top, once its slide has finished.
+        sync.pending = 0;
+        await expect(indicator).toHaveAttribute("data-state", "idle", { timeout: 15_000 });
+        await expect
+            .poll(async () => {
+                const hidden = await indicator.boundingBox();
+                const top = await list.boundingBox();
+
+                return hidden!.y + hidden!.height <= top!.y + 1;
+            }, { timeout: 5_000 })
+            .toBe(true);
+    });
+
+    test("a touch cancelled mid-pull aborts the pull: no sync, and the indicator returns to idle", async ({ page }) => {
+        const sync = await mockSync(page);
+
+        await openInbox(page);
+
+        const start = await rowsStart(page);
+        const cancelled = await Finger.down(page, start.x, start.y);
+
+        await cancelled.move(0, PULL_PAST);
+        await expect(page.locator(INDICATOR)).toHaveAttribute("data-state", "release");
+
+        await cancelled.cancel();
+
+        await expect(page.locator(INDICATOR)).toHaveAttribute("data-state", "idle");
+        await page.waitForTimeout(500);
+
+        expect(sync.posts, "a cancelled touch syncs nothing").toBe(0);
+
+        // Presence companion, in the same test: a pull that ends with touchend syncs.
+        const ended = await Finger.down(page, start.x, start.y);
+
+        await ended.move(0, PULL_PAST);
+        await ended.up();
+
+        await expect.poll(() => sync.posts).toBe(1);
+    });
+
+    test("a second finger during a pull aborts it: both fingers up syncs nothing", async ({ page }) => {
+        const sync = await mockSync(page);
+
+        await openInbox(page);
+
+        const start = await rowsStart(page);
+        const finger = await Finger.down(page, start.x, start.y);
+
+        await finger.move(0, PULL_PAST);
+        await expect(page.locator(INDICATOR)).toHaveAttribute("data-state", "release");
+
+        // The second finger lands 100px to the right of the first, which is still on screen.
+        await finger.addFinger(start.x + 100, start.y + PULL_PAST);
+
+        await expect(page.locator(INDICATOR)).toHaveAttribute("data-state", "idle");
+
+        await finger.up();
+        await page.waitForTimeout(500);
+
+        expect(sync.posts, "a two-finger touch syncs nothing").toBe(0);
+
+        // Presence companion: a later single-finger pull still syncs.
+        const later = await Finger.down(page, start.x, start.y);
+
+        await later.move(0, PULL_PAST);
+        await later.up();
+
+        await expect.poll(() => sync.posts).toBe(1);
     });
 
     test("a second pull while the sync is still running does not sync again", async ({ page }) => {

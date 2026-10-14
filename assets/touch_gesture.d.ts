@@ -29,4 +29,4 @@ export function registerSurface(name: string, isOpen: () => boolean): void;
 export function unregisterSurface(name: string): void;
 export function openSurface(): string | null;
 export function claimSequence(kind: string): boolean;
-export function releaseSequence(): void;
+export function releaseSequence(kind: string): boolean;

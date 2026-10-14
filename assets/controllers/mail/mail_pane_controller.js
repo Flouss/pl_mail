@@ -117,6 +117,8 @@ const CLIENT_OWNED = new Set([
     // The row swipe's marker and side. See SWIPED: a marked row is skipped whole, and these
     // two say which row it is and which way it is open, so they are not the server's to reset.
     "data-swipe-owned", "data-swipe-side",
+    // The long-press marker on a row and its overlay, held while a finger is on them. See mail--row-hold.
+    "data-pressed",
 ]);
 
 /**

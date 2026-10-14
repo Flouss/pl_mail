@@ -5723,3 +5723,50 @@ li[data-swipe-side] > [data-swipe-content] {
     position: relative;
     z-index: 2;
 }
+
+/* ── Action sheet ──────────────────────────────────────────────────────────
+   The long-press sheet on a phone (mail--action-sheet, opened by mail--row-hold).
+   A copy of the list's template, appended to <body>, so it sits above the page and
+   outside the list's own stacking. Its slide takes --sheet-duration, which the
+   controller sets to 0ms under reduced motion.
+
+   Pressed rows (data-pressed, while a finger is on them) switch off iOS's touch
+   callout and text selection, on the row and on its overlay link, which is the
+   element iOS calls out on. Pressed is CLIENT_OWNED in mail_pane, so a refresh
+   does not strip it mid-press.
+
+   The pickers (move, labels, snooze) are the list's own menus, each behind its
+   own trigger. The trigger is invisible and never clicked by a finger; the sheet
+   presses it. Only the picker's panel takes pointer events, so the entry under it
+   stays tappable. Unlayered, like the rules above. */
+
+[data-pressed],
+[data-pressed] > a {
+    -webkit-touch-callout: none;
+    user-select: none;
+}
+
+.action-sheet-panel {
+    animation: action-sheet-rise var(--sheet-duration, 200ms) ease-out both;
+}
+
+@keyframes action-sheet-rise {
+    from {
+        transform: translateY(100%);
+    }
+}
+
+[data-sheet-picker-scope] {
+    pointer-events: none;
+}
+
+[data-sheet-picker-scope] > * > button:first-child {
+    opacity: 0;
+    pointer-events: none;
+}
+
+[data-sheet-picker-scope] [role="menu"],
+[data-sheet-picker-scope] [data-mail--label-menu-target="panel"],
+[data-sheet-picker-scope] [data-ui--dropdown-target="menu"] {
+    pointer-events: auto;
+}

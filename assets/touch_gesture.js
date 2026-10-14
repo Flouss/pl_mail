@@ -50,6 +50,14 @@ export const HOLD_MS = 450;
  */
 export const HOLD_SLOP_PX = 8;
 
+/**
+ * How long, in milliseconds, after a hold's finger lifts a click is still that finger's.
+ * A finger released from a hold can leave a click behind it, which lands on whatever is
+ * under it: the backdrop of the sheet the hold opened, most often. The browser's own
+ * double-tap delay is 300ms, and a click follows its touchend within it.
+ */
+export const CLICK_WINDOW_MS = 300;
+
 /** What a sequence has been decided to be, or that it is still undecided. */
 export const Intent = Object.freeze({
     UNDECIDED: "undecided",

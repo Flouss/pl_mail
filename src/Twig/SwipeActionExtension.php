@@ -8,6 +8,7 @@ use App\Domain\DTO\Mail\SwipeAffordance;
 use App\Domain\Enum\Mail\SwipeDirection;
 use App\Entity\Mail\Message;
 use App\Entity\Mail\MessageThread;
+use App\Service\Mail\MailPlacement;
 use App\Service\Mail\SwipeActionResolver;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
@@ -22,7 +23,10 @@ use Twig\TwigFunction;
  */
 final class SwipeActionExtension extends AbstractExtension
 {
-    public function __construct(private readonly SwipeActionResolver $swipe)
+    public function __construct(
+        private readonly SwipeActionResolver $swipe,
+        private readonly MailPlacement $placement,
+    )
     {
     }
 
@@ -47,9 +51,10 @@ final class SwipeActionExtension extends AbstractExtension
      * Each entry is keyed by its value and holds its URL (`u`) and, when the route
      * reads one, its body (`b`). A client-only entry (move, labels, select) is an
      * empty object: its presence is what the client reads. The type is named so the
-     * label picker knows which kind of target it is ticking.
+     * label picker knows which kind of target it is ticking, and the placement so the
+     * move picker can take out the list the row already sits in.
      *
-     * @return array{type: string, entries: array<string, array{u?: string, b?: array<string, bool>}|array{}>}
+     * @return array{type: string, placement: string, entries: array<string, array{u?: string, b?: array<string, bool>}|array{}>}
      */
     public function sheetEntries(MessageThread|Message $item, bool $draft): array
     {
@@ -68,8 +73,9 @@ final class SwipeActionExtension extends AbstractExtension
         }
 
         return [
-            'type'    => $item instanceof MessageThread ? 'thread' : 'message',
-            'entries' => $entries,
+            'type'      => $item instanceof MessageThread ? 'thread' : 'message',
+            'placement' => $this->placement->of($item),
+            'entries'   => $entries,
         ];
     }
 }

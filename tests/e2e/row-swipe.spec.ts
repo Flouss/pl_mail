@@ -130,6 +130,87 @@ test.describe("row swipe on a phone", () => {
         await expect(page.getByRole("button", { name: "Undo", exact: true })).toBeVisible();
     });
 
+    test("a real touch tap on the revealed Archive button archives the row with exactly one POST", async ({ page }) => {
+        await openInbox(page);
+
+        const row = mailRow(page, INBOX_SUBJECTS.archive);
+        const id = await threadId(row);
+
+        await drag(page, row, "left", 0.5, { pause: DROP_PAUSE_MS });
+        await expect(row).toHaveAttribute("data-swipe-side", "left");
+
+        const archive = row.getByRole("button", { name: "Archive", exact: true });
+
+        await expect(archive).toBeVisible();
+
+        // Presence: the point at the button's centre is the button, so the touch lands on it.
+        const box = await archive.boundingBox();
+
+        expect(box, "the revealed button is rendered").not.toBeNull();
+
+        const x = box!.x + box!.width / 2;
+        const y = box!.y + box!.height / 2;
+        const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest("[data-swipe-commit]") !== null, { x, y });
+
+        expect(hit, "the touch point is on the revealed button").toBe(true);
+
+        const archivePosts: string[] = [];
+
+        page.on("request", (request) => {
+            const path = new URL(request.url()).pathname;
+
+            if (request.method() === "POST" && path.startsWith("/status/")) {
+                archivePosts.push(path);
+            }
+        });
+
+        // A finger, not a mouse: down, a small hold, up. The hold is short of the hold timer's
+        // 450ms, so the row's hold gesture never claims it.
+        const finger = await Finger.down(page, x, y);
+
+        await page.waitForTimeout(80);
+        await finger.up();
+
+        // Presence: the row is gone, and Undo is offered for the archive that happened.
+        await expect(mailRow(page, INBOX_SUBJECTS.archive)).toHaveCount(0);
+        await expect(page.getByRole("button", { name: "Undo", exact: true })).toBeVisible();
+
+        expect(archivePosts, "a touch on the revealed button posts its URL exactly once").toEqual([archiveUrl(id)]);
+    });
+
+    test("a touch tap on the open row away from its button closes the row and posts nothing", async ({ page }) => {
+        await openInbox(page);
+
+        const row = mailRow(page, INBOX_SUBJECTS.archive);
+
+        await drag(page, row, "left", 0.5, { pause: DROP_PAUSE_MS });
+        await expect(row).toHaveAttribute("data-swipe-side", "left");
+
+        const archivePosts: string[] = [];
+
+        page.on("request", (request) => {
+            if (request.method() === "POST" && new URL(request.url()).pathname.startsWith("/status/")) {
+                archivePosts.push(new URL(request.url()).pathname);
+            }
+        });
+
+        // Presence: the row is open and its button is drawn, so the tap below is a tap on
+        // the open row, not on a closed one.
+        await expect(row.getByRole("button", { name: "Archive", exact: true })).toBeVisible();
+
+        const box = await row.boundingBox();
+        const tap = await Finger.down(page, box!.x + box!.width * 0.5, box!.y + box!.height / 2);
+
+        await page.waitForTimeout(80);
+        await tap.up();
+
+        await expect(row).not.toHaveAttribute("data-swipe-side", /.+/);
+        await page.waitForTimeout(300);
+
+        expect(archivePosts, "a tap away from the button posts nothing").toEqual([]);
+        await expect(mailRow(page, INBOX_SUBJECTS.archive)).toBeVisible();
+    });
+
     test("a left drag short of partial snaps back and sends nothing", async ({ page }) => {
         await openInbox(page);
 
@@ -626,6 +707,80 @@ test.describe("row swipe and the list refresh", () => {
         await expect.poll(() => syncs.length).toBe(1);
     });
 
+    test("a rotation past the phone width closes an open row, and the next refresh lands its change", async ({ page }) => {
+        await openInbox(page);
+
+        const row = mailRow(page, INBOX_SUBJECTS.archive);
+        const id = await threadId(row);
+
+        await drag(page, row, "left", 0.5, { pause: DROP_PAUSE_MS });
+
+        // Presence: the row is open at phone width, so the rotation below is what closes it.
+        await expect(row).toHaveAttribute("data-swipe-side", "left");
+
+        // A server change to the open row, held back by the open row until it is closed and refreshed.
+        expect((await ajaxPost(page, `/status/thread/${id}/read`, { read: true })).ok()).toBe(true);
+
+        await page.setViewportSize({ width: 1280, height: 800 });
+
+        await expect(row, "a row open at phone width closes when the window passes the breakpoint").not.toHaveAttribute("data-swipe-side", /.+/);
+        await expect(row, "and no longer owns its drawn state").not.toHaveAttribute("data-swipe-owned");
+        expect(await row.locator(CONTENT).evaluate((el) => el.style.transform), "the content is drawn at rest").toBe("");
+
+        // The next refresh applies the held change to the closed row.
+        expect(await refreshAndWaitForFragment(page), "the refresh asked for the list fragment").toBe(true);
+        await expect(row).toHaveAttribute("data-unread", "false");
+    });
+
+    test("a drag whose row is removed under the finger leaves no claim behind: a pull syncs once, and another row's swipe opens", async ({ page }) => {
+        const syncs: string[] = [];
+
+        await page.route("**/mail/sync", (route) => {
+            if (route.request().method() === "POST") {
+                syncs.push(route.request().url());
+            }
+
+            return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ dispatched: 1 }) });
+        });
+        await page.route("**/mail/sync/status", (route) =>
+            route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ pending: 0 }) }),
+        );
+
+        await openInbox(page);
+
+        const row = mailRow(page, INBOX_SUBJECTS.archive);
+        const other = mailRow(page, INBOX_SUBJECTS.star);
+        const box = await row.boundingBox();
+
+        expect(box, "the row is rendered").not.toBeNull();
+
+        // A 20px drag: past the 10px direction lock, so the swipe claims the sequence, and short of
+        // any reveal. Presence: the row is owned by the drag, which is what makes the claim real.
+        const finger = await Finger.down(page, box!.x + box!.width * LEFT_START, box!.y + box!.height / 2);
+
+        await finger.move(-20, 0);
+        await expect(row).toHaveAttribute("data-swipe-owned", "");
+
+        // The row leaves the document mid-drag. The touch's events target the detached node, so
+        // nothing from here on reaches the swipe's touchend.
+        await row.evaluate((el) => el.remove());
+        await finger.up();
+
+        // A pull from the top is granted, and syncs exactly once. A stale swipe claim would refuse it.
+        const rows = await page.locator(ROWS).boundingBox();
+        const pull = await Finger.down(page, rows!.x + rows!.width / 2, rows!.y + 20);
+
+        await pull.move(0, 180);
+        await pull.up();
+
+        await page.waitForTimeout(500);
+        expect(syncs, "the stale swipe claim does not refuse the pull; exactly one sync").toHaveLength(1);
+
+        // A swipe on another row works after it: presence that the claim was released, not only that the pull ran.
+        await drag(page, other, "left", 0.5, { pause: DROP_PAUSE_MS });
+        await expect(other, "another row's swipe opens after the stale drag").toHaveAttribute("data-swipe-side", "left");
+    });
+
     test("a second row's drag closes the open one, and the drag itself does nothing", async ({ page }) => {
         await openInbox(page);
 
@@ -708,6 +863,41 @@ test.describe("row swipe with reduced motion", () => {
         await posted;
 
         await expect(mailRow(page, INBOX_SUBJECTS.star)).toHaveCount(0);
+    });
+
+    test("closing an open row runs no animation under reduced motion, and the same close animates with motion allowed", async ({ page }) => {
+        await openInbox(page);
+
+        const row = mailRow(page, INBOX_SUBJECTS.archive);
+        const content = row.locator(CONTENT);
+
+        // A close is a tap on the open row, away from its button. The row is closed when the tap lifts.
+        const closeTap = async () => {
+            const box = await row.boundingBox();
+            const tap = await Finger.down(page, box!.x + box!.width * 0.5, box!.y + box!.height / 2);
+
+            await page.waitForTimeout(80);
+            await tap.up();
+        };
+
+        await drag(page, row, "left", 0.5, { pause: DROP_PAUSE_MS });
+        await expect(row).toHaveAttribute("data-swipe-side", "left");
+        await closeTap();
+        await expect(row).not.toHaveAttribute("data-swipe-side", /.+/);
+
+        // Invariant 6: the close is a jump. The stylesheet eases the content's transform, so
+        // any running animation here is the close the reduced-motion user was promised away from.
+        expect(await content.evaluate((el) => el.getAnimations().length), "no animation runs on a close under reduced motion").toBe(0);
+
+        // Presence: the same close, with motion allowed, does animate, so the zero above is the
+        // reduced-motion reset and not an element that never moves.
+        await page.emulateMedia({ reducedMotion: "no-preference" });
+        await drag(page, row, "left", 0.5, { pause: DROP_PAUSE_MS });
+        await expect(row).toHaveAttribute("data-swipe-side", "left");
+        await closeTap();
+        await expect(row).not.toHaveAttribute("data-swipe-side", /.+/);
+
+        expect(await content.evaluate((el) => el.getAnimations().length), "with motion allowed the close animates").toBeGreaterThan(0);
     });
 });
 

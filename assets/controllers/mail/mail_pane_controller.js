@@ -149,8 +149,10 @@ const MENU = '[data-ui--dropdown-target="menu"]';
  * is removed when the row is released (row_swipe_controller.js #reset), and the
  * next refresh then brings the row up to date as usual.
  *
- * A refresh that REMOVES a marked row is not skipped: the morph takes the row out,
- * and the gesture notices on its next move, because the row is no longer connected.
+ * A refresh that REMOVES a marked row is not skipped: the morph takes the row out.
+ * The gesture then gets no further events for that touch, because the touch targets
+ * the detached node and its touchend never reaches the list. The stale sequence is
+ * abandoned at the next one-finger touchstart (row_swipe_controller.js #touchStart).
  */
 const SWIPED = "li[data-swipe-owned]";
 

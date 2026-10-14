@@ -534,7 +534,7 @@ class MessageThreadRepository extends ServiceEntityRepository
             ->setMaxResults($perPage)
             ->distinct();
 
-        $this->narrowToCategory($qb, $category);
+        $this->narrowToCategory($qb, $category, $this->switchedOffBy($account->usr));
 
         $this->excludeTrashed($qb);
 
@@ -559,7 +559,7 @@ class MessageThreadRepository extends ServiceEntityRepository
             ->setParameter('account', $account)
             ->setParameter('inbox', LabelRole::Inbox);
 
-        $this->narrowToCategory($qb, $category);
+        $this->narrowToCategory($qb, $category, $this->switchedOffBy($account->usr));
 
         $this->excludeTrashed($qb);
 
@@ -583,6 +583,10 @@ class MessageThreadRepository extends ServiceEntityRepository
      * has left its built-in tab, and a tab of the reader's own would then be
      * missing from the strip and its threads from every tab.
      *
+     * A built-in the reader switched off is counted under Primary, as the list
+     * puts it there (narrowToCategory()), so the account's tabs still add up to
+     * its inbox.
+     *
      * @return array<string, int>
      */
     public function countByCategoryForAccountInbox(Account $account): array
@@ -599,7 +603,7 @@ class MessageThreadRepository extends ServiceEntityRepository
 
         $this->excludeTrashed($qb);
 
-        return $this->foldByTab($qb->getQuery()->getResult(), 'threadCount');
+        return $this->foldByTab($qb->getQuery()->getResult(), 'threadCount', $this->switchedOffBy($account->usr));
     }
 
     /** No-op when no account was asked for, so callers need no branch. */

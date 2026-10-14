@@ -328,6 +328,31 @@ final class AccountInboxTabsTest extends WebTestCase
         self::assertResponseRedirects($base . '?tab=c' . $payments->id);
     }
 
+    /**
+     * A built-in the reader switched off is no tab, and its mail is listed under
+     * Primary — the unified inbox's rule, on this page too. Otherwise a
+     * conversation in it is in no tab of this page at all.
+     */
+    public function testASwitchedOffCategoryIsListedUnderPrimaryAndHasNoTab(): void
+    {
+        $this->thread(self::PRIMARY, MessageCategory::Primary);
+        $this->thread(self::PROMOTION, MessageCategory::Promotions);
+        $this->thread('Ein Update', MessageCategory::Updates);
+
+        // Presence companion: with Promotions still on, it is a tab of its own.
+        self::assertContains('tab=promotions', $this->tabQueries($this->crawl()));
+
+        $this->user->categorySorting->switchOff([MessageCategory::Promotions]);
+        $this->em->flush();
+
+        $html = $this->accountHtml();
+
+        self::assertStringContainsString(self::PRIMARY, $html);
+        self::assertStringContainsString(self::PROMOTION, $html, 'the switched-off category is in no tab');
+        self::assertStringNotContainsString('Ein Update', $html);
+        self::assertNotContains('tab=promotions', $this->tabQueries($this->crawl()));
+    }
+
     /** With the tabs off the account page is the whole inbox, filed mail included. */
     public function testWithoutTabsTheWholeInboxListsFiledMailToo(): void
     {

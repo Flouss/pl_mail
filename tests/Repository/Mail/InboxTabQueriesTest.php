@@ -279,6 +279,31 @@ final class InboxTabQueriesTest extends KernelTestCase
     }
 
     /**
+     * Promotions switched off (see testASwitchedOffCategoryIsListedAndCounted…):
+     * promoNew is Primary's now, on the account page too. Hand-derived: Primary
+     * = {primaryRead, promoNew} = 2, Shipping = {carrierNew, updateRead} = 2,
+     * and 2 + 2 = 4 = the inbox, so no thread falls out of every tab.
+     */
+    public function testAnAccountsSwitchedOffCategoryIsListedAndCountedUnderPrimary(): void
+    {
+        $this->user->categorySorting->switchOff([MessageCategory::Promotions]);
+
+        $primary = InboxTab::builtIn(MessageCategory::Primary);
+
+        self::assertSame(
+            ['primary, read', 'promo, new'],
+            $this->subjects($this->repository->findForAccountInbox($this->account, category: $primary)),
+        );
+        self::assertSame(2, $this->repository->countForAccountInbox($this->account, $primary));
+
+        $counts = $this->repository->countByCategoryForAccountInbox($this->account);
+
+        self::assertEquals(['c' . $this->shipping->id => 2, 'primary' => 2], $this->sorted($counts));
+        self::assertSame(4, array_sum($counts));
+        self::assertSame(4, $this->repository->countForAccountInbox($this->account, null));
+    }
+
+    /**
      * The category is the reader's, the counts are the account's. Another
      * account of the same reader holds one more Shipping thread and one thread
      * in a second category of theirs; neither may reach this account's counts.

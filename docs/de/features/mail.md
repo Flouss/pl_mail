@@ -1,4 +1,4 @@
-<!-- translated-from: features/mail.md sha1:42b6ebba22918b5f0ac9430eea4ea67279e09be0 -->
+<!-- translated-from: features/mail.md sha1:5942b98e1f06ceac81a776b86a33808dff6bab79 -->
 
 # Mail
 
@@ -676,6 +676,21 @@ für eine Auswahl eingeschlossen.
 Jede Richtung hat ihre eigene Einstellung unter **Einstellungen → E-Mail → Wischgesten**, je eine
 Auswahl für rechts und für links. Zur Wahl stehen Gelesen / ungelesen, Archivieren, Stern und Nichts.
 Beide Richtungen dürfen auf dasselbe gesetzt sein. Löschen gehört nicht dazu (siehe *Fallstricke*).
+
+Auf dem Telefon öffnet auch ein längeres Drücken einer Zeile ihre Aktionen. Halte eine Zeile etwa eine
+halbe Sekunde still, und von unten erscheint ein Aktionsblatt mit allem, was die Zeile anbietet:
+auswählen, als gelesen oder ungelesen markieren, archivieren, markieren, verschieben, mit Labels
+versehen, auf später legen, als Spam markieren, löschen und, im Papierkorb oder im Spam, in den
+Posteingang zurückholen und, wenn du unter **Einstellungen → E-Mail → Entsorgen → Knöpfe zum sofortigen
+Löschen** eingeschaltet hast, endgültig löschen. Die Einträge sind die, die auch die eigenen Knöpfe der
+Zeile anbieten, an denselben Stellen, und jeder tut, was sein Knopf tut. **Verschieben**, **Labels** und
+**Später** öffnen ihre Auswahl über dem Blatt, wie in der Leiste. Das Blatt schließt sich bei einem
+Tippen auf die abgedunkelte Seite, mit Escape oder nach einer Aktion; die Seite dahinter reagiert,
+solange es offen ist, nicht. Eine Aktualisierung im Hintergrund lässt es in Ruhe, und eine Aktualisierung,
+die die Zeile aus der Liste nimmt, schließt es. Wo der Browser vibrieren kann (Android Chrome), gibt es
+beim Öffnen einen kurzen Impuls; iOS kennt für Webseiten keine Vibration, dort gibt es keinen. Bei
+reduzierter Bewegung erscheint das Blatt ohne Gleiten. Ohne Berührung erledigen die Knöpfe der Zeile und
+die Leiste dieselbe Arbeit.
 Ein Stern ist auf der Zeile ein Schalter: Ein zweiter Wisch nimmt ihn wieder weg, wie bei Gelesen /
 ungelesen; Archivieren bietet sein **Rückgängig** an.
 
@@ -1300,4 +1315,10 @@ kein eigenes Rückgängig. Das Löschen bleibt daher bei den Knöpfen der Zeile 
 zuerst getippt werden muss. Auch unter **Einstellungen → E-Mail → Wischgesten** ist Löschen keine
 Wahl: Ein dafür gespeicherter Wert gilt als Standard der Richtung, sodass auch ein wiederhergestelltes
 Backup es nicht zurückbringt.
+
+**Ein längeres Drücken öffnet das Blatt, und Zeilen werden auf dem Telefon nicht gezogen.** Unterhalb des
+Tablet-Breakpunkts ist eine Unterhaltung kein natives Ziehen: Ziehen per HTML5 hat mit dem Finger nie
+funktioniert, und das Abschalten verhindert, dass iOS eine Zeile während der halben Sekunde anhebt. Mit der
+Maus lässt sich eine Zeile wie bisher ziehen. Das Blatt bietet Löschen an einer Zeile im Posteingang an, wie
+es der eigene Knopf der Zeile tut, und hat kein Rückgängig, so wie dieser Knopf.
 

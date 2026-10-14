@@ -615,6 +615,19 @@ for left. The choices are read / unread, archive, star, and nothing. Both direct
 same choice. Trash is not one of them (see *Things that bite*). A star is a toggle on the row, so a
 second swipe takes it off again, as it does for read / unread; archive offers its **Undo**.
 
+On a phone, pressing and holding a row also opens its actions. Hold a row still for about half a second
+and an action sheet rises from the bottom of the screen with every action the row offers: select it,
+mark it read or unread, archive it, star it, move it, label it, snooze it, mark it as spam, delete it,
+and, in the bin or in spam, move it back to the inbox and, if you have switched on **Settings → Mail →
+Disposal → Delete-now buttons**, delete it for good. The entries are the ones the row's own buttons
+offer, in the same places, and each does what that button does. **Move to**, **Label as** and **Snooze**
+open their pickers over the sheet, as they do on the toolbar. The sheet closes on a tap on the dimmed
+page, on Escape, or after an action, and the page behind it does not respond while it is open. A
+background refresh leaves it alone, and a refresh that takes the row out of the list closes it. Where
+the browser can vibrate (Android Chrome), opening the sheet gives a short buzz; iOS has no vibration for
+web pages, so there is none there. Reduced motion makes the sheet appear without its slide. Without
+touch, the row's own buttons and the toolbar do the same work.
+
 ### Keyboard shortcuts
 
 The single keys Gmail uses work here too. Press **?** anywhere for the full list, or the
@@ -1118,6 +1131,12 @@ it. A refresh that removes the row takes it off the list.
 own, so deleting stays with the row's buttons and the bin, where a tap comes first. Trash is not one of
 the **Settings → Mail → Swipe actions** choices either: a value stored for it reads as that direction's
 default, so a restored backup cannot bring it back.
+
+**A long press opens the sheet, and a phone's rows are not dragged.** Below the tablet breakpoint a
+thread row is not a native drag: HTML5 drag never worked from a finger, and turning it off keeps iOS
+from lifting a row during the half-second hold. A mouse still drags a row as before. The sheet offers
+trash on a row in the inbox, where the row's own trash button does, and it has no Undo, as that button
+has none.
 
 **A signature image has to be small to travel with the mail.** A picture in a *signature* is stored
 inside it and sent as an inline part, up to 256 KB each and 768 KB per signature; see

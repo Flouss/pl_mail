@@ -38,11 +38,14 @@ import { Intent, claimSequence, createSequence, releaseSequence } from "../../to
  * Thresholds are measured on finger displacement from touchstart, never on the
  * rendered translation, so easing does not move them.
  *
- * A pull ends in one of two ways, and only one of them can sync:
+ * A pull ends in one of three ways, and only the first can sync:
  *   - touchend, of the finger that was pulling: release past the threshold syncs;
  *   - touchcancel (the system took the touch), or a second finger landing during
  *     the pull: the pull is ABORTED. The indicator returns to idle, the claim is
- *     released, and nothing syncs.
+ *     released, and nothing syncs;
+ *   - no touchend or touchcancel ever arrives: the element the finger was on was
+ *     removed mid-pull, so events stop reaching this element. The next one-finger
+ *     touchstart abandons the stale pull the same way an abort does, and nothing syncs.
  *
  * Touch moves are listened to with passive: false only while a sequence might be
  * a pull: the listener is added at touchstart when the list is at its top, and
@@ -160,6 +163,11 @@ export default class extends Controller {
             return;
         }
 
+        // A one-finger touchstart begins a new sequence, so whatever this controller still
+        // holds is stale: its touchend or touchcancel may never reach us, because the
+        // element the finger was on was removed mid-gesture. Abandon it, with no sync.
+        this._abort();
+
         this._sequence = null;
         this._rows = null;
 
@@ -231,6 +239,14 @@ export default class extends Controller {
         this._disarm();
 
         if (this._claimed === false) {
+            return;
+        }
+
+        // The rows scroller was replaced during the pull (a frame swap, or a refresh that
+        // rebuilt the list): the pull is no longer over the list it started on, so it aborts.
+        if (this._rows.isConnected === false) {
+            this._abort();
+
             return;
         }
 

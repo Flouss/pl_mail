@@ -5640,7 +5640,7 @@ html[data-dnd-active] [data-dnd-ghost] {
 }
 
 .mail-pull-indicator[data-state="release"] {
-    color: rgb(var(--rgb-accent));
+    color: var(--accent-text);
 }
 
 /* ── Row swipe ─────────────────────────────────────────────────────────────

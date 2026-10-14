@@ -200,6 +200,13 @@ final class AccountInboxTabsTest extends WebTestCase
 
         self::assertStringContainsString('Zahlung geaendert', $own);
         self::assertStringNotContainsString(self::PRIMARY, $own);
+
+        // And the strip says where you are: the open tab, and only it, is the
+        // current page. Compared by key — a tab is a fresh object every time.
+        $current = $this->crawl('?tab=c' . $payments->id)->filter('nav a[aria-current="page"]');
+
+        self::assertCount(1, $current);
+        self::assertStringContainsString('tab=c' . $payments->id, (string) $current->attr('href'));
     }
 
     /**

@@ -17,17 +17,17 @@ importing, and about nothing else; the Settings page spells it out. Spam, drafts
 import in progress no longer notify, and neither does a message whose arrival time plMail cannot
 work out from its headers. Reminders from Calendar alerts and the update notice for administrators
 are separate pushes and unchanged. Apps that register through JMAP, and an Android phone through
-Firebase, still hear about every change: they ask what moved, so for them the count of pushes is the
-same.
+Firebase, are still told about every change: they ask what moved. **Migration:** one boolean column
+on `jmap_push_subscription`, false by default; devices registered through the in-app toggle (an id
+starting `web-`) are switched to the new behaviour once, so nobody has to turn notifications off and
+on. Reversible.
 
 **Outlook mailboxes stop reporting moves that did not happen.** Microsoft sends a message again
 whenever anything about it changes — plMail marking it read is enough — and each of those was
-written to the change log as a move into the folder the message was already in. A JMAP client
-fetched and compared every one of them. Only a message whose folder actually changed is recorded
-now, so a JMAP client sees fewer Email and Thread changes from an Outlook mailbox and none that
-describe nothing. **Migration:** one boolean column on `jmap_push_subscription`, false by default;
-devices registered through the in-app toggle (an id starting `web-`) are switched to the new
-behaviour once, so nobody has to turn notifications off and on. Reversible.
+written to the change log as a move into the folder the message was already in. Only a message
+whose folder actually changed is recorded now. The effect runs one way: a JMAP client, and an
+Android phone through Firebase, are told about fewer Email and Thread changes from an Outlook
+mailbox, and none that describe nothing. No migration.
 
 ## v0.3.5 — 2026-10-13
 

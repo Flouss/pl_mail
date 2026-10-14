@@ -19,6 +19,7 @@ use App\Repository\Calendar\CalendarRepository;
 use App\Repository\Calendar\CalendarShareLinkRepository;
 use App\Repository\Integration\IntegrationRepository;
 use App\Repository\Label\LabelRepository;
+use App\Repository\Mail\InboxCategoryRepository;
 use App\Repository\Mail\AccountRepository;
 use App\Repository\Rule\MailRuleRepository;
 use App\Repository\User\ApiTokenRepository;
@@ -251,6 +252,7 @@ final readonly class ConfigBackupUsers
         private CalendarRepository          $calendars,
         private CalendarShareLinkRepository $shareLinks,
         private BookingPageRepository       $bookingPages,
+        private InboxCategoryRepository     $inboxCategories,
     ) {
     }
 
@@ -376,6 +378,7 @@ final readonly class ConfigBackupUsers
             'accounts'     => $this->exportAccounts($user),
             'integrations' => $this->exportIntegrations($user),
             'labels'       => $this->exportLabels($user),
+            'inboxCategories' => $this->exportInboxCategories($user),
             'rules'        => $this->exportRules($user),
             'calendars'    => $this->exportCalendars($user),
             'shareLinks'   => $this->exportShareLinks($user),
@@ -598,6 +601,31 @@ final readonly class ConfigBackupUsers
                 'color'     => $label->color,
                 'isVisible' => $label->isVisible,
                 'sortOrder' => $label->sortOrder,
+            ];
+        }
+
+        return $exported;
+    }
+
+    /**
+     * The inbox tabs the person made themselves, in the order their strip draws
+     * them.
+     *
+     * With each one's id, for the reason labels carry theirs: a filter's "File in
+     * category" action names a category by that number, and the restorer rewrites
+     * it to the id the new row is given. Without these rows the filter would file
+     * into nothing, which is why they travel BEFORE the rules in the document.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function exportInboxCategories(User $user): array
+    {
+        $exported = [];
+
+        foreach ($this->inboxCategories->findForUserOrdered($user) as $category) {
+            $exported[] = [
+                'id'   => $category->id,
+                'name' => $category->name,
             ];
         }
 

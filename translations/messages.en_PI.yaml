@@ -2211,6 +2211,7 @@ message:
             ai: "an oracle, for no rule knew it: "
             ai_differs: 'the rules say otherwise'
             awaiting_resort: "Bein' re-stowed — ye changed how post be sorted, an' this one has not shifted yet."
+            own_filter: "stowed there by one o' yer sieves"
             gmail_overruled: "not used — ye asked plMail to stow this itself"
             in_force: 'this one decides'
             ai_no_answer: 'asked, naught useful back'
@@ -2222,6 +2223,7 @@ message:
             pinned: 'ye hauled it here yerself'
             promotion: 'a bulk-cargo header: '
             social: 'the sender port '
+            switched_off: "it'd be %category%, an' ye scuttled that one"
             thread_differs: "This message alone would be %category% — a yarn takes th' category o' its newest message."
             update: 'a sign of an unmanned sender: '
         category: rank
@@ -2980,6 +2982,7 @@ settings:
         action:
             applyLabel: Fly the flag
             archive: Skip the hold
+            fileInCategory: Stow in a hold of its own
             markRead: Mark as read
             markSpam: Call it bilge
             removeLabel: Strike the flag
@@ -3043,6 +3046,7 @@ settings:
             draft: a rough draft
             flagged: marked
             seen: read
+        category_missing: '(scuttled hold)'
         integration_missing: '(cast-off port)'
         label_missing: '(struck flag)'
         move_down: 'Send "%name%" astern'
@@ -3052,6 +3056,7 @@ settings:
         new_title: New sieve
         no: Nay
         no_actions: No orders yet
+        no_categories: 'No holds yet — build one first.'
         no_integrations: 'No ports moored — make fast to one in Friendly ports first.'
         of_the_following: o the followin
         op:
@@ -3573,6 +3578,7 @@ settings:
         appearance: Look o' the ship
         calendar_behaviour: Behaviour
         calendars: Almanacs
+        categories: "Holds"
         disposal: Disposal
         filters: Sieves
         general: General
@@ -3764,13 +3770,40 @@ settings:
             rendered: 'Drawn'
             toggle: 'Signature view'
         subheading: 'What be carved at the foot o'' the scrolls ye write.'
+    categories:
+        add: Add
+        built_in: "Ship's own"
+        built_in_off: "Ship's own · struck — its loot be on the Main deck"
+        created: 'Built the hold "%name%".'
+        delete: Scuttle the hold
+        delete_confirm: 'Scuttle "%name%"? Post stowed there goes back to the hold it would be in otherwise. No post goes over the side.'
+        deleted: 'Scuttled "%name%".'
+        error:
+            empty: 'A hold needs a name.'
+            reserved: 'That name belongs to one o'' the holds the ship came with.'
+            taken: 'Ye already have a hold by that name.'
+            too_long: 'That name be too long (forty letters at most).'
+        filters_link: 'Settings → Sieves.'
+        heading: "Tabs"
+        hint: "A tab o' yer own shows in the inbox while it holds letters. Letters go into it through a filter whose order be \"File in category\" — rig one up under"
+        move_down: "Haul %tab% down"
+        move_up: "Haul %tab% up"
+        name_label: Name
+        off: "Nay"
+        on: "Aye"
+        placeholder: 'e.g. Parcels'
+        primary_fixed: "Always first an' always flyin' — loot from a tab ye strike lands here."
+        rename: Rename
+        renamed: 'Renamed to "%name%".'
+        reorder: "Drag t' reorder"
+        subheading: "Raise or strike the ship's own tabs, add yer own, an' haul 'em into whatever order ye fancy."
     sorting:
         again:
             button: "Ask again"
             hint: "Th' oracle answers once per message an' keeps th' answer. Ask again when th' oracle, its orders or a plMail release have changed — it costs an askin' per message, so it be bounded to yer newest post."
             label: "Stow recent post again"
         applies_to_new: "Changin' either o' these re-stows the post ye already have, below decks — a big hold takes a few minutes, so give the tabs a moment. Yarns ye stowed by hand yerself be left be."
-        heading: Categories
+        heading: "Sortin'"
         override:
             hint: "A Gmail account arrives already stowed by Google. This decides whether plMail leaves it be or answers for itself."
             label: "On Gmail accounts"

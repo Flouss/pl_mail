@@ -2334,6 +2334,7 @@ message:
             # difference between them is the finding.
             ai_differs: 'the rules disagree'
             awaiting_resort: 'Being re-filed — you changed how mail is sorted, and this one has not moved yet.'
+            own_filter: 'filed there by one of your filters'
             gmail_overruled: 'not used — you asked plMail to sort this itself'
             in_force: 'this one decides'
             # Asked, and what came back was not one of the five categories. Kept
@@ -2350,6 +2351,7 @@ message:
             pinned: 'you moved it here'
             promotion: 'a bulk-mail header: '
             social: 'the sender domain '
+            switched_off: "it would be %category%, which you switched off"
             # A conversation takes ONE category, from its newest message, so a
             # reply can carry the whole thread out of the tab this message
             # belongs in. Said outright, because without it the panel reads as
@@ -3135,6 +3137,7 @@ settings:
         action:
             applyLabel: Apply label
             archive: Skip inbox
+            fileInCategory: File in category
             markRead: Mark as read
             markSpam: Mark as spam
             removeLabel: Remove label
@@ -3205,6 +3208,7 @@ settings:
             draft: a draft
             flagged: starred
             seen: read
+        category_missing: '(deleted category)'
         integration_missing: '(disconnected service)'
         label_missing: '(deleted label)'
         move_down: Move "%name%" later
@@ -3214,6 +3218,7 @@ settings:
         new_title: New filter
         no: No
         no_actions: No actions yet
+        no_categories: 'No categories yet — create one first.'
         no_integrations: 'No services connected — set one up in Integrations first.'
         of_the_following: of the following
         op:
@@ -3760,6 +3765,7 @@ settings:
         appearance: Appearance
         calendar_behaviour: Behaviour
         calendars: Calendars
+        categories: "Categories"
         disposal: Disposal
         filters: Filters
         general: General
@@ -3962,13 +3968,40 @@ settings:
             rendered: 'Rendered'
             toggle: 'Signature view'
         subheading: 'What is added to the bottom of the messages you write.'
+    categories:
+        add: Add
+        built_in: "Built in"
+        built_in_off: "Built in · switched off — its mail is in Primary"
+        created: 'Created "%name%".'
+        delete: Delete category
+        delete_confirm: 'Delete "%name%"? Mail filed there goes back to the tab it would otherwise be in. No mail is deleted.'
+        deleted: 'Deleted "%name%".'
+        error:
+            empty: 'A category needs a name.'
+            reserved: 'That name belongs to one of the built-in tabs.'
+            taken: 'You already have a category with that name.'
+            too_long: 'That name is too long (40 characters at most).'
+        filters_link: 'Settings → Filters.'
+        heading: "Tabs"
+        hint: "A tab of your own shows in the inbox while it holds mail. Mail goes into it through a filter whose action is \"File in category\" — set one up under"
+        move_down: "Move %tab% down"
+        move_up: "Move %tab% up"
+        name_label: Name
+        off: "Off"
+        on: "On"
+        placeholder: 'e.g. Shipping'
+        primary_fixed: "Always first and always on — mail from a tab you switch off lands here."
+        rename: Rename
+        renamed: 'Renamed to "%name%".'
+        reorder: "Drag to reorder"
+        subheading: "Switch the built-in tabs on or off, add your own, and drag them into the order you want."
     sorting:
         again:
             button: Ask again
             hint: The assistant answers once per message and keeps the answer. Ask again after the model, the prompt or a plMail release has changed — it costs a model call per message, so it is bounded to your newest mail.
             label: Sort recent mail again
         applies_to_new: Changing either of these re-files the mail you already have, in the background — a large mailbox takes a few minutes, so give the tabs a moment to settle. Conversations you moved to a tab yourself are left alone.
-        heading: Categories
+        heading: "Sorting"
         override:
             hint: A Gmail account arrives already sorted by Google. This decides whether plMail leaves that alone or answers for itself.
             label: On Gmail accounts

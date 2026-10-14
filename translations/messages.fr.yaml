@@ -2356,11 +2356,13 @@ message:
             default: 'rien ne l’a désigné comme courrier de masse'
             forum: 'un en-tête de liste de diffusion : '
             gmail: 'Gmail l’a dit : '
+            own_filter: "classé ici par l’un de vos filtres"
             # A category somebody chose by dragging the conversation onto a tab.
             # Nothing below the first row can move it while this holds.
             pinned: 'vous l’avez déplacé ici'
             promotion: 'un en-tête de courrier de masse : '
             social: 'le domaine de l’expéditeur '
+            switched_off: "ce serait %category%, que vous avez désactivé"
             # A conversation takes ONE category, from its newest message, so a
             # reply can carry the whole thread out of the tab this message
             # belongs in. Said outright, because without it the panel reads as
@@ -2895,6 +2897,33 @@ settings:
         refresh: 'Actualiser depuis le fournisseur'
         subheading: 'Les adresses sous lesquelles ce compte envoie et reçoit.'
         system: 'système'
+    categories:
+        add: "Ajouter"
+        built_in: "Intégré"
+        built_in_off: "Intégré · désactivé — son courrier est dans Principal"
+        created: "Catégorie « %name% » créée."
+        delete: "Supprimer la catégorie"
+        delete_confirm: "Supprimer « %name% » ? Le courrier qui y est classé retourne dans l’onglet où il serait sinon. Aucun courrier n’est supprimé."
+        deleted: "Catégorie « %name% » supprimée."
+        error:
+            empty: "Une catégorie a besoin d’un nom."
+            reserved: "Ce nom appartient à l’un des onglets intégrés."
+            taken: "Vous avez déjà une catégorie de ce nom."
+            too_long: "Ce nom est trop long (40 caractères au maximum)."
+        filters_link: "Réglages → Filtres."
+        heading: "Onglets"
+        hint: "Un onglet personnel apparaît dans la boîte de réception tant qu’il contient du courrier. Le courrier y arrive par un filtre dont l’action est « Classer dans une catégorie » — configurez-en un dans"
+        move_down: "Descendre %tab%"
+        move_up: "Monter %tab%"
+        name_label: "Nom"
+        off: "Désactivé"
+        on: "Activé"
+        placeholder: "p. ex. Livraisons"
+        primary_fixed: "Toujours en premier et toujours actif — le courrier d’un onglet que vous désactivez arrive ici."
+        rename: "Renommer"
+        renamed: "Renommée en « %name% »."
+        reorder: "Faire glisser pour réordonner"
+        subheading: "Activez ou désactivez les onglets intégrés, ajoutez les vôtres et faites-les glisser dans l’ordre que vous voulez."
     clock:
         heading: Horloge
         subheading: Si les heures s’écrivent au format 12 ou 24 heures, et où l’heure actuelle s’affiche. Rien n’est stocké différemment — seuls les chiffres changent.
@@ -3151,6 +3180,7 @@ settings:
         action:
             applyLabel: Appliquer le libellé
             archive: Ignorer la boîte de réception
+            fileInCategory: "Classer dans une catégorie"
             markRead: Marquer comme lu
             markSpam: Marquer comme spam
             removeLabel: Retirer le libellé
@@ -3162,6 +3192,7 @@ settings:
         add_condition: Ajouter une condition
         add_group: Ajouter un groupe
         all_accounts: Tous les comptes
+        category_missing: "(catégorie supprimée)"
         count: '%count% filtres'
         count_capped: 'Correspond à %count%+ messages existants'
         count_error: Pas encore un filtre utilisable
@@ -3230,6 +3261,7 @@ settings:
         new_title: Nouveau filtre
         no: Non
         no_actions: Aucune action pour l’instant
+        no_categories: "Aucune catégorie pour l’instant — créez-en une d’abord."
         no_integrations: 'Aucun service connecté — configurez-en un d’abord dans Intégrations.'
         of_the_following: des conditions suivantes
         op:
@@ -3781,6 +3813,7 @@ settings:
         appearance: Apparence
         calendar_behaviour: Comportement
         calendars: Agendas
+        categories: "Catégories"
         disposal: Suppression
         filters: Filtres
         general: Général
@@ -3992,7 +4025,7 @@ settings:
             hint: L’assistant répond une fois par message et garde la réponse. Redemandez après un changement de modèle, d’instruction ou de version de plMail — cela coûte un appel au modèle par message, c’est donc limité à votre courrier le plus récent.
             label: Trier à nouveau le courrier récent
         applies_to_new: Changer l’un de ces réglages reclasse en arrière-plan le courrier que vous avez déjà — une grosse boîte prend quelques minutes, laissez donc un moment aux onglets pour se stabiliser. Les conversations que vous avez vous-même déplacées dans un onglet ne sont pas touchées.
-        heading: Catégories
+        heading: "Tri"
         override:
             hint: Un compte Gmail arrive déjà trié par Google. Ceci décide si plMail laisse ce tri tel quel ou répond lui-même.
             label: Sur les comptes Gmail

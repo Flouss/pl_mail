@@ -234,6 +234,28 @@ Get these wrong and things fail quietly rather than loudly.
   did not is the failure this whole layer is careful about. `app:backfill
   category` is what fills those in, and re-running it after a change to
   `MessageCategorizer` needs no resync — it reads only persisted data.
+
+  **The tabs as the reader arranged them are a second, separate surface:
+  `urn:plmail:params:jmap:inboxtabs`.** The five stay a closed vocabulary on
+  `Thread.category` and `threadCategory`, because a sixth value would break
+  every client that has never heard of it. A client that knows the extension
+  reads `InboxTab/get` instead — every tab in the reader's order, the built-in
+  ones with `isEnabled`, the reader's own with their `name` — and draws from
+  `Thread.inboxTab`, filters with `threadInboxTab`, and moves a conversation
+  with `Thread/set { inboxTab }`. Those three follow the web exactly: a
+  conversation filed in a tab of the reader's own is in that tab and in no
+  built-in one, a category the reader switched off is listed under Primary,
+  and a switched-off tab is no tab (`threadInboxTab` matches nothing,
+  `Thread/set` refuses it). `InboxTabMapper` is where that rule is written for
+  JMAP and `MessageThreadRepository::narrowToCategory()` for the web.
+
+  The tabs are the user's, and JMAP state is per account, so a change is
+  recorded in every account's change log (`InboxTabChanges`) — the way a label
+  is a Mailbox in each account — and every account answers `InboxTab/get`
+  with the same list. A re-sort that moves conversations between tabs records
+  each one it moved as a Thread change, so `Thread/changes` tells a phone; it
+  used to rewrite the column and tell nobody.
+
 - **A JMAP CalendarEvent id is a `calendar_event` id — the series.** The query
   that finds events is a `tsrange &&` overlap over `calendar_event_occurrence`,
   so the ids the database hands back are *occurrence* ids and

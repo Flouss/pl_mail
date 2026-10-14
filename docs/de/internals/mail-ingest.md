@@ -1,4 +1,4 @@
-<!-- translated-from: internals/mail-ingest.md sha1:1c9c9d3d0cc4ce9e95d18b4f296c61ddfb7dc752 -->
+<!-- translated-from: internals/mail-ingest.md sha1:4cec2680ca81aaeda118258ea11392456b81c947 -->
 # Mail-Ingest
 
 Vom Anbieter in die Datenbank: wie aus Bytes eine Zeile `Message` wird, was mit ihr geschieht,
@@ -186,6 +186,28 @@ nach der Konversationsbildung, damit Archivier- und Papierkorb-Aktionen die Konv
 Nachricht erreichen), ein Flush, ein zweiter Durchgang, der Konversations-Ids pro Konto für
 `MailChangeRecorder::threadsTouched()` einsammelt, und ein zweiter Flush für die Zeilen des
 Änderungsprotokolls.
+
+Die Filter-Aktion **In Kategorie ablegen** läuft im selben Durchgang und ist die einzige Aktion,
+die eine Kategorie schreibt. Sie schreibt nicht `Message::$category`: Fünf Dinge berechnen diese
+Spalte aus gespeicherten Daten neu (Ankunft, `app:backfill category`, die Neusortierung, die eine
+Einstellungsänderung einreiht, die Freigabe durch den Assistenten, die Gmail-Anreicherung), und jedes
+davon würde ein dort abgelegtes Urteil löschen. Das Urteil steht stattdessen in
+`Message::$ruleCategory`, das nichts neu berechnet, und `RuleCategoryFiler` lässt dann die
+Konversation über `MessageThreader::refreshCategory()` neu auflösen — neueste gewinnt, pin-bewusst,
+Hold-bewusst, wie bei der eingebauten Kategorie. `MessageThread::$userCategory` ist die Seite der
+Konversation, aufgelöst von denselben zwei Neuberechnungs-Statements wie `category`. Eine Nachricht
+wird nur abgelegt, wenn `SenderAuthentication` `Pass` sagt; wessen Urteil geglaubt wird, steht in
+dessen Docblock. Der Filter legt auch Mail mit Gmail-Labels ab: Die Kategorien des Anbieters haben
+Vorrang vor plMails eigener Sortierung, nicht vor einer Anweisung, die die Nutzerin geschrieben hat.
+
+Eine eingebaute Kategorie, die die Nutzerin ausgeschaltet hat (`CategorySorting::$disabled`),
+bekommt keine Mail. `MessageCategorizer::explain()` macht aus dem, was die Kaskade entschieden hat —
+Header-Regel, Gmail-Label oder Assistent —, Allgemein mit dem Grund `switched_off`, statt die nächste
+Regel zu fragen; „Foren ist aus“ macht eine Mailingliste also nie zu Werbung. Eine Kategorie aus- oder
+einzuschalten reiht dieselbe Neusortierung ein wie die anderen Sortier-Einstellungen. Beide
+Neuberechnungs-Statements schreiben nur die Konversationen, deren Tab sich ändert, und geben sie
+zurück, und jeder Aufrufer trägt sie als JMAP-Thread-Änderungen ein — so erfährt ein Handy von einer
+Neusortierung.
 
 Zurück kommt `PostIngestResult` — Nachrichten in Ingest-Reihenfolge, besitzende Konten nach Id
 und Konversations-Ids nach besitzendem Konto —, weil die drei Aufrufer nicht gleich zu Ende

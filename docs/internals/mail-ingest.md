@@ -163,6 +163,25 @@ threading, so archive and trash actions can reach each message's thread), a flus
 pass collecting thread ids per account for `MailChangeRecorder::threadsTouched()`, and a
 second flush for the change-log rows.
 
+A filter's **File in category** action runs in that same pass and is the one action that writes
+a category. It does not write `Message::$category`: five things recompute that column from stored
+data (arrival, `app:backfill category`, the re-sort a settings change queues, the assistant's
+release, Gmail enrichment), and every one would erase a verdict kept there. The verdict goes in
+`Message::$ruleCategory` instead, which nothing recomputes, and `RuleCategoryFiler` then has the
+thread re-resolve through `MessageThreader::refreshCategory()` — most-recent-wins, pin-aware, hold-aware,
+like the built-in category. `MessageThread::$userCategory` is the thread's side, resolved by the same
+two recompute statements as `category`. A message is filed only when `SenderAuthentication` says
+`Pass`; see its docblock for whose verdict is believed. The filter files Gmail-labelled mail too:
+the provider's categories outrank plMail's own sorting, not an instruction the reader wrote.
+
+A built-in category the reader switched off (`CategorySorting::$disabled`) takes no mail.
+`MessageCategorizer::explain()` maps whatever the cascade decided — header rule, Gmail label or
+the assistant — to Primary with the reason `switched_off`, rather than consulting the next rule, so
+"Forums is off" never turns a mailing list into Promotions. Switching a category off or on queues
+the same re-sort as the other sorting choices. Both recompute statements write only the
+conversations whose tab changes and return them, and every caller records those as JMAP Thread
+changes, so a phone hears about a re-sort.
+
 `PostIngestResult` is what comes back — messages in ingest order, owning accounts by id, and
 thread ids by owning account — because the three callers do not finish the same way: IMAP
 publishes its Mercure update and dispatches contact harvesting one level up in

@@ -30,6 +30,12 @@ use Doctrine\ORM\Mapping as ORM;
 // for one mailbox), and no query looks up a bare UID.
 #[ORM\UniqueConstraint(name: 'uniq_message_mailbox_imap_uid', columns: ['mailbox_id', 'imap_uid'])]
 #[ORM\Index(name: 'idx_message_search_vector', columns: ['search_vector'])]
+// Partial, and declared here so the mapping and the migration agree: without an
+// index of its own on this foreign-key column Doctrine would go on wanting a
+// full one, on the largest table in the schema, for a column that is NULL on
+// nearly every row. Serves "which mail is in this category" and the SET NULL a
+// category's removal performs.
+#[ORM\Index(name: 'idx_message_rule_category', columns: ['rule_category_id'], options: ['where' => 'rule_category_id IS NOT NULL'])]
 // Threading reads both of these on every synced message. message_id is looked up
 // by value across an account (parent lookup for References threading); the
 // provider key is looked up account-scoped, so account trails it the same way
@@ -447,6 +453,31 @@ class Message extends MessageModel
      */
     #[ORM\Column(name: 'ai_category', enumType: MessageCategory::class, nullable: true)]
     public ?MessageCategory $aiCategory = null;
+
+    /**
+     * The category a FILTER filed this message under, when it is one the
+     * reader made themselves.
+     *
+     * A THIRD OPINION, AND THE REASON IT IS ITS OWN COLUMN
+     * ────────────────────────────────────────────────────
+     * Not written into $category, for the reason $aiCategory is not, and for a
+     * sharper one besides. $category is a pure function of persisted data that
+     * five writers recompute — arrival, the backfill, the re-sort a settings
+     * change triggers, the assistant's release, Gmail enrichment — and every one
+     * of them overwrites it. A filter's verdict written there would be erased by
+     * the next re-sort. Here nothing recomputes it: only a filter's action
+     * writes it, and only removing the category clears it.
+     *
+     * $category keeps the built-in the rules decided, which is also what a JMAP
+     * client is served: its tab vocabulary is closed, so a message filed in a
+     * tab of the reader's own still reads as the built-in it would have been in.
+     *
+     * ON DELETE SET NULL: removing the category un-files its mail in the
+     * database, with no sweep for the application to forget.
+     */
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'rule_category_id', nullable: true, onDelete: 'SET NULL')]
+    public ?InboxCategory $ruleCategory = null;
 
     /**
      * The Gmail account that can act on this message, when it is not this

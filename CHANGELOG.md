@@ -44,6 +44,27 @@ for the calendar, a "facture" with its "net à payer" becomes an invoice card, a
 vérification" a login-code card. A slashed date such as 04/08/2026 is read day first for a French
 reader. No migration.
 
+**Inbox tabs are yours to arrange: switch the built-in ones off, make your own, and put them in
+any order.** The new Settings → Categories, in the Mail group, holds everything about the tabs: what
+sorts mail into them (the card that used to sit under General), which of the five built-in tabs are
+on, the tabs you make yourself, and the order of all of them — dragged, or moved with buttons from a
+keyboard or a phone. Primary is always first and always on. A tab you switch off takes no mail: the
+header rules, Google's labels and the assistant all file what would have gone there under Primary,
+and switching it back on re-sorts and brings it back. A tab of your own is filled by a filter whose
+action is **File in category**; mail filed there leaves the built-in tab it would otherwise be in,
+and the tab shows while it holds mail, takes drag-and-drop, and counts and badges like the others. A
+filter files Gmail mail too, whatever you chose about Google's own sorting. Only mail whose sender
+passes authentication is filed, so a forged "your parcel is waiting" never lands in a tab named after
+the real carrier; on a mailbox where plMail cannot tell which server vouches for the mail such a
+filter files nothing, and the filters page says so. Mail stays in a tab when the filter that put it
+there is changed or deleted. The Android app and other JMAP clients can draw the same tabs and move
+mail between them (`urn:plmail:params:jmap:inboxtabs`), and a re-sort that moves conversations
+between tabs now tells them — a phone used to keep showing a conversation where it had been. Re-sorting
+also reads only the mailbox being re-sorted, where it used to sort every user's mail once per account.
+**Migration:** one new table, a nullable column each on messages and conversations and two settings
+columns on users, added without rewriting any mail. With tabs on, every inbox page and sidebar-counts
+poll makes one more indexed read. [#87](https://github.com/karatektus/pl_mail/pull/87), by @Flouss.
+
 ## v0.3.5 — 2026-10-13
 
 **Browsers and password managers kept offering your logins in client-secret fields.** Opening

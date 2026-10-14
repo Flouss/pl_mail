@@ -83,8 +83,8 @@ On a phone, switching tabs replaces the entry in the browser's history rather th
 
 ### An inbox without tabs
 
-If you would rather have one list, switch **Inbox tabs** to **One list** under **Settings → General
-→ Categories**. The inbox then shows everything in it, newest first, and the tabs are
+If you would rather have one list, switch **Inbox tabs** to **One list** under **Settings →
+Categories**. The inbox then shows everything in it, newest first, and the tabs are
 gone along with what belongs to them: the "new" pills, dragging a conversation onto a tab, and the
 panel that explains why a message was filed where it was.
 
@@ -95,7 +95,7 @@ choosing **Rules** stops it.
 
 ### Choosing what sorts your mail
 
-Both of those defaults are yours to change, under **Settings → General → Categories**.
+Both of those defaults are yours to change, under **Settings → Categories**.
 
 **Sorted by** picks what decides. **Rules** reads headers — a mailing-list header, an unsubscribe
 link, a sender you have written to before — and answers the same way every time for the same
@@ -139,6 +139,49 @@ again about your newest 100, 200 or 500 messages.
 It is bounded because it costs a model call each — a few hundred is minutes on a warm host, a whole
 mailbox is hours. Recent mail is where a wrong tab gets noticed anyway. Nothing asks again on its
 own, and nothing should.
+
+### Arranging the tabs
+
+The **Tabs** card on the same page lists every tab in the order the inbox shows them. Drag one to
+move it, or use the arrows beside it from a keyboard or on a phone. **Primary** is always first and
+always on: it is where the inbox opens and where mail from a tab you switch off goes.
+
+Any of the other four built-in tabs can be switched **Off**. Forums is the usual candidate — Gmail
+itself rarely puts anything there. A tab that is off is not just hidden: nothing sorts into it any
+more, not the rules, not Google's labels and not the assistant, and the mail that would have gone
+there is in Primary. The **Details** panel says so on such a message ("it would be Forums, which you
+switched off"). Switching a tab off or back on re-files the mail you already have, in the
+background, the same way changing what sorts your mail does; switching it back on brings its mail
+back, because the category is worked out again from what is stored on each message. A conversation
+you had dragged into a tab you switch off goes back to being sorted like any other.
+
+### Tabs of your own
+
+The five are what plMail knows how to recognise. If you want a tab for something it cannot — parcels,
+receipts, one client's mail — add it at the bottom of the **Tabs** card under **Settings →
+Categories**: a name, and nothing else. It goes to the end of the strip until you move it. A tab of your own holds nothing until a [filter](filters.md#filing-into-your-own-tabs)
+whose action is **File in category** puts mail into it, and like the others it only shows in the
+inbox while it holds mail. A filter files Gmail mail too: Google's categories outrank plMail's own
+sorting unless you say otherwise, but a filter is something you wrote, and it outranks both.
+
+Mail stays in your tab when the filter that put it there is changed or deleted, as a label stays on
+mail when its filter goes. Dragging the conversation out, or deleting the tab, is how it leaves.
+
+A conversation is in exactly one tab, so mail filed into yours leaves the built-in tab it would
+otherwise have been in — a carrier's notice that used to sit in Promotions is in Shipping now, and
+Promotions counts, shows and badges only what is left. You can also drag a conversation onto a tab
+of your own, or off one onto a built-in tab, exactly as between the five; a conversation you moved
+by hand stays where you put it.
+
+The message's **Details** panel names your tab when that is where the conversation is, and says it
+was filed there by one of your filters (or, after a drag, that you moved it). Renaming a tab renames
+it everywhere at once. **Deleting** one puts its mail back in the tab it would otherwise be in;
+nothing is deleted.
+
+The Android app shows your tabs as the browser does — in your order, without the ones you switched
+off — and moves mail between them. Other mail apps that connect over JMAP see what they always did:
+the five built-in categories, with a conversation in your Shipping tab under the built-in tab it
+would otherwise be in. Gmail itself knows nothing of your tabs.
 
 ### Telling plMail it got one wrong
 

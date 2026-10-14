@@ -152,6 +152,7 @@
                                         { section: 'read-receipts', icon: 'fa-solid fa-envelope-open-text', label: 'settings.nav.read_receipts' },
                                         { section: 'signature',     icon: 'fa-solid fa-signature' },
                                         { section: 'templates',     icon: 'fa-regular fa-file-lines' },
+                                        { section: 'categories',    icon: 'fa-solid fa-inbox' },
                                         { section: 'labels',        icon: 'fa-solid fa-tag' },
                                         { section: 'filters',       icon: 'fa-solid fa-filter' },
                                         { section: 'disposal',      icon: 'fa-solid fa-trash-can' },
@@ -398,6 +399,14 @@
                                                 {% endblock %}
                                             {% endembed %}
 
+                                        </div>
+                                    {% elseif section == 'categories' %}
+                                        {# Everything about the inbox tabs on one page: what sorts
+                                           mail into them, then the tabs themselves — which built-in
+                                           ones are on, the reader's own, and the order of all of
+                                           them. The sorting card used to sit under General, and the
+                                           tabs it sorts into were a second card beside it. #}
+                                        <div class="space-y-4">
                                             {% embed 'settings/_card.html.twig' with {
                                                 heading:    'settings.sorting.heading'|trans,
                                                 subheading: 'settings.sorting.subheading'|trans,
@@ -408,6 +417,18 @@
                                                         overrideProvider: app.user.categorySorting.overrideProvider,
                                                         assistantOffered: ai_categorisation_enabled(),
                                                         tabs:             app.user.categorySorting.tabs,
+                                                    } %}
+                                                {% endblock %}
+                                            {% endembed %}
+
+                                            {% embed 'settings/_card.html.twig' with {
+                                                heading:    'settings.categories.heading'|trans,
+                                                subheading: 'settings.categories.subheading'|trans,
+                                            } %}
+                                                {% block body %}
+                                                    {% include 'settings/_inbox_tabs.html.twig' with {
+                                                        tabs:        categoryTabs,
+                                                        switchedOff: app.user.categorySorting.switchedOff(),
                                                     } %}
                                                 {% endblock %}
                                             {% endembed %}

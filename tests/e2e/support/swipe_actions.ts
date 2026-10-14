@@ -11,6 +11,16 @@ import { expect, type Page } from "@playwright/test";
 export async function setSwipeAction(page: Page, direction: "Swipe right" | "Swipe left", option: string): Promise<void> {
     await page.goto("/settings?section=swipe-actions");
 
+    const field = direction === "Swipe right" ? "swipeRight" : "swipeLeft";
+
+    // Already the option asked for: choosing it again is no change, so no save follows and nothing
+    // is waited for. A cleanup that resets a direction it never moved (a test that failed first) is safe.
+    const current = await page.locator(`select[name="${field}"] option[selected]`).textContent();
+
+    if (current?.trim() === option) {
+        return;
+    }
+
     const saved = page.waitForResponse(
         (response) =>
             "GET" === response.request().method() &&
@@ -34,8 +44,6 @@ export async function setSwipeAction(page: Page, direction: "Swipe right" | "Swi
     await page.locator(`[id="${listboxId}"]`).getByRole("option", { name: option, exact: true }).click();
 
     await saved;
-
-    const field = direction === "Swipe right" ? "swipeRight" : "swipeLeft";
 
     await expect(
         page.locator(`select[name="${field}"] option[selected]`),

@@ -602,12 +602,13 @@ On a phone the same sync is a pull: drag the list down from its top, past the in
 the indicator spins with it. Without touch, the sync button is the equivalent: it is a named button
 for a keyboard or a screen reader, and the sync toast says when the run starts and when it ends.
 
-On a phone a row swipes too. Drag it to the right and it does what the right direction is set to, which
-is to mark it read, or unread if it already is; drag it to the left and it is archived. Past a third of
+On a phone a row swipes too. Drag it to the right and it does what the right direction is set to; by
+default that marks it read, or unread if it already is. Drag it to the left and, by default, it is
+archived. What each direction does is set under **Settings → Mail → Swipe actions**, below. Past a third of
 the row's width the action waits behind the row, and pressing it does the thing. Past two thirds, or a
 quick flick past the first third, it happens as you let go. Touching anything else closes an open row,
-and that touch does nothing more. A swipe offers nothing where the row's own buttons offer nothing: not
-on a draft, and not in the archive, the bin or spam. Without touch, the row's checkbox (its avatar) and
+and that touch does nothing more. Read / unread and archive are offered only on ordinary mail: never on
+a draft, and never in the archive, the bin or spam. Star is offered on every row, drafts included. Without touch, the row's checkbox (its avatar) and
 the toolbar do the same work, **Archive** and **More** on a selection included.
 
 Each direction has its own setting under **Settings → Mail → Swipe actions**, a select for right and one

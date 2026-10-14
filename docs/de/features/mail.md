@@ -1,4 +1,4 @@
-<!-- translated-from: features/mail.md sha1:42b6ebba22918b5f0ac9430eea4ea67279e09be0 -->
+<!-- translated-from: features/mail.md sha1:0673ada764f7c63f3330d184d6f7926335c8ff54 -->
 
 # Mail
 
@@ -664,12 +664,13 @@ Berührung ist der Knopf der Ersatz: ein benannter Knopf für Tastatur und Bilds
 Meldung zur Synchronisierung sagt, wann ein Lauf beginnt und endet.
 
 Auf dem Telefon lässt sich eine Zeile auch wischen. Zieh sie nach rechts, und geschieht, was die
-Richtung rechts eingestellt hat, standardmäßig: Die Zeile wird als gelesen markiert, oder als
-ungelesen, wenn sie schon gelesen ist. Zieh sie nach links, und sie wird archiviert. Über ein Drittel der Zeilenbreite wartet die Aktion hinter der Zeile, und Drücken führt
+Richtung rechts eingestellt hat; standardmäßig wird sie als gelesen markiert, oder als ungelesen,
+wenn sie schon gelesen ist. Zieh sie nach links, und standardmäßig wird sie archiviert. Was jede Richtung
+tut, stellst du unter **Einstellungen → E-Mail → Wischgesten** ein (siehe unten). Über ein Drittel der Zeilenbreite wartet die Aktion hinter der Zeile, und Drücken führt
 sie aus. Über zwei Drittel, oder ein schneller Wisch über das erste Drittel, geschieht sie beim
 Loslassen. Ein Tippen irgendwo anders schließt eine offene Zeile, und dieses Tippen tut sonst nichts.
-Wo die eigenen Knöpfe der Zeile nichts anbieten, bietet auch ein Wisch nichts: nicht bei einem
-Entwurf und nicht im Archiv, im Papierkorb oder bei Spam. Ohne Berührung erledigen das
+Gelesen / ungelesen und Archivieren gibt es nur bei normalen Mails: nie bei einem Entwurf und nie im
+Archiv, im Papierkorb oder bei Spam. Stern gibt es bei jeder Zeile, auch bei Entwürfen. Ohne Berührung erledigen das
 Kontrollkästchen der Zeile (ihr Avatar) und die Leiste dieselbe Arbeit, **Archivieren** und **Mehr**
 für eine Auswahl eingeschlossen.
 

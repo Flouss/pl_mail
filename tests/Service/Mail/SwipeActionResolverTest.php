@@ -130,6 +130,20 @@ final class SwipeActionResolverTest extends KernelTestCase
     }
 
     /**
+     * Move posts the row's id to the bulk move route, which looks up thread ids, so
+     * a bare message offers no Move. The thread beside it offers Move, so an absent
+     * entry is the rule and not a sheet that offers nothing.
+     */
+    public function testMoveIsOfferedOnAThreadButNotOnABareMessage(): void
+    {
+        $thread  = $this->seedThread(unreadCount: 1);
+        $message = $this->seedMessage(unseen: true);
+
+        self::assertArrayHasKey('move', $this->resolver->sheet($thread, false), 'a thread offers Move');
+        self::assertArrayNotHasKey('move', $this->resolver->sheet($message, false), 'a bare message offers no Move');
+    }
+
+    /**
      * Each direction does what the signed-in user's own setting says, and the two
      * do not affect each other. The expected actions are the literal choices made
      * here: left = star, right = none.
@@ -480,7 +494,10 @@ final class SwipeActionResolverTest extends KernelTestCase
             'restore'                          => false === $ordinary,
             'purge'                            => $discarded && $deletesNow,
             'spam'                             => $thread && false === $draft && false === $discarded,
-            'move', 'labels'                   => false === $draft,
+            // Move posts the row's id to the bulk move route, which looks up thread ids, so a bare
+            // message has no Move. Labels open for either kind.
+            'move'                             => $thread && false === $draft,
+            'labels'                           => false === $draft,
             'select'                           => true,
             default                            => throw new LogicException(sprintf('No parity rule for the sheet entry "%s".', $entry)),
         };

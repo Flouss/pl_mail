@@ -8,6 +8,15 @@ The published image tags: `latest` follows the most recent release below,
 
 ## Unreleased
 
+**Signing in through single sign-on keeps you signed in, as "Keep me signed in" does on the password form.**
+A single sign-on sign-in left nothing but the PHP session holding you in: a cookie that ends with the
+browser, kept in a file that is cleaned up after 24 minutes without a request and that goes with the
+container whenever the server is updated. Which is why it signed people out every few hours. It now
+sets the same 60-day remember-me cookie, stored in the database, so a lapsed session is picked up
+again without a visit to the provider. Accounts with two-factor authentication are still asked for
+their code when the cookie signs them back in. Everyone signed in through the provider before the
+upgrade signs in once more to get the cookie.
+
 **A Gmail import takes in everything in the mailbox, not only mail addressed to the account.**
 plMail kept a Gmail message only when its headers named the account, and on a real mailbox
 (`app:gmail:skipped`) what it dropped was the account owner's own mail: 202 messages sent from

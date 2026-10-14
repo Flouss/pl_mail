@@ -22,9 +22,12 @@ use Webklex\PHPIMAP\Support\FlagCollection;
  * sentAt on the way in, could be seen in the thread and never opened.
  * receivedAt keeps the Date: it is when the row appeared.
  *
- * Both spellings of the flag are fed in, because webklex reports `Draft` from
- * some servers and `\Draft` from others, and the rest of the app compares them
- * as one (MessageFlag::canonicalList).
+ * webklex strips the backslash, so what a real server's `\Draft` arrives as is
+ * `Draft`, and the row stores it that way: the app (Message::isDraft) does not
+ * treat it as a draft until something rewrites the flags, which is separate
+ * from this. What this pins is that a row is never half of each — "not a draft
+ * and never sent" — so sentAt follows the stored flag exactly as isDraft()
+ * reads it.
  *
  * Through the importer, like ImapMailboxImporterTest, because buildMessage() is
  * private and the claim is about what is stored.
@@ -73,7 +76,7 @@ final class ImapDraftSentAtTest extends KernelTestCase
         parent::tearDown();
     }
 
-    public function testADraftHasNoSentAtWhicheverWayTheServerSpellsTheFlag(): void
+    public function testSentAtFollowsTheStoredDraftFlag(): void
     {
         $this->importer->importPage($this->mailboxId, FakeImportClient::holding([
             1 => $this->mail(1, ['Draft']),
@@ -95,8 +98,10 @@ final class ImapDraftSentAtTest extends KernelTestCase
             );
         }
 
-        self::assertNull($rows[1]['sent_at'], 'a draft flagged `Draft`');
-        self::assertNull($rows[2]['sent_at'], 'a draft flagged `\\Draft`');
+        self::assertNull($rows[2]['sent_at'], 'a stored `\\Draft` is an unsent draft');
+
+        // Not a draft as the app reads the flag, so not a half-state either.
+        self::assertNotNull($rows[1]['sent_at'], '`Draft` is not `\\Draft` to isDraft()');
 
         // And the ordinary message is untouched.
         self::assertNotNull($rows[3]['sent_at']);

@@ -9,7 +9,7 @@ The published image tags: `latest` follows the most recent release below,
 ## Unreleased
 
 **A draft you started in another mail app opens in plMail.**
-A draft that arrived by sync (from Outlook, Gmail or an IMAP Drafts folder) was listed in its
+A draft that arrived by sync (from Outlook or Gmail) was listed in its
 conversation, and clicking it gave a "Not found" page: it had been marked as already sent, which the
 editor refuses to open. It is now kept as the unsent draft it is, like one written in plMail. The
 visible side effect is that a conversation holding such a draft is no longer moved up the list by the

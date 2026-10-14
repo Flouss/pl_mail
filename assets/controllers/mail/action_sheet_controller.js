@@ -89,11 +89,12 @@ export default class extends Controller {
         };
         document.addEventListener("keydown", this._onKeydown);
 
-        // The move picker's entries close the sheet. Captured, so the listener sees the click
-        // before the picker's own action (which stops propagation), and the close waits a tick
-        // so that action has run.
+        // The move picker's entries close the sheet, and so does a modal opened from it (Create label),
+        // which lives outside the sheet and would otherwise open under it. Captured, so the listener
+        // sees the click before the picker's own action (which stops propagation), and the close waits
+        // a tick so that action has run.
         this._onPick = (event) => {
-            if (event.target.closest?.('[role="menuitem"]')) {
+            if (event.target.closest?.('[role="menuitem"], [data-controller~="ui--modal"]')) {
                 setTimeout(() => this.close(), 0);
             }
         };

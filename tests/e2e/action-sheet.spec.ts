@@ -2,6 +2,7 @@ import { test, expect, devices, type Locator, type Page } from "./support/test";
 import { Finger } from "./support/touch";
 import { settled } from "./support/motion";
 import { INBOX_SUBJECTS, ajaxPost, mailRow, seed } from "./support/config";
+import { openSurfaceOf, pullIsGranted } from "./support/arbiter";
 
 /**
  * The long-press action sheet on a phone (E3 in the touch-gesture plan).
@@ -467,5 +468,108 @@ test.describe("desktop width: the same press opens nothing", () => {
         // Presence companion at this width: the row is the same row, and the page is live.
         await expect(row).toBeVisible();
         await expect(page.locator(SHELL)).toHaveJSProperty("inert", false);
+    });
+});
+
+test.describe("the open sheet is a surface the arbiter honours", () => {
+    test("while open the arbiter names the sheet and refuses a pull; after close it names nothing and grants one", async ({ page }) => {
+        await openInbox(page);
+
+        // Presence: nothing is open before the sheet is.
+        expect(await openSurfaceOf(page)).toBeNull();
+
+        const row = mailRow(page, INBOX_SUBJECTS.archive);
+        const finger = await pressRow(page, row);
+
+        await page.clock.runFor(500);
+        await finger.up();
+        await expect(dialog(page)).toBeVisible();
+
+        expect(await openSurfaceOf(page)).toBe("sheet");
+        expect(await pullIsGranted(page)).toBe(false);
+
+        await page.keyboard.press("Escape");
+        await expect(sheet(page)).toHaveCount(0);
+
+        // Presence companion: after close, the same probes are granted and unnamed.
+        expect(await openSurfaceOf(page)).toBeNull();
+        expect(await pullIsGranted(page)).toBe(true);
+    });
+});
+
+test.describe("the sheet clears the home indicator", () => {
+    /**
+     * Chromium cannot set env(safe-area-inset-bottom), which is 0 here, so the value cannot be
+     * changed by the test. What can be asserted is that the rule the phone applies carries the
+     * inset: the stylesheet's own rule for the panel names env(safe-area-inset-bottom), and the
+     * computed padding is at least the base (1rem, the size the template had as pb-4). The
+     * real clearance of the home indicator on an iPhone is a manual check.
+     */
+    test("the panel's bottom padding is the base plus the safe-area inset, in the stylesheet", async ({ page }) => {
+        await openInbox(page);
+
+        const row = mailRow(page, INBOX_SUBJECTS.archive);
+        const finger = await pressRow(page, row);
+
+        await page.clock.runFor(500);
+        await finger.up();
+        await expect(dialog(page)).toBeVisible();
+
+        // Presence: the computed base padding is at least 1rem (16px).
+        const padding = await dialog(page).evaluate((element) => parseFloat(getComputedStyle(element).paddingBottom));
+
+        expect(padding).toBeGreaterThanOrEqual(16);
+
+        // The rule itself: find the panel's padding-bottom in every stylesheet, through the CSSOM.
+        const declared = await page.evaluate(() => {
+            const found: string[] = [];
+            const visit = (rules: CSSRuleList) => {
+                for (const rule of Array.from(rules)) {
+                    if (rule instanceof CSSStyleRule && rule.selectorText.split(",").some((s) => s.trim() === ".action-sheet-panel")) {
+                        found.push(rule.style.paddingBottom);
+                    }
+
+                    if ("cssRules" in rule) {
+                        visit((rule as CSSGroupingRule).cssRules);
+                    }
+                }
+            };
+
+            for (const sheet of Array.from(document.styleSheets)) {
+                visit(sheet.cssRules);
+            }
+
+            return found;
+        });
+
+        expect(declared.join(" | ")).toContain("env(safe-area-inset-bottom");
+    });
+});
+
+test.describe("Create label from the sheet", () => {
+    test("choosing Create label opens the label modal, and the sheet is gone", async ({ page }) => {
+        await openInbox(page);
+
+        const row = mailRow(page, INBOX_SUBJECTS.archive);
+        const finger = await pressRow(page, row);
+
+        await page.clock.runFor(500);
+        await finger.up();
+
+        await dialog(page).getByRole("button", { name: "Label as", exact: true }).click();
+
+        const panel = sheet(page).locator('[data-mail--label-menu-target="panel"]');
+
+        await expect(panel).toBeVisible();
+
+        // The label menu's "Create label" opens the shared modal, which is outside the sheet.
+        await panel.locator('button[data-controller~="ui--modal"]').click();
+
+        // The sheet closes a tick after the click (the click is still on its way), so the fake clock moves past it.
+        await page.clock.runFor(50);
+
+        // Presence: the modal is open. Without it, "sheet gone" could be a sheet that broke.
+        await expect(page.locator("#modal-backdrop")).toBeVisible();
+        await expect(sheet(page)).toHaveCount(0);
     });
 });

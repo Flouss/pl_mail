@@ -1,5 +1,6 @@
 import { test, expect, devices, type Locator, type Page } from "./support/test";
 import { Finger, recordTouchSamples, touchSamples, velocityOverLast } from "./support/touch";
+import { openSurfaceOf } from "./support/arbiter";
 import { settled } from "./support/motion";
 import { INBOX_SUBJECTS, ajaxPost, mailRow, seed } from "./support/config";
 
@@ -737,3 +738,32 @@ async function refreshAndWaitForFragment(page: Page): Promise<boolean> {
 
     return seen;
 }
+
+test.describe("an open row is an open surface", () => {
+    test("while a row is open the arbiter names it, and a touch elsewhere closes it and clears the name", async ({ page }) => {
+        await openInbox(page);
+
+        const row = mailRow(page, INBOX_SUBJECTS.archive);
+
+        // Presence: no surface is open before the row is.
+        expect(await openSurfaceOf(page)).toBeNull();
+
+        await drag(page, row, "left", 0.5, { pause: DROP_PAUSE_MS });
+        await expect(row).toHaveAttribute("data-swipe-side", "left");
+
+        expect(await openSurfaceOf(page)).toBe("row");
+
+        // A touch on another row is the dismissal: the open row closes, and nothing is open after it.
+        const other = mailRow(page, INBOX_SUBJECTS.read);
+        const box = await other.boundingBox();
+
+        expect(box, "the other row is rendered").not.toBeNull();
+
+        const finger = await Finger.down(page, box!.x + box!.width * 0.5, box!.y + box!.height / 2);
+
+        await finger.up();
+
+        await expect(row).not.toHaveAttribute("data-swipe-side", "left");
+        expect(await openSurfaceOf(page)).toBeNull();
+    });
+});

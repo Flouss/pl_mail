@@ -5748,6 +5748,10 @@ li[data-swipe-side] > [data-swipe-content] {
 
 .action-sheet-panel {
     animation: action-sheet-rise var(--sheet-duration, 200ms) ease-out both;
+
+    /* The base is 1rem, what the panel had as pb-4. The inset clears the home indicator on an iPhone:
+       the sheet is appended to <body>, outside the padding the app gives its own body. */
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
 }
 
 @keyframes action-sheet-rise {

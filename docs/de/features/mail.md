@@ -92,8 +92,10 @@ die ohnehin schon gespeichert sind — darum braucht eine Neukategorisierung nie
 Synchronisierung.
 
 Die Tabs gibt es im Posteingang ganz oben und im **Posteingang eines einzelnen Kontos** (Klick auf
-das Konto in der Seitenleiste) — ein Outlook-Konto oder jedes andere hat sie also auch. Ein Tab ist
-da, solange er Mail enthält, und auf der Seite eines Kontos zählt er nur dessen Mail. Die Tabs auf
+das Konto in der Seitenleiste) — ein Outlook-Konto oder jedes andere hat sie also auch, [eigene
+Tabs](#eigene-tabs) eingeschlossen. Ein Tab ist da, solange er Mail enthält, und auf der Seite
+eines Kontos zählt er nur dessen Mail — ein eigener Tab, der nur in einem anderen Konto Mail
+enthält, fehlt auf dieser Seite also. Die Tabs auf
 der Kontoseite sind schlichter: keine „neu“-Markierungen, keine Absenderhinweise und keine
 Ungelesen-Färbung, denn die zählen alle Konten zusammen und würden dort das falsche Postfach
 beschreiben. Eine Konversation auf einen Tab zu ziehen geht nur im Posteingang ganz oben.

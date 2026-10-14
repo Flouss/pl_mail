@@ -305,6 +305,12 @@ import line in the background-work indicator now shows the quota, roughly how mu
 use, how many messages a minute are coming in, how long the rest of the import takes, and says
 so when Google has paused it. No
 migration. [#90](https://github.com/karatektus/pl_mail/issues/90), reported by @karamanliev.
+**An account's page shows your own tabs, so mail filed in one can be found there.** Clicking an
+account in the sidebar offered the five built-in tabs and none of the ones you made. Mail filed in
+one of yours is in that tab only — not in Primary or any other — so on an account's page it was in
+no tab at all. The page now has the same tabs as the top-level Inbox, yours included, each shown
+while it holds mail in that account, and `?tab=` accepts yours. Counts are per account; a link to a
+tab that is not yours, or was deleted, opens Primary as it does in the Inbox. No migration.
 
 **The tab icon is the one you picked, in Firefox too.** Settings → Appearance → Logo changed the
 icon in the app but not in the tab, which kept showing the wax seal. Every page also linked a

@@ -80,8 +80,10 @@ For everything else it works the category out from headers that were already sto
 re-categorisation never needs a resync.
 
 The tabs are on the top-level Inbox and on **an account's own inbox** (click the account in the
-sidebar), so an Outlook or any other account has them too. A tab is there while it holds mail, and
-on an account's page it counts only that account's mail. The account page's tabs are plainer: no
+sidebar), so an Outlook or any other account has them too, [tabs of your own](#tabs-of-your-own)
+included. A tab is there while it holds mail, and on an account's page it counts only that
+account's mail — so a tab of yours that holds mail only in another account is not on this one. The
+account page's tabs are plainer: no
 "new" pills, sender hints or unread tint, because those add up every account and would describe the
 wrong mailbox there. Dragging a conversation onto a tab is on the top-level Inbox only.
 

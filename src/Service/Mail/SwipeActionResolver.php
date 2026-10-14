@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Mail;
 
+use App\Domain\DTO\Mail\SheetAffordance;
 use App\Domain\DTO\Mail\SwipeAffordance;
+use App\Domain\Enum\Mail\SheetEntry;
 use App\Domain\Enum\Mail\SwipeAction;
 use App\Domain\Enum\Mail\SwipeDirection;
 use App\Entity\Mail\Message;
@@ -70,6 +72,93 @@ final class SwipeActionResolver
             SwipeDirection::Right => $user->swipeRightAction,
             SwipeDirection::Left  => $user->swipeLeftAction,
         };
+    }
+
+    /**
+     * Every entry the long-press sheet offers on this row, keyed by the entry's
+     * value. The sheet shares read/unread, archive and star with the swipe, so
+     * those come from for(); everything else is a SheetEntry, offered by the
+     * rules in offersSheetEntry(), which mirror the row's strip.
+     *
+     * @return array<string, SheetAffordance>
+     */
+    public function sheet(MessageThread|Message $item, bool $draft): array
+    {
+        $entries = [];
+
+        foreach ([SwipeAction::ReadUnread, SwipeAction::Archive, SwipeAction::Star] as $action) {
+            $affordance = $this->for($action, $item, $draft);
+
+            if (null !== $affordance) {
+                $entries[$action->value] = new SheetAffordance($action, $affordance->url, $affordance->body);
+            }
+        }
+
+        foreach (SheetEntry::cases() as $entry) {
+            if (false === $this->offersSheetEntry($entry, $item, $draft)) {
+                continue;
+            }
+
+            $url = null === $entry->route()
+                ? null
+                : $this->urls->generate($entry->requireRoute(), $this->routeParams($entry, $item));
+
+            $entries[$entry->value] = new SheetAffordance($entry, $url, []);
+        }
+
+        return $entries;
+    }
+
+    /**
+     * Whether the strip draws the button for this entry on this row. Each arm
+     * names the strip's own condition in the row template, so the two can be
+     * read side by side. Parity is tested by rendering the strip.
+     *
+     * Trash is offered on drafts because the strip's trash button is not
+     * conditioned on the draft flag. Purge is offered only to a signed-in user
+     * who has switched delete-now on, as the strip requires.
+     */
+    private function offersSheetEntry(SheetEntry $entry, MessageThread|Message $item, bool $draft): bool
+    {
+        $placement = $this->placement->of($item);
+        $ordinary  = MailPlacement::NORMAL === $placement;
+        $discarded = MailPlacement::TRASH === $placement || MailPlacement::SPAM === $placement;
+
+        if (true === $entry->needsNotADraft() && true === $draft) {
+            return false;
+        }
+
+        return match ($entry) {
+            SheetEntry::Trash   => $ordinary,
+            SheetEntry::Restore => false === $ordinary,
+            SheetEntry::Purge   => $discarded && $this->deletesNow(),
+            SheetEntry::Snooze  => $ordinary,
+            SheetEntry::Move    => true,
+            SheetEntry::Labels  => true,
+            SheetEntry::Spam    => $item instanceof MessageThread && false === $discarded,
+            SheetEntry::Select  => true,
+        };
+    }
+
+    /** Whether the signed-in user has switched on delete-now. Nobody signed in has not. */
+    private function deletesNow(): bool
+    {
+        $user = $this->security->getUser();
+
+        return $user instanceof User && true === $user->deleteNowButtons;
+    }
+
+    /** The route parameters an entry's URL takes, for this row. */
+    private function routeParams(SheetEntry $entry, MessageThread|Message $item): array
+    {
+        if (false === $entry->takesType()) {
+            return ['id' => $item->id];
+        }
+
+        return [
+            'type' => $item instanceof MessageThread ? 'thread' : 'message',
+            'id'   => $item->id,
+        ];
     }
 
     /**

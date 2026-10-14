@@ -4083,6 +4083,9 @@ thread_row:
     no_subject: (no subject)
     scheduled: 'Due %when%'
     select: Pick it
+    sheet:
+        label: Things ye can do wi' this bottle
+        select: Pick it
     star: Mark this bottle with an X
     to: 'Bound for: %recipients%'
     unread: Unread by any soul

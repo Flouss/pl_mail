@@ -4309,6 +4309,9 @@ thread_row:
     no_subject: (sans objet)
     scheduled: 'Programmé %when%'
     select: Sélectionner
+    sheet:
+        label: Actions pour cette conversation
+        select: Sélectionner
     star: Suivre ce message
     to: 'À : %recipients%'
     unread: Non lu

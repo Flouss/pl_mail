@@ -4284,6 +4284,10 @@ thread_row:
     no_subject: (no subject)
     scheduled: 'Scheduled %when%'
     select: Select
+    # The long-press sheet's own names: its dialog label, and the entry that ticks the row.
+    sheet:
+        label: Actions for this conversation
+        select: Select
     star: Star this message
     to: 'To: %recipients%'
     unread: Unread

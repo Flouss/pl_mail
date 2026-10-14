@@ -299,6 +299,10 @@ be a worse regression than the one this feature fixes.
        tick, a second click re-attached a label instead of removing it, so a
        label could be put on and never taken off again. #}
     data-label-ids="{{ item.labels|filter(l => l.role is null)|map(l => l.id)|join(',') }}"
+    {# Every entry the long-press sheet offers on this row, with the URL and body
+       each posts to, resolved here by SwipeActionResolver::sheet(). The sheet's own
+       markup is one template per list; this is the only part that differs by row. #}
+    data-sheet="{{ sheet_entries(item, draft)|json_encode }}"
     data-mail--message-row-id-value="{{ rowId }}"
     data-unread="{{ unread ? 'true' : 'false' }}"
     {# Its own attribute beside data-unread rather than folded into it: the two

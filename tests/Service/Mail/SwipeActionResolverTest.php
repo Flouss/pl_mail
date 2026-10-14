@@ -370,6 +370,120 @@ final class SwipeActionResolverTest extends KernelTestCase
         }
     }
 
+    /**
+     * The sheet against the strip it mirrors (E1). For every placement, row kind
+     * and draft flag, and with the signed-in user's delete-now switch both off and
+     * on, each sheet entry must be offered exactly where the strip draws its
+     * button, and to the same route. Move, labels and select have no strip button,
+     * so they are checked against the rule written here, from the strip's own
+     * conditions and the rule the plan sets for them.
+     *
+     * The row carries the same answer as JSON in its data-sheet attribute, so the
+     * browser reads what this test reads.
+     *
+     * @param 'normal'|'archive'|'trash'|'spam' $placement
+     * @param 'thread'|'message'                $kind
+     */
+    #[DataProvider('placements')]
+    public function testEachSheetEntryIsOfferedExactlyWhereTheStripDrawsItsButton(string $placement, string $kind, bool $draft): void
+    {
+        foreach ([false, true] as $deletesNow) {
+            // The persisted owner of the fixture account: the strip's account
+            // query binds the signed-in user, which an unsaved User cannot do.
+            $user                   = $this->account->usr;
+            $user->deleteNowButtons = $deletesNow;
+            $this->signIn($user);
+
+            $item = match ($kind) {
+                'thread'  => $this->seedThread(unreadCount: 1, draftMessage: $draft),
+                'message' => $this->seedMessage(unseen: true, draft: $draft),
+            };
+
+            $role = match ($placement) {
+                'archive' => LabelRole::Archive,
+                'trash'   => LabelRole::Trash,
+                'spam'    => LabelRole::Spam,
+                'normal'  => null,
+            };
+
+            if (null !== $role) {
+                $this->placeIn($item, $role);
+            }
+
+            $html  = $this->renderStrip($item, $kind);
+            $sheet = $this->resolver->sheet($item, $draft);
+            $cell  = sprintf('%s %s %s, delete-now %s', $placement, $kind, $draft ? 'draft' : 'mail', $deletesNow ? 'on' : 'off');
+
+            foreach (self::STRIP_ATTRIBUTES as $entry => $attribute) {
+                $expected = $this->sheetOffersByRule($entry, $placement, 'thread' === $kind, $draft, $deletesNow);
+                $strip    = $this->stripRoute($html, $attribute);
+                $offered  = array_key_exists($entry, $sheet);
+
+                self::assertSame($expected, $offered, sprintf('"%s" offered by the sheet, %s', $entry, $cell));
+                self::assertSame(null !== $strip, $offered, sprintf('"%s" drawn by the strip, %s', $entry, $cell));
+
+                if ($offered && null !== $sheet[$entry]->url) {
+                    self::assertSame($strip, $sheet[$entry]->url, sprintf('"%s" posts to the strip route, %s', $entry, $cell));
+                }
+            }
+
+            foreach (self::CLIENT_ONLY as $entry) {
+                $expected = $this->sheetOffersByRule($entry, $placement, 'thread' === $kind, $draft, $deletesNow);
+
+                self::assertSame($expected, array_key_exists($entry, $sheet), sprintf('"%s" offered by the sheet, %s', $entry, $cell));
+            }
+
+            $json = (new Crawler($html))->filter('li[data-sheet]')->attr('data-sheet');
+
+            self::assertSame(
+                array_keys($sheet),
+                array_keys(json_decode($json, true, flags: JSON_THROW_ON_ERROR)['entries']),
+                sprintf('the row carries the same entries as JSON, %s', $cell),
+            );
+        }
+    }
+
+    /**
+     * The strip attribute that proves each entry is drawn, and the entry's name
+     * in the sheet. Snooze is drawn on each option of the snooze menu; the spam
+     * menu's report URL sits on its wrapper.
+     */
+    private const array STRIP_ATTRIBUTES = [
+        'read_unread' => 'data-mail--message-row-read-url-param',
+        'archive'     => 'data-mail--message-row-archive-url-param',
+        'star'        => 'data-mail--message-row-star-url-param',
+        'trash'       => 'data-mail--message-row-trash-url-param',
+        'restore'     => 'data-mail--message-row-restore-url-param',
+        'purge'       => 'data-mail--message-row-purge-url-param',
+        'snooze'      => 'data-mail--message-row-snooze-url-param',
+        'spam'        => 'data-mail--spam-menu-report-url-value',
+    ];
+
+    /** The entries the strip has no button for: the sheet's own pickers and the checkbox. */
+    private const array CLIENT_ONLY = ['move', 'labels', 'select'];
+
+    /**
+     * What the rule says, written from the row template's conditions (the strip
+     * lines are named in SheetEntry and in the template), so the expectation is
+     * not read back from the code under test.
+     */
+    private function sheetOffersByRule(string $entry, string $placement, bool $thread, bool $draft, bool $deletesNow): bool
+    {
+        $ordinary  = 'normal' === $placement;
+        $discarded = 'trash' === $placement || 'spam' === $placement;
+
+        return match ($entry) {
+            'read_unread', 'archive', 'snooze' => false === $draft && $ordinary,
+            'star'                             => true,
+            'trash'                            => $ordinary,
+            'restore'                          => false === $ordinary,
+            'purge'                            => $discarded && $deletesNow,
+            'spam'                             => $thread && false === $draft && false === $discarded,
+            'move', 'labels'                   => false === $draft,
+            'select'                           => true,
+        };
+    }
+
     /** The route the strip draws for this attribute, or null when the strip draws no such button. */
     private function stripRoute(string $html, string $attribute): ?string
     {

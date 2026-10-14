@@ -4302,6 +4302,9 @@ thread_row:
     no_subject: (kein Betreff)
     scheduled: 'Geplant %when%'
     select: Auswählen
+    sheet:
+        label: Aktionen für diese Unterhaltung
+        select: Auswählen
     star: Diese Nachricht markieren
     to: 'An: %recipients%'
     unread: Ungelesen

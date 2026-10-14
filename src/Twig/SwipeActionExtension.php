@@ -30,6 +30,7 @@ final class SwipeActionExtension extends AbstractExtension
     {
         return [
             new TwigFunction('swipe_action', $this->affordance(...)),
+            new TwigFunction('sheet_entries', $this->sheetEntries(...)),
         ];
     }
 
@@ -37,5 +38,38 @@ final class SwipeActionExtension extends AbstractExtension
     public function affordance(MessageThread|Message $item, string $direction, bool $draft): ?SwipeAffordance
     {
         return $this->swipe->forDirection(SwipeDirection::from($direction), $item, $draft);
+    }
+
+    /**
+     * `sheet_entries(item, draft)`: the long-press sheet's entries for one row,
+     * as the JSON the row carries in its data-sheet attribute.
+     *
+     * Each entry is keyed by its value and holds its URL (`u`) and, when the route
+     * reads one, its body (`b`). A client-only entry (move, labels, select) is an
+     * empty object: its presence is what the client reads. The type is named so the
+     * label picker knows which kind of target it is ticking.
+     *
+     * @return array{type: string, entries: array<string, array{u?: string, b?: array<string, bool>}|array{}>}
+     */
+    public function sheetEntries(MessageThread|Message $item, bool $draft): array
+    {
+        $entries = [];
+
+        foreach ($this->swipe->sheet($item, $draft) as $key => $affordance) {
+            if (null === $affordance->url) {
+                $entries[$key] = [];
+
+                continue;
+            }
+
+            $entries[$key] = [] === $affordance->body
+                ? ['u' => $affordance->url]
+                : ['u' => $affordance->url, 'b' => $affordance->body];
+        }
+
+        return [
+            'type'    => $item instanceof MessageThread ? 'thread' : 'message',
+            'entries' => $entries,
+        ];
     }
 }

@@ -8,6 +8,19 @@ The published image tags: `latest` follows the most recent release below,
 
 ## Unreleased
 
+**The mail check now hears mail read, unread or starred somewhere else.**
+`app:mail:probe` only asked whether mail had arrived, so a message read on a phone reached plMail
+at the next quarter-hourly sync, up to fifteen minutes later. It now asks a second question every
+time: what has been read, unread or starred since the last sync? A Gmail account is asked for the
+label changes of `UNREAD` and `STARRED` on anything that is not a draft; an Outlook account is asked
+what is waiting on its Inbox's saved change feed, which is read and never moved or kept, so the sync
+it wakes still finds the same window. Each change is announced once however long the sync takes to
+run, and your own click in plMail wakes one sync like any other. On Outlook it looks at the Inbox
+only (a read in another folder still waits for the quarter-hourly sync), and it depends on the
+change feed asking for read state (a separate fix, [#114](https://github.com/karatektus/pl_mail/pull/114):
+without it Outlook sends no entry for a message that was only read). Two requests per account per
+check instead of one.
+
 **A Gmail import takes in everything in the mailbox, not only mail addressed to the account.**
 plMail kept a Gmail message only when its headers named the account, and on a real mailbox
 (`app:gmail:skipped`) what it dropped was the account owner's own mail: 202 messages sent from

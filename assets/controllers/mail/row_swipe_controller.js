@@ -176,12 +176,24 @@ export default class extends Controller {
         // Capture, so a click on a row's overlay link is seen before the link acts on it.
         this.element.addEventListener("click", this.#onClick, { capture: true });
 
+        // Past the phone width the gesture is off, so an open row must not stay open there: a
+        // rotation to a desktop width closes it, as sidebar_drawer_controller does at its own breakpoint.
+        this._mobile = window.matchMedia(MOBILE);
+        this._onBreakpoint = () => {
+            if (this._mobile.matches === false) {
+                this.#close();
+            }
+        };
+        this._mobile.addEventListener("change", this._onBreakpoint);
+
         registerSurface(SURFACE, () => this._open !== null && this._open.row.isConnected);
     }
 
     disconnect() {
         this.#abandon();
         this.#close();
+
+        this._mobile.removeEventListener("change", this._onBreakpoint);
 
         this.element.removeEventListener("touchstart", this.#onStart);
         this.element.removeEventListener("touchmove", this.#onMove);
@@ -210,6 +222,11 @@ export default class extends Controller {
             return;
         }
 
+        // A one-finger touchstart begins a new sequence, so whatever this controller still
+        // holds is stale: its touchend or touchcancel may never reach us, because the element
+        // the finger was on was removed mid-drag. Abandon it, and release only its own claim.
+        this.#abandon();
+
         if (window.matchMedia(MOBILE).matches !== true) {
             return;
         }
@@ -237,6 +254,8 @@ export default class extends Controller {
             row,
             sequence: createSequence(),
             origin,
+            // The revealed button the touch began on, if any: a tap on it commits that panel.
+            button: event.target.closest?.(COMMIT) ?? null,
             onOpenRow: open === row,
             maxReach: 0,
             dragging: false,
@@ -321,8 +340,14 @@ export default class extends Controller {
 
         if (active.claimed === false) {
             // A tap on the open row closes it, and the click after it is not the row's to take.
+            // A tap on the revealed button is that button's commit, by touch, exactly as its click
+            // is: the click the browser then synthesises is consumed, so the button posts once.
             if (active.onOpenRow && active.maxReach < DIRECTION_LOCK_PX) {
                 this.#close();
+
+                if (active.button !== null) {
+                    this.#post(active.row, active.button.dataset.swipeUrl, JSON.parse(active.button.dataset.swipeBody || "{}"));
+                }
 
                 this._consumeClick = true;
             }
@@ -332,7 +357,9 @@ export default class extends Controller {
 
         releaseSequence("swipe");
 
-        // The row left the document mid-drag (a refresh removed it). Nothing to commit, nothing to show.
+        // The row left the document, and this touchend arrived anyway: the touch did not stay on the
+        // removed node, so nothing is committed and nothing is shown. A removed row whose touch ended
+        // elsewhere never reaches this point; #touchStart abandons that stale sequence instead.
         if (active.row.isConnected === false) {
             this._open = this._open?.row === active.row ? null : this._open;
 
@@ -409,6 +436,17 @@ export default class extends Controller {
      * Otherwise, a click the last touch asked to be consumed is stopped here.
      */
     #click(event) {
+        // The click a consumed touch leaves behind, whatever it landed on. A touch that committed
+        // the button has already posted, so its click must not post again.
+        if (this._consumeClick) {
+            this._consumeClick = false;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            return;
+        }
+
         const commit = event.target.closest?.(COMMIT);
 
         if (commit) {
@@ -420,18 +458,7 @@ export default class extends Controller {
                 this.#close();
                 this.#post(row, commit.dataset.swipeUrl, JSON.parse(commit.dataset.swipeBody || "{}"));
             }
-
-            return;
         }
-
-        if (this._consumeClick === false) {
-            return;
-        }
-
-        this._consumeClick = false;
-
-        event.preventDefault();
-        event.stopPropagation();
     }
 
     /** Rest the row open on its side, and remember it. */
@@ -509,7 +536,9 @@ export default class extends Controller {
 
         if (content !== null) {
             content.style.transform = "";
-            content.style.transition = "";
+            // The stylesheet eases every transform on the content (180ms), so a reset under reduced
+            // motion must say "none" outright, or the close and the snap back would still animate.
+            content.style.transition = motionIsOff() ? "none" : "";
         }
     }
 }

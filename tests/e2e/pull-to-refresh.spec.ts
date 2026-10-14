@@ -351,6 +351,82 @@ test.describe("pull to refresh on a phone", () => {
         await expect.poll(() => sync.posts).toBe(1);
     });
 
+    test("a pull whose rows are replaced under the finger leaves no claim behind: a later touch syncs nothing, and the next pull syncs once", async ({ page }) => {
+        const sync = await mockSync(page);
+
+        await openInbox(page);
+
+        // Record the element the first finger lands on, so the test can show it is the
+        // one that gets detached. A touch whose target stays in the document would
+        // still reach the controller, and the test would pass without the fault.
+        await page.evaluate(() => {
+            document.addEventListener(
+                "touchstart",
+                (event) => {
+                    (window as unknown as { __origin: Element | null }).__origin = event.target as Element;
+                },
+                { capture: true, passive: true },
+            );
+        });
+
+        const start = await rowsStart(page);
+        const stale = await Finger.down(page, start.x, start.y);
+
+        await stale.move(0, PULL_PAST);
+        await expect(page.locator(INDICATOR)).toHaveAttribute("data-state", "release");
+
+        // Presence: the touch landed on a row inside the rows region, not on the region itself.
+        // Replacing the region's children detaches that row, and the region stays in place.
+        const detached = await page.evaluate(() => {
+            const origin = (window as unknown as { __origin: Element | null }).__origin;
+            const rows = document.querySelector('[data-list-region="rows"]');
+
+            if (origin === null || rows === null || origin === rows || !rows.contains(origin)) {
+                return "the touch did not land on a row";
+            }
+
+            rows.innerHTML = rows.innerHTML;
+
+            return origin.isConnected ? "the touch target is still attached" : "detached";
+        });
+
+        expect(detached).toBe("detached");
+
+        await stale.up();
+
+        // A tap that does not move: no pull, no sync, on any branch. It has to be a tap
+        // with no touchmove, because a touchmove during a stale pull resets the displayed
+        // distance to the finger's travel (0 here) and would hide the fault. The tap's
+        // synthesised click is swallowed, so the row does not open and the list stays put.
+        await page.evaluate(() => {
+            window.addEventListener(
+                "click",
+                (event) => {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                },
+                { capture: true },
+            );
+        });
+
+        const fresh = await Finger.down(page, start.x, start.y);
+
+        await fresh.up();
+        await page.waitForTimeout(500);
+
+        expect(sync.posts, "a touch after a lost pull syncs nothing").toBe(0);
+
+        // Presence companion: a fresh pull from the top still syncs, exactly once.
+        const pull = await Finger.down(page, start.x, start.y);
+
+        await pull.move(0, PULL_PAST);
+        await pull.up();
+
+        await expect.poll(() => sync.posts).toBe(1);
+        await page.waitForTimeout(300);
+        expect(sync.posts, "exactly one sync for the fresh pull").toBe(1);
+    });
+
     test("a second pull while the sync is still running does not sync again", async ({ page }) => {
         const sync = await mockSync(page, { pending: 1 });
 

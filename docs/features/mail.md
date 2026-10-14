@@ -618,7 +618,8 @@ second swipe takes it off again, as it does for read / unread; archive offers it
 
 On a phone, pressing and holding a row also opens its actions. Hold a row still for about half a second
 and an action sheet rises from the bottom of the screen with every action the row offers: select it,
-mark it read or unread, archive it, star it, move it, label it, snooze it, mark it as spam, delete it,
+mark it read or unread, archive it, star it, move it (a conversation, not a single message), label it,
+snooze it, mark it as spam, delete it,
 and, in the bin or in spam, move it back to the inbox and, if you have switched on **Settings → Mail →
 Disposal → Delete-now buttons**, delete it for good. The entries are the ones the row's own buttons
 offer, in the same places, and each does what that button does. **Move to**, **Label as** and **Snooze**
@@ -1115,8 +1116,8 @@ included.
 
 **Pull to refresh is for a finger at the top of the list, and only there.** A mouse, a trackpad and
 any window at the tablet breakpoint or wider never pull. A pull starts only while the list is
-scrolled to its very top, and not while the sidebar is open: from further down, the same drag just
-scrolls. Reduced motion removes the indicator's slide and nothing else, so the release point is the
+scrolled to its very top, and not while the sidebar, an open row or the action sheet is up: from further
+down, the same drag just scrolls. Reduced motion removes the indicator's slide and nothing else, so the release point is the
 same.
 
 **A swipe is a finger's gesture on a phone, and its directions are physical.** A mouse never swipes,
@@ -1124,9 +1125,10 @@ at any width, and nothing swipes at the tablet breakpoint or wider. Right means 
 edge of the screen whatever the language, because no right-to-left locale ships. A reader who adds
 one has to decide how the two sides mirror.
 
-**A refresh leaves a row you are holding where it is.** A row under your finger, or open, keeps its
-state while a sync or an update redraws the list, and the change to that row arrives when you close
-it. A refresh that removes the row takes it off the list.
+**A refresh leaves a row you are swiping, or have open, where it is.** Such a row keeps its state while
+a sync or an update redraws the list, and the change to that row arrives when you close it. A row that
+is only pressed, or that a long press has opened into the action sheet, is redrawn as usual. A refresh
+that removes the row takes it off the list, and closes the sheet with it.
 
 **Trash is not a swipe.** A full drag has no tap in front of it, and a trashed row has no undo of its
 own, so deleting stays with the row's buttons and the bin, where a tap comes first. Trash is not one of

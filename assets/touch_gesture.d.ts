@@ -27,6 +27,6 @@ export interface Sequence {
 export function createSequence(): Sequence;
 export function registerSurface(name: string, isOpen: () => boolean): void;
 export function unregisterSurface(name: string): void;
-export function openSurface(): string | null;
-export function claimSequence(kind: string): boolean;
+export function openSurface(except?: string | null): string | null;
+export function claimSequence(kind: string, options?: { except?: string | null }): boolean;
 export function releaseSequence(kind: string): boolean;

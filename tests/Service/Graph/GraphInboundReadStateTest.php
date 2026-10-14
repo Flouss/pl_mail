@@ -16,6 +16,7 @@ use App\Entity\Mail\MessageThread;
 use App\Entity\User\User;
 use App\Service\Graph\GraphApiSyncer;
 use App\Service\Mail\GraphApiClient;
+use App\Tests\Support\Mercure\RecordingHub;
 use DateTimeImmutable;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -46,6 +47,7 @@ final class GraphInboundReadStateTest extends KernelTestCase
     private User $user;
     private Account $account;
     private Label $inbox;
+    private RecordingHub $hub;
 
     private const string INBOX_FOLDER = 'AAMkAD-inbox';
     private const string GRAPH_ID     = 'AAkALgAAmessage';
@@ -60,6 +62,7 @@ final class GraphInboundReadStateTest extends KernelTestCase
 
         $this->connection->beginTransaction();
 
+        $this->hub     = new RecordingHub();
         $this->user    = $this->seedUser();
         $this->account = $this->seedAccount();
         $this->inbox   = $this->seedLabel('Inbox', LabelRole::Inbox, self::INBOX_FOLDER);
@@ -178,6 +181,129 @@ final class GraphInboundReadStateTest extends KernelTestCase
         $this->em->refresh($message);
 
         self::assertNotNull($message->seenAt, 'the local change is still in flight');
+    }
+
+    // ── telling the open list ─────────────────────────────────────────────
+
+    /**
+     * The row changed, so the browser has to be told. A flag-only delta builds
+     * no message, and account.synced is otherwise published only after a batch
+     * ingested something: the sidebar counts moved (mail.changed) while the
+     * list kept showing the old bold/regular row until the page was reloaded.
+     * Read AND unread are both asserted, because each is a separate branch of
+     * what flipped.
+     */
+    public function testAMessageReadInOutlookTellsTheOpenListToRefresh(): void
+    {
+        $message = $this->seedMessage(seen: false);
+
+        $this->syncDelta(['isRead' => true]);
+
+        $this->em->refresh($message);
+
+        self::assertNotNull($message->seenAt, 'the change itself was applied');
+        $this->assertListToldToRefresh();
+    }
+
+    public function testAMessageMarkedUnreadInOutlookTellsTheOpenListToRefresh(): void
+    {
+        $message = $this->seedMessage(seen: true);
+
+        $this->syncDelta(['isRead' => false]);
+
+        $this->em->refresh($message);
+
+        self::assertNull($message->seenAt, 'the change itself was applied');
+        $this->assertListToldToRefresh();
+    }
+
+    /** A star is the other thing the same call applies, and the list shows it. */
+    public function testAFlagSetInOutlookTellsTheOpenListToRefresh(): void
+    {
+        $message = $this->seedMessage(seen: false);
+
+        $this->syncDelta(['isRead' => false, 'flag' => ['flagStatus' => 'flagged']]);
+
+        $this->em->refresh($message);
+
+        self::assertNotNull($message->starredAt, 'the change itself was applied');
+        $this->assertListToldToRefresh();
+    }
+
+    /**
+     * Nothing to say when nothing changed. The delta agreeing with the row is
+     * the common case (every echo of our own push), and a refresh per echo
+     * would put one list render in every open tab for no reason. The same
+     * message is then really changed, so "nothing was published" cannot be the
+     * silence of a notifier that never speaks.
+     */
+    public function testADeltaThatAgreesWithTheRowIsNotAnnounced(): void
+    {
+        $message = $this->seedMessage(seen: true);
+
+        $this->syncDelta(['isRead' => true]);
+
+        self::assertSame([], $this->hub->updates, 'the server agrees with the row: nothing to refresh');
+
+        $this->syncDelta(['isRead' => false]);
+
+        $this->em->refresh($message);
+
+        self::assertNull($message->seenAt, 'the same message, now changed');
+        $this->assertListToldToRefresh();
+    }
+
+    /** An entry that says nothing about read state changes nothing and announces nothing. */
+    public function testADeltaWithoutReadStateIsNotAnnounced(): void
+    {
+        $message = $this->seedMessage(seen: true);
+
+        $this->syncDelta([]);
+
+        $this->em->refresh($message);
+
+        self::assertNotNull($message->seenAt);
+        self::assertSame([], $this->hub->updates);
+    }
+
+    /**
+     * The echo guard declines the change (see the test above), so there is
+     * nothing new on screen to refresh to: applyRemoteFlags() reports 0 rows.
+     */
+    public function testAChangeTheEchoGuardDeclinesIsNotAnnounced(): void
+    {
+        $message = $this->seedMessage(seen: false);
+
+        $message->seenAt         = new DateTimeImmutable();
+        $message->flags          = [MessageFlag::SEEN->value];
+        $message->flagsTouchedAt = new DateTimeImmutable();
+        $this->em->flush();
+
+        $this->syncDelta(['isRead' => false]);
+
+        $this->em->refresh($message);
+
+        self::assertNotNull($message->seenAt, 'declined: the local change is still in flight');
+        self::assertSame([], $this->hub->updates);
+    }
+
+    /**
+     * One update, to this user's own stream, saying which account changed: the
+     * shape mercure_controller.js turns into onAccountSynced(), which re-reads
+     * whatever list is open.
+     */
+    private function assertListToldToRefresh(): void
+    {
+        self::assertCount(1, $this->hub->updates, 'one nudge, however many rows the delta changed');
+
+        $update = $this->hub->updates[0];
+
+        self::assertSame(['mail/user/' . $this->user->id], $update->getTopics());
+        self::assertTrue($update->isPrivate());
+        self::assertSame(
+            ['type' => 'account.synced', 'accountId' => $this->account->id],
+            json_decode($update->getData(), true, flags: JSON_THROW_ON_ERROR),
+        );
     }
 
     // ── helpers ───────────────────────────────────────────────────────────

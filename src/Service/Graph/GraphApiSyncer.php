@@ -15,6 +15,7 @@ use App\Repository\Mail\MessageRepository;
 use App\Service\Label\ThreadLabelSynchronizer;
 use App\Service\Mail\GraphApiClient;
 use App\Service\Mail\MessageEraser;
+use App\Service\Mail\SyncNotifier;
 use App\Service\Mail\SyncOrigin;
 use App\Service\Mail\ThreadStatusUpdater;
 use DateTimeImmutable;
@@ -566,8 +567,16 @@ final class GraphApiSyncer
         // One call for the batch: it recounts threads and writes the JMAP
         // change log, and it is where the echo guard keeps an unconfirmed local
         // change from being reverted by a delta that predates it.
-        if ([] !== $flagStates) {
-            $this->status->applyRemoteFlags($flagStates, $readAt);
+        if ([] !== $flagStates && 0 < $this->status->applyRemoteFlags($flagStates, $readAt)) {
+            // The open list has to hear about it. A delta that only changed
+            // flags builds no message, so SyncGraphMessageBatchHandler never
+            // runs and never publishes account.synced; GraphAccountSyncer
+            // returns no mailbox ids, so there is no mailbox.synced either. The
+            // sidebar counts do move (mail.changed), and the list kept showing
+            // the old row until the page was reloaded. Only when a row really
+            // changed: the guard declining it, or the server agreeing with us
+            // (every echo of our own push), is not news.
+            $this->notifier->publishAccountSynced($account);
         }
 
         return $needsFetch;

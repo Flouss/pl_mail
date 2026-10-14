@@ -8,6 +8,13 @@ The published image tags: `latest` follows the most recent release below,
 
 ## Unreleased
 
+**On a phone, syncing the inbox meant reaching for the button at the top of the screen.**
+Pulling the mail list down from its top now syncs it, through the same sync as that button: drag
+past the *Release to sync* indicator and let go, and the sync icon spins while the run lasts. It is
+for a finger on a phone-width screen only. A mouse, a trackpad and wider windows behave as before, a
+list scrolled down scrolls as it always did, and a pull while the sidebar is open does nothing.
+Reduced motion removes the indicator's slide. No schema change, no deployment change.
+
 **A Gmail import takes in everything in the mailbox, not only mail addressed to the account.**
 plMail kept a Gmail message only when its headers named the account, and on a real mailbox
 (`app:gmail:skipped`) what it dropped was the account owner's own mail: 202 messages sent from

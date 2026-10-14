@@ -13,8 +13,15 @@ hover, and a phone has no hover, so they never appeared in the list. A row now s
 right to mark it read or unread, and to the left to archive it, past a third of its width to reveal
 the action or past two thirds to do it straight away. It is for a finger on a phone-width screen only;
 a mouse and wider windows behave as before. A swipe offers nothing on a draft or in the archive, the
-bin or spam, as the row's own buttons do, and trashing is not a swipe. The two directions are fixed
-for now. No schema change, no deployment change.
+bin or spam, as the row's own buttons do, and trashing is not a swipe. Each direction can be changed
+under Settings → Mail → Swipe actions (next entry). No schema change, no deployment change.
+
+**On a phone, a swipe to the right or to the left always did the same thing.** The two directions were
+read or unread and archive, with no way to change either. Settings → Mail → Swipe actions now sets each
+direction to read or unread, archive, star, or nothing, and the defaults are the same as before. Trash
+is not one of the choices: a swipe commits without a tap, and a trashed row has no Undo. A value stored
+for trash reads as the direction's default. No schema change: the two choices live in the settings bag,
+and the config backup carries them.
 
 **On a phone, syncing the inbox meant reaching for the button at the top of the screen.**
 Pulling the mail list down from its top now syncs it, through the same sync as that button: drag

@@ -1,4 +1,4 @@
-<!-- translated-from: features/mail.md sha1:edc2d16a6d9526a3aadc0ccb7cc07c241ed28ebd -->
+<!-- translated-from: features/mail.md sha1:42b6ebba22918b5f0ac9430eea4ea67279e09be0 -->
 
 # Mail
 
@@ -663,15 +663,21 @@ Knopf oben auf dem Bildschirm dreht sich, solange er läuft, und der Hinweis dre
 Berührung ist der Knopf der Ersatz: ein benannter Knopf für Tastatur und Bildschirmleser, und die
 Meldung zur Synchronisierung sagt, wann ein Lauf beginnt und endet.
 
-Auf dem Telefon lässt sich eine Zeile auch wischen. Zieh sie nach rechts, und sie wird als gelesen
-markiert, oder als ungelesen, wenn sie schon gelesen ist; zieh sie nach links, und sie wird
-archiviert. Über ein Drittel der Zeilenbreite wartet die Aktion hinter der Zeile, und Drücken führt
+Auf dem Telefon lässt sich eine Zeile auch wischen. Zieh sie nach rechts, und geschieht, was die
+Richtung rechts eingestellt hat, standardmäßig: Die Zeile wird als gelesen markiert, oder als
+ungelesen, wenn sie schon gelesen ist. Zieh sie nach links, und sie wird archiviert. Über ein Drittel der Zeilenbreite wartet die Aktion hinter der Zeile, und Drücken führt
 sie aus. Über zwei Drittel, oder ein schneller Wisch über das erste Drittel, geschieht sie beim
 Loslassen. Ein Tippen irgendwo anders schließt eine offene Zeile, und dieses Tippen tut sonst nichts.
 Wo die eigenen Knöpfe der Zeile nichts anbieten, bietet auch ein Wisch nichts: nicht bei einem
 Entwurf und nicht im Archiv, im Papierkorb oder bei Spam. Ohne Berührung erledigen das
 Kontrollkästchen der Zeile (ihr Avatar) und die Leiste dieselbe Arbeit, **Archivieren** und **Mehr**
-für eine Auswahl eingeschlossen. Die beiden Richtungen sind vorerst fest.
+für eine Auswahl eingeschlossen.
+
+Jede Richtung hat ihre eigene Einstellung unter **Einstellungen → E-Mail → Wischgesten**, je eine
+Auswahl für rechts und für links. Zur Wahl stehen Gelesen / ungelesen, Archivieren, Stern und Nichts.
+Beide Richtungen dürfen auf dasselbe gesetzt sein. Löschen gehört nicht dazu (siehe *Fallstricke*).
+Ein Stern ist auf der Zeile ein Schalter: Ein zweiter Wisch nimmt ihn wieder weg, wie bei Gelesen /
+ungelesen; Archivieren bietet sein **Rückgängig** an.
 
 ### Tastenkürzel
 
@@ -1291,5 +1297,7 @@ Aktualisierung, die die Zeile entfernt, nimmt sie von der Liste.
 
 **Löschen ist kein Wisch.** Ein voller Zug hat kein Tippen davor, und eine Zeile im Papierkorb hat
 kein eigenes Rückgängig. Das Löschen bleibt daher bei den Knöpfen der Zeile und im Papierkorb, wo
-zuerst getippt werden muss.
+zuerst getippt werden muss. Auch unter **Einstellungen → E-Mail → Wischgesten** ist Löschen keine
+Wahl: Ein dafür gespeicherter Wert gilt als Standard der Richtung, sodass auch ein wiederhergestelltes
+Backup es nicht zurückbringt.
 

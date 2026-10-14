@@ -602,13 +602,18 @@ On a phone the same sync is a pull: drag the list down from its top, past the in
 the indicator spins with it. Without touch, the sync button is the equivalent: it is a named button
 for a keyboard or a screen reader, and the sync toast says when the run starts and when it ends.
 
-On a phone a row swipes too. Drag it to the right and it is marked read, or unread if it already is;
-drag it to the left and it is archived. Past a third of the row's width the action waits behind the
-row, and pressing it does the thing. Past two thirds, or a quick flick past the first third, it
-happens as you let go. Touching anything else closes an open row, and that touch does nothing more.
-A swipe offers nothing where the row's own buttons offer nothing: not on a draft, and not in the
-archive, the bin or spam. Without touch, the row's checkbox (its avatar) and the toolbar do the same
-work, **Archive** and **More** on a selection included. The two directions are fixed for now.
+On a phone a row swipes too. Drag it to the right and it does what the right direction is set to, which
+is to mark it read, or unread if it already is; drag it to the left and it is archived. Past a third of
+the row's width the action waits behind the row, and pressing it does the thing. Past two thirds, or a
+quick flick past the first third, it happens as you let go. Touching anything else closes an open row,
+and that touch does nothing more. A swipe offers nothing where the row's own buttons offer nothing: not
+on a draft, and not in the archive, the bin or spam. Without touch, the row's checkbox (its avatar) and
+the toolbar do the same work, **Archive** and **More** on a selection included.
+
+Each direction has its own setting under **Settings → Mail → Swipe actions**, a select for right and one
+for left. The choices are read / unread, archive, star, and nothing. Both directions may be set to the
+same choice. Trash is not one of them (see *Things that bite*). A star is a toggle on the row, so a
+second swipe takes it off again, as it does for read / unread; archive offers its **Undo**.
 
 ### Keyboard shortcuts
 
@@ -1110,7 +1115,9 @@ state while a sync or an update redraws the list, and the change to that row arr
 it. A refresh that removes the row takes it off the list.
 
 **Trash is not a swipe.** A full drag has no tap in front of it, and a trashed row has no undo of its
-own, so deleting stays with the row's buttons and the bin, where a tap comes first.
+own, so deleting stays with the row's buttons and the bin, where a tap comes first. Trash is not one of
+the **Settings → Mail → Swipe actions** choices either: a value stored for it reads as that direction's
+default, so a restored backup cannot bring it back.
 
 **A signature image has to be small to travel with the mail.** A picture in a *signature* is stored
 inside it and sent as an inline part, up to 256 KB each and 768 KB per signature; see

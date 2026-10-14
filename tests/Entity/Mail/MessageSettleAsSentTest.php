@@ -47,6 +47,29 @@ final class MessageSettleAsSentTest extends TestCase
         self::assertSame('2026-10-14 15:00:00', $thread->lastMessageAt->format('Y-m-d H:i:s'));
     }
 
+    /**
+     * A draft stored before synced drafts were kept unsent has a sentAt
+     * already (its receivedAt). It keeps it, and ranks the thread by it, not by
+     * the moment the sync noticed: otherwise re-reading old drafts, which an
+     * upgrade does to every Gmail mailbox, floats each of their conversations
+     * to the top.
+     */
+    public function testADraftThatAlreadyHasASentAtKeepsItAndRanksByIt(): void
+    {
+        $draft  = $this->message([MessageFlag::DRAFT->value]);
+        $thread = new MessageThread();
+
+        $draft->sentAt         = new DateTimeImmutable('2026-10-14 10:00:00');
+        $thread->lastMessageAt = new DateTimeImmutable('2026-10-14 09:00:00');
+        $draft->thread         = $thread;
+
+        $draft->settleAsSent(new DateTimeImmutable('2026-10-14 15:00:00'));
+
+        self::assertFalse($draft->isDraft());
+        self::assertSame('2026-10-14 10:00:00', $draft->sentAt->format('Y-m-d H:i:s'));
+        self::assertSame('2026-10-14 10:00:00', $thread->lastMessageAt->format('Y-m-d H:i:s'));
+    }
+
     /** Never backwards: a newer message in the thread keeps its place. */
     public function testANewerMessageInTheThreadKeepsItsRank(): void
     {

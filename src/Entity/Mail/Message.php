@@ -766,12 +766,17 @@ class Message extends MessageModel
         }
 
         $this->removeFlag(MessageFlag::DRAFT);
+
+        // A draft stored before synced drafts were kept unsent already has a
+        // sentAt (its receivedAt). That is the time it keeps, and the one the
+        // thread is ranked by: $at is only when this was noticed, and a mass
+        // re-read of old drafts must not float every conversation to the top.
         $this->sentAt ??= $at;
 
         $thread = $this->thread;
 
-        if (null !== $thread && (null === $thread->lastMessageAt || $at > $thread->lastMessageAt)) {
-            $thread->lastMessageAt = $at;
+        if (null !== $thread && (null === $thread->lastMessageAt || $this->sentAt > $thread->lastMessageAt)) {
+            $thread->lastMessageAt = $this->sentAt;
         }
     }
 

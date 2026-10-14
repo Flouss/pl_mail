@@ -514,10 +514,12 @@ final readonly class SyncGmailMessageBatchHandler
         );
 
         if (true === $ownsFlags) {
-            // A stored draft whose message no longer carries DRAFT was sent
-            // (Gmail swaps DRAFT for SENT on the same message). Before the
-            // refresh below, which rewrites the flags from what it is given.
-            if (false === in_array('DRAFT', $labelIds, true)) {
+            // A stored draft whose message now carries SENT and no longer
+            // DRAFT was sent (Gmail swaps one label for the other on the same
+            // message). Only SENT says so, as only Sent Items does on Graph:
+            // a draft with neither label is not known to be sent. Ahead of the
+            // refresh below, so that it sees the row as it now is.
+            if (true === in_array('SENT', $labelIds, true) && false === in_array('DRAFT', $labelIds, true)) {
                 $existing->settleAsSent(new DateTimeImmutable());
             }
 

@@ -138,8 +138,9 @@ final readonly class SyncGraphMessageBatchHandler
                     // that send is heard; the stored row would otherwise stay
                     // an unsent draft for good. Like the locator above it is
                     // not announced to JMAP clients: this handler has no
-                    // change log, and the folder move that comes with it is.
-                    if (false === ($payload['isDraft'] ?? false)) {
+                    // change log. Only an explicit false counts: a payload that
+                    // does not say is not an answer.
+                    if (false === ($payload['isDraft'] ?? null)) {
                         $sentAt = $payload['sentDateTime'] ?? null;
 
                         try {

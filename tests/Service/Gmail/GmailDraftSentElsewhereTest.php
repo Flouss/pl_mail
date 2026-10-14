@@ -83,6 +83,19 @@ final class GmailDraftSentElsewhereTest extends KernelTestCase
         self::assertGreaterThanOrEqual($before->getTimestamp(), $draft->sentAt->getTimestamp());
     }
 
+    /** Neither label: not known to be sent, so not settled. */
+    public function testADraftThatGmailLabelsNeitherDraftNorSentStaysADraft(): void
+    {
+        $draft = $this->seedDraft();
+
+        $this->handle(['TRASH']);
+
+        $this->em->refresh($draft);
+
+        self::assertTrue($draft->isDraft());
+        self::assertNull($draft->sentAt);
+    }
+
     public function testADraftThatGmailStillLabelsDraftStaysADraft(): void
     {
         $draft = $this->seedDraft();

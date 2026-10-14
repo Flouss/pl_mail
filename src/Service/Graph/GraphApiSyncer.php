@@ -578,8 +578,10 @@ final class GraphApiSyncer
      * Graph has no flag list, so the two booleans it does answer are turned
      * into one: RemoteFlagState::storedFlags() synthesises the mirror. \Draft
      * is deliberately not carried here — isDraft is a property of the message
-     * that GraphMessageBuilder sets at ingest and that a delta on a stored
-     * message does not change without the message being rewritten anyway.
+     * that GraphMessageBuilder sets at ingest, and a delta does not say when it
+     * changes. A draft being sent is heard elsewhere instead: attachFolderLabel()
+     * for a move into Sent Items, SyncGraphMessageBatchHandler for a new id
+     * (both Message::settleAsSent()).
      *
      * @param array<string,mixed> $item
      */

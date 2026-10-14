@@ -104,9 +104,25 @@ final class SyncGraphDraftSentElsewhereTest extends KernelTestCase
         self::assertNull($draft->sentAt);
     }
 
+    /** Absence is not an answer: a payload that omits isDraft settles nothing. */
+    public function testAPayloadThatDoesNotSayIfItIsADraftSettlesNothing(): void
+    {
+        $draft = $this->seedDraft();
+
+        $this->sync(isDraft: null);
+
+        $this->em->refresh($draft);
+
+        // Presence: the handler did meet it and re-point it.
+        self::assertSame(self::NEW_ID, $draft->graphId);
+
+        self::assertTrue($draft->isDraft());
+        self::assertNull($draft->sentAt);
+    }
+
     // ── fixture ───────────────────────────────────────────────────────────
 
-    private function sync(bool $isDraft): void
+    private function sync(?bool $isDraft): void
     {
         $container = self::getContainer();
 
@@ -144,9 +160,9 @@ final class SyncGraphDraftSentElsewhereTest extends KernelTestCase
     }
 
     /** @return array<string,mixed> */
-    private function payload(bool $isDraft): array
+    private function payload(?bool $isDraft): array
     {
-        return [
+        $payload = [
             'id'                => self::NEW_ID,
             'internetMessageId' => self::RFC_ID,
             'conversationId'    => 'conv-draft',
@@ -156,12 +172,17 @@ final class SyncGraphDraftSentElsewhereTest extends KernelTestCase
             'receivedDateTime'  => '2026-10-14T14:15:51Z',
             'sentDateTime'      => false === $isDraft ? '2026-10-14T14:20:00Z' : null,
             'isRead'            => true,
-            'isDraft'           => $isDraft,
             'body'              => ['contentType' => 'text', 'content' => 'Hello'],
             'bodyPreview'       => 'Hello',
             'hasAttachments'    => false,
             'parentFolderId'    => false === $isDraft ? 'sent-folder' : 'drafts-folder',
         ];
+
+        if (null !== $isDraft) {
+            $payload['isDraft'] = $isDraft;
+        }
+
+        return $payload;
     }
 
     /** A draft as the sync stored it before it was sent: \Draft, no sentAt. */

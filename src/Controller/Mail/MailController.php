@@ -3,6 +3,7 @@
 namespace App\Controller\Mail;
 
 use App\Controller\ChecksCsrf;
+use App\Domain\DTO\Mail\InboxTab;
 use App\Domain\Enum\Mail\LabelRole;
 use App\Domain\Enum\Mail\ListSortOrder;
 use App\Domain\Enum\Mail\MessageCategory;
@@ -22,6 +23,7 @@ use App\Security\Voter\OwnershipVoter;
 use App\Service\Ai\ThreadSummariser;
 use App\Service\Ai\ThreadSummaryStore;
 use App\Service\Ai\ThreadTranscript;
+use App\Service\Mail\InboxTabs;
 use App\Service\Mail\NewMailMarkers;
 use App\Service\Mail\SidebarCounts;
 use App\Service\Mail\ThreadListRenderer;
@@ -38,6 +40,13 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/mail', name: 'app_mail_')]
 final class MailController extends AbstractController
 {
+    /**
+     * The key the counts payload carries its change sequence under. Namespaced
+     * so it cannot be taken for a badge: no element has a count key starting
+     * "state:".
+     */
+    public const string COUNTS_SEQUENCE_KEY = 'state:sequence';
+
     use ChecksCsrf;
 
     public function __construct(
@@ -53,6 +62,7 @@ final class MailController extends AbstractController
         private readonly ThreadSummaryStore $summaries,
         private readonly ThreadRows $threadRows,
         private readonly ThreadSenderFacts $senderFacts,
+        private readonly InboxTabs $inboxTabs,
     )
     {
     }
@@ -214,8 +224,14 @@ final class MailController extends AbstractController
         // ValueError out of an enum here surfaced as a 500 on ?tab=quatsch.
         // Falling back to Primary shows the inbox, which is what the person
         // following that link was after.
-        $tab = MessageCategory::tryFrom((string) $request->query->get('tab', ''))
-            ?? MessageCategory::Primary;
+        //
+        // Resolved against the reader's OWN tabs as well as the five: a key for
+        // another person's category, or for one since deleted, is no tab here
+        // and takes the same fall-back — see InboxTabs::resolve().
+        $tab = $user instanceof User
+            ? $this->inboxTabs->resolve($user, (string) $request->query->get('tab', ''))
+            : null;
+        $tab ??= InboxTab::builtIn(MessageCategory::Primary);
 
         // One list, for somebody who has switched the tabs off (#29). `?tab=`
         // is then a link from before the switch, or from a bookmark, and it
@@ -252,8 +268,22 @@ final class MailController extends AbstractController
         // See the tab strip in mail/inbox.html.twig.
         $tabUnread  = $tabbed ? $this->threadRepository->countUnreadByCategoryForUnifiedInbox($user) : [];
 
-        // A tab exists while it holds something — see visibleTabs().
-        $tabs = $this->visibleTabs($tabbed, $tab, $tabTotals);
+        // A tab nobody's mail lands in is a door to an empty room — Gmail
+        // itself has quietly retired Forums. Primary always shows, a category
+        // shows while it holds anything at all, and the tab being LOOKED AT
+        // stays even when its last thread just left, so the ground does not
+        // vanish underfoot; it disappears on the next natural navigation.
+        //
+        // The reader's own tabs follow the five and obey the same rule: one
+        // shows while it holds mail, or while it is being looked at.
+        $allTabs = $tabbed && $user instanceof User ? $this->inboxTabs->allFor($user) : [];
+
+        $tabs = false === $tabbed ? [] : array_values(array_filter(
+            $allTabs,
+            static fn (InboxTab $case): bool => MessageCategory::Primary === $case->builtIn
+                || $case->value === $tab?->value
+                || ($tabTotals[$case->value] ?? 0) > 0,
+        ));
 
         // The categories the strip does NOT show, so a drag has somewhere to
         // put mail that no thread is in yet.
@@ -264,9 +294,11 @@ final class MailController extends AbstractController
         // Forums stays empty forever because nothing can be dropped there until
         // something is already there. These render as ghost tabs, visible only
         // while a drag is in flight. See mail/inbox.html.twig.
+        $shownKeys = array_map(static fn (InboxTab $shown): string => $shown->value, $tabs);
+
         $dropTabs = false === $tabbed ? [] : array_values(array_filter(
-            MessageCategory::cases(),
-            static fn (MessageCategory $case): bool => false === in_array($case, $tabs, true),
+            $allTabs,
+            static fn (InboxTab $case): bool => false === in_array($case->value, $shownKeys, true),
         ));
 
         $this->threadRows->preload($threads);
@@ -771,7 +803,12 @@ final class MailController extends AbstractController
     {
         $this->denyAccessUnlessGranted('ROLE_USER');
 
+        // How far along this user's mail was when these numbers were read. A
+        // tab keeps it and ignores a `mail.changed` nudge that is not newer.
+        // First in the payload because it has to be read first — see
+        // SidebarCounts::changeSequence().
         $payload = [
+            self::COUNTS_SEQUENCE_KEY     => $counts->changeSequence(),
             'starred'                     => $counts->forStarred(),
             'unread'                      => $counts->forUnread(),
             NewMailMarkers::STARRED_KEY   => $newMail->forStarred(),
@@ -798,15 +835,17 @@ final class MailController extends AbstractController
         // unread count ("category:", the unprefixed namespace every other
         // unread number here already uses — "role:", "label:").
         //
-        // The unread one is NOT a number the tab prints, and that distinction is
-        // the whole reason it can exist without reopening the argument it used
-        // to lose. A tab still shows one figure and one only. This feeds the
-        // icon tint in the unread-only view, where the reasoning that kept
-        // unread off the tabs — the sidebar badge and the bold rows already say
-        // it — stops holding: every row on screen is unread, so the rows say
-        // nothing that distinguishes them, and the sidebar's Inbox badge is one
-        // total that cannot say WHICH tab its mail is sitting in. The tint is
-        // the only thing on the page that can, and it says it without counting.
+        // The unread one feeds two things on the tab: the icon tint, and the
+        // number printed beside the tab's name (data-tab-unread). It used to
+        // feed only the tint, and the number was kept off the tabs on the
+        // argument that the sidebar badge and the bold rows already say unread.
+        // That held until the badge read 1 and the open tab showed nothing
+        // unread: the badge could not say WHERE, and a colour nobody has had
+        // explained points at nothing. The figure is the badge's own unit —
+        // conversations holding unread mail — so the tabs add up to it.
+        //
+        // The "new:" pill stays a different statement and a different number:
+        // what arrived that the reader has never been shown, not what is unread.
         //
         // None of the three for somebody with the tabs switched off: there is
         // no element on their page carrying any of these keys, and each family
@@ -815,10 +854,13 @@ final class MailController extends AbstractController
         $tabbed     = $countsUser instanceof User && true === $countsUser->categorySorting->tabs;
         $tabUnread  = $tabbed ? $this->threadRepository->countUnreadByCategoryForUnifiedInbox($countsUser) : [];
 
-        foreach ($tabbed ? MessageCategory::cases() : [] as $category) {
-            $payload[NewMailMarkers::categoryKey($category)]        = $newMail->forCategory($category);
-            $payload[NewMailMarkers::categorySendersKey($category)] = implode(', ', $newMail->sendersForCategory($category));
-            $payload['category:' . $category->value]                = $tabUnread[$category->value] ?? 0;
+        // The reader's own tabs ride on the same payload as the five, under the
+        // same three keys: the strip patches itself by key, and a tab drawn with
+        // no matching key here is one whose dot and number never update.
+        foreach ($tabbed && $countsUser instanceof User ? $this->inboxTabs->allFor($countsUser) : [] as $tab) {
+            $payload[NewMailMarkers::categoryKey($tab)]        = $newMail->forTab($tab);
+            $payload[NewMailMarkers::categorySendersKey($tab)] = implode(', ', $newMail->sendersForTab($tab));
+            $payload['category:' . $tab->value]                = $tabUnread[$tab->value] ?? 0;
         }
 
         // forRoleBadge(), not forRole(): Trash and Drafts show a total rather

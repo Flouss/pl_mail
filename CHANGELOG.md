@@ -8,6 +8,14 @@ The published image tags: `latest` follows the most recent release below,
 
 ## Unreleased
 
+**A draft you started in another mail app opens in plMail.**
+A draft that arrived by sync (from Outlook, Gmail or an IMAP Drafts folder) was listed in its
+conversation, and clicking it gave a "Not found" page: it had been marked as already sent, which the
+editor refuses to open. It is now kept as the unsent draft it is, like one written in plMail. The
+visible side effect is that a conversation holding such a draft is no longer moved up the list by the
+draft's date, the same as for a draft written here. Drafts that were already stored before the
+upgrade are not changed.
+
 **Signing in through single sign-on keeps you signed in, as "Keep me signed in" does on the password form.**
 A single sign-on sign-in left nothing but the PHP session holding you in: a cookie that ends with the
 browser, kept in a file that is cleaned up after 24 minutes without a request and that goes with the

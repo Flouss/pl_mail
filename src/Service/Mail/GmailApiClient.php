@@ -465,7 +465,7 @@ final class GmailApiClient
                 'timeout'     => self::PROBE_TIMEOUT_SECONDS,
             ]);
 
-            $body = $this->decode($response, 'history.list');
+            $body = $this->decode($account, $response, 'history.list');
 
             foreach ($body['history'] ?? [] as $record) {
                 if (true === isset($record['id']) && true === self::addedMailThatCameIn($record)) {

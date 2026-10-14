@@ -185,6 +185,7 @@ final class SwipeActionResolverTest extends KernelTestCase
      * route, and is inert where the strip has nothing.
      *
      * @param 'normal'|'archive'|'trash'|'spam' $placement
+     * @param 'thread'|'message'                $kind
      */
     #[DataProvider('placements')]
     public function testEachDirectionMatchesTheStripItWouldDuplicate(string $placement, string $kind, bool $draft): void

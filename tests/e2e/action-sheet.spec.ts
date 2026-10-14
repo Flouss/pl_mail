@@ -419,8 +419,35 @@ test.describe("the label picker in the sheet", () => {
     });
 });
 
+test.describe("rows are not native drags on a phone", () => {
+    test("a thread row is draggable=false on a phone, and a refresh does not restore it", async ({ page }) => {
+        await openInbox(page);
+
+        const row = mailRow(page, INBOX_SUBJECTS.archive);
+
+        // The server renders draggable="true" for a thread that is not a draft. The phone turns it off.
+        await expect(row).toHaveAttribute("draggable", "false");
+
+        // A refresh morphs the row back to the server's markup. The list puts it back, and the test
+        // only passes if the refresh really ran: the X-List-Fragment request is the proof.
+        const fragment = page.waitForRequest((request) => request.headers()["x-list-fragment"] !== undefined);
+
+        await refreshList(page);
+        await fragment;
+
+        await expect(row).toHaveAttribute("draggable", "false");
+    });
+});
+
 test.describe("desktop width: the same press opens nothing", () => {
     test.use({ viewport: { width: 1280, height: 800 }, hasTouch: false, isMobile: false });
+
+    test("a thread row stays draggable with a mouse, so the drag still works where it is used", async ({ page }) => {
+        await openInbox(page);
+
+        // Companion for the phone test: the same row, the same server markup, not switched off here.
+        await expect(mailRow(page, INBOX_SUBJECTS.archive)).toHaveAttribute("draggable", "true");
+    });
 
     test("a mouse long press and a touch at desktop width both open nothing", async ({ page }) => {
         await openInbox(page);

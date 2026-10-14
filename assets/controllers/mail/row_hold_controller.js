@@ -26,7 +26,8 @@ import {
  * │ Reads            │ li[data-sheet] on the row (presence = the row has a      │
  * │                  │ sheet), the row's id                                     │
  * ├──────────────────┼──────────────────────────────────────────────────────────┤
- * │ Writes           │ none                                                     │
+ * │ Writes           │ draggable on thread rows: "false" on a phone (see        │
+ * │                  │ TOUCH_ONLY_LIST), "true" elsewhere                       │
  * ├──────────────────┼──────────────────────────────────────────────────────────┤
  * │ Claims           │ "hold", via touch_gesture.js. A claimed sequence, or an  │
  * │                  │ open surface, refuses it. Once a hold is decided a later │
@@ -54,6 +55,20 @@ import {
 /** Below md: 48rem, the same query the swipe and the pull use. */
 const MOBILE = "(width < 48rem)";
 
+/**
+ * The phone's pointers: a touch screen below md. Rows are not native drags here.
+ *
+ * Why it is in this controller, and not in CSS or in the server's markup: a row is
+ * draggable because the server says so (`draggable="true"`, for a thread that is not a
+ * draft), and nothing CSS can do switches the attribute off; `-webkit-user-drag` only
+ * stops the image, and a long press on iOS may lift the row as a drag, which races the
+ * 450ms hold. HTML5 drag is documented as mouse-only in dnd_controller.js, so nothing a
+ * phone can do is lost. The server cannot know the pointer, so the list does it.
+ */
+const TOUCH_ONLY_LIST = "(pointer: coarse) and (width < 48rem)";
+
+/** The attribute the server puts on a thread row that can be dragged. See _thread_row.html.twig. */
+const DRAG_SOURCE = "[data-dnd-thread]";
 
 /** A row, as opposed to any node inside one. */
 const ROW = 'li[data-controller~="mail--message-row"]';
@@ -84,6 +99,19 @@ export default class extends Controller {
         this.element.addEventListener("click", this.#onClick, { capture: true });
         // A long press is also a context menu on Android. While a finger is on a row, that menu is not wanted.
         this.element.addEventListener("contextmenu", this.#onContextMenu);
+
+        // Rows are not native drags on a phone (see #syncDraggable). A refresh morphs the rows
+        // back to the server's draggable="true", so this watches the attribute as well as the list.
+        this._touchOnly = window.matchMedia(TOUCH_ONLY_LIST);
+        this._touchOnly.addEventListener("change", this.#onTouchOnlyChange);
+        this._draggable = new MutationObserver(() => this.#syncDraggable());
+        this._draggable.observe(this.element, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["draggable"],
+        });
+        this.#syncDraggable();
     }
 
     disconnect() {
@@ -95,6 +123,9 @@ export default class extends Controller {
         this.element.removeEventListener("touchcancel", this.#onCancel);
         this.element.removeEventListener("click", this.#onClick, { capture: true });
         this.element.removeEventListener("contextmenu", this.#onContextMenu);
+
+        this._touchOnly.removeEventListener("change", this.#onTouchOnlyChange);
+        this._draggable.disconnect();
     }
 
     // ── Private ───────────────────────────────────────────────────────────
@@ -105,6 +136,21 @@ export default class extends Controller {
     #onCancel = () => this.#abandon();
     #onClick = (event) => this.#click(event);
     #onContextMenu = (event) => this.#contextMenu(event);
+    #onTouchOnlyChange = () => this.#syncDraggable();
+
+    /**
+     * Each thread row's draggable matches the pointer: "false" on a phone, "true" elsewhere.
+     * Written only where it differs, so the observer this triggers does not loop.
+     */
+    #syncDraggable() {
+        const want = this._touchOnly.matches ? "false" : "true";
+
+        for (const row of this.element.querySelectorAll(DRAG_SOURCE)) {
+            if (row.getAttribute("draggable") !== want) {
+                row.setAttribute("draggable", want);
+            }
+        }
+    }
 
     #touchStart(event) {
         // A second finger is not a hold, and ends whatever a first one was.

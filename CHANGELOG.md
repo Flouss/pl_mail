@@ -13,7 +13,8 @@ A draft that arrived by sync (from Outlook or Gmail) was listed in its
 conversation, and clicking it gave a "Not found" page: it had been marked as already sent, which the
 editor refuses to open. It is now kept as the unsent draft it is, like one written in plMail. The
 visible side effect is that a conversation holding such a draft is no longer moved up the list by the
-draft's date, the same as for a draft written here. Drafts that were already stored before the
+draft's date, the same as for a draft written here. A draft you then send from Outlook or Gmail is
+recognised as sent, and no longer offered for editing. Drafts that were already stored before the
 upgrade are not changed.
 
 **Signing in through single sign-on keeps you signed in, as "Keep me signed in" does on the password form.**

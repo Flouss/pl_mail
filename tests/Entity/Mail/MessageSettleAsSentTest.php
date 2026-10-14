@@ -44,7 +44,7 @@ final class MessageSettleAsSentTest extends TestCase
 
         $draft->settleAsSent(new DateTimeImmutable('2026-10-14 15:00:00'));
 
-        self::assertSame('2026-10-14 15:00:00', $thread->lastMessageAt?->format('Y-m-d H:i:s'));
+        self::assertSame('2026-10-14 15:00:00', $thread->lastMessageAt->format('Y-m-d H:i:s'));
     }
 
     /** Never backwards: a newer message in the thread keeps its place. */
@@ -58,7 +58,7 @@ final class MessageSettleAsSentTest extends TestCase
 
         $draft->settleAsSent(new DateTimeImmutable('2026-10-14 15:00:00'));
 
-        self::assertSame('2026-10-14 16:00:00', $thread->lastMessageAt?->format('Y-m-d H:i:s'));
+        self::assertSame('2026-10-14 16:00:00', $thread->lastMessageAt->format('Y-m-d H:i:s'));
     }
 
     /**
@@ -80,7 +80,7 @@ final class MessageSettleAsSentTest extends TestCase
 
         self::assertSame($before, $sent->sentAt);
         self::assertSame([MessageFlag::SEEN->value], $sent->flags);
-        self::assertSame('2026-10-14 09:00:00', $thread->lastMessageAt?->format('Y-m-d H:i:s'));
+        self::assertSame('2026-10-14 09:00:00', $thread->lastMessageAt->format('Y-m-d H:i:s'));
     }
 
     /**

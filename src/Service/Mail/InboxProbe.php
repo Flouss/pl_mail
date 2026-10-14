@@ -68,6 +68,9 @@ final readonly class InboxProbe
     /** How long a remembered arrival is kept. Losing it costs one redundant sync. */
     private const int MEMORY_SECONDS = 14 * 86400;
 
+    /** How long an Outlook Inbox's folder id is trusted before it is asked for again. */
+    private const int INBOX_FOLDER_SECONDS = 3600;
+
     public function __construct(
         private GmailApiClient         $gmail,
         private GraphApiClient         $graph,
@@ -93,7 +96,8 @@ final readonly class InboxProbe
         }
 
         try {
-            $signal = $this->signalOf($account);
+            $arrival = $this->signalOf($account);
+            $changes = $this->changeSignalOf($account);
         } catch (GmailThrottledException | GraphThrottledException $throttled) {
             // What the provider asked for, not a guess: its own Retry-After, or
             // the exception's fallback when it sent none.
@@ -111,23 +115,60 @@ final readonly class InboxProbe
             return false;
         }
 
+        // Both questions are put and both are remembered, whatever the first
+        // one answered: a thing that is announced here is announced by one
+        // sync, and has to be known as announced next tick whichever question
+        // it was found by.
+        $arrivalIsNews = $this->arrivalIsNews($account, $arrival);
+        $changesAreNews = $this->changesAreNews($id, $changes);
+
+        return $arrivalIsNews || $changesAreNews;
+    }
+
+    private function arrivalIsNews(Account $account, ?string $signal): bool
+    {
         if (null === $signal) {
             return false;
         }
 
-        $previous = $this->remembered($id);
+        $id       = (int) $account->id;
+        $previous = $this->remembered($id, 'seen');
 
         if ($previous === $signal) {
             return false;
         }
 
-        $this->remember($id, $signal);
+        $this->remember($id, 'seen', $signal);
 
         // A first look at a Microsoft account has nothing to be compared with,
         // so a message being there is not news — only a later change is. A
         // Gmail signal is different in kind: it exists only when the history
         // window holds an arrival, so it is evidence even the first time.
         return null !== $previous || true === $account->isGmail();
+    }
+
+    /**
+     * Whether what is waiting to be read has changed since it was last
+     * announced. The empty signal is remembered too, and is never news: it is
+     * what lets the same message being read again later be announced again.
+     *
+     * Unlike an arrival, a first look is news when something is pending. There
+     * is nothing to compare it with, but it does not need comparing: it says
+     * that something happened since the cursor was stored.
+     */
+    private function changesAreNews(int $accountId, ?string $signal): bool
+    {
+        if (null === $signal) {
+            return false;
+        }
+
+        if ($this->remembered($accountId, 'changes') === $signal) {
+            return false;
+        }
+
+        $this->remember($accountId, 'changes', $signal);
+
+        return '' !== $signal;
     }
 
     /**
@@ -178,6 +219,99 @@ final readonly class InboxProbe
         return null;
     }
 
+    /**
+     * A token for what the provider says has been read, unread, starred or moved
+     * elsewhere and not yet synced, '' when nothing has, or null when there is
+     * nothing to ask about.
+     *
+     * The second question, put after the arrivals one. It has its own memory
+     * because the two are different things: new mail moves the first, a read on
+     * the phone moves this, and one sync answers whichever (or both) moved.
+     */
+    private function changeSignalOf(Account $account): ?string
+    {
+        if (true === $account->isGmail()) {
+            $cursor = $account->gmailHistoryId;
+
+            if (null === $cursor) {
+                return null;
+            }
+
+            try {
+                return $this->gmail->probeStateChanges($account, $cursor) ?? '';
+            } catch (GmailThrottledException $throttled) {
+                throw $throttled;
+            } catch (GmailApiException $failure) {
+                // A dead cursor is already announced, once, by the arrivals
+                // question (see signalOf()). Announcing it from here as well would
+                // be a second reason to sync for one cause, and rethrowing it
+                // would pause an account for a fault that has an answer.
+                if (true === in_array($failure->getStatus(), [404, 410], true)) {
+                    return null;
+                }
+
+                throw $failure;
+            }
+        }
+
+        if (true === $account->isMicrosoft()) {
+            // As for arrivals: an account that has never synced has no cursor to
+            // ask about. And a folder with no saved link is the import's, whose
+            // history is still being read, so there is none either.
+            if (null === $account->lastSyncedAt || [] === $account->graphDeltaLinks) {
+                return null;
+            }
+
+            // The Inbox, and not every folder: one request per account per tick
+            // is what this stays at. Mail read in another folder waits for the
+            // quarter-hourly sync, as everything did before this question.
+            $inbox = $this->inboxFolderId($account);
+            $link  = null === $inbox ? null : ($account->graphDeltaLinks[$inbox] ?? null);
+
+            if (null === $link) {
+                return null;
+            }
+
+            return $this->graph->pendingChanges($account, $link);
+        }
+
+        return null;
+    }
+
+    /**
+     * The Inbox's folder id for an account, asked for at most once an hour.
+     *
+     * Not forever: Graph does not promise a system folder's id stays put (see
+     * GraphApiClient::resolveWellKnownFolders()), and an id that moved would
+     * silently stop the probe finding the Inbox's link. An hour bounds that.
+     * The moment is kept with the id and measured against the injected clock,
+     * not the cache's own expiry, which is why a clock that can be moved can
+     * test it.
+     */
+    private function inboxFolderId(Account $account): ?string
+    {
+        $accountId = (int) $account->id;
+        $item      = $this->cache->getItem($this->key('inbox_folder', $accountId));
+        $now       = $this->clock->now()->getTimestamp();
+
+        if (true === $item->isHit()) {
+            $held = $item->get();
+
+            if (true === is_array($held) && $now - (int) ($held['at'] ?? 0) < self::INBOX_FOLDER_SECONDS) {
+                return '' === (string) ($held['id'] ?? '') ? null : (string) $held['id'];
+            }
+        }
+
+        $id = $this->graph->inboxFolderId($account);
+
+        $item->set(['id' => $id ?? '', 'at' => $now]);
+        $item->expiresAfter(self::MEMORY_SECONDS);
+
+        $this->cache->save($item);
+
+        return $id;
+    }
+
     private function pausedUntil(int $accountId): int
     {
         $item = $this->cache->getItem($this->key('pause', $accountId));
@@ -195,16 +329,18 @@ final readonly class InboxProbe
         $this->cache->save($item);
     }
 
-    private function remembered(int $accountId): ?string
+    /** @param 'seen'|'changes' $what */
+    private function remembered(int $accountId, string $what): ?string
     {
-        $item = $this->cache->getItem($this->key('seen', $accountId));
+        $item = $this->cache->getItem($this->key($what, $accountId));
 
         return true === $item->isHit() ? (string) $item->get() : null;
     }
 
-    private function remember(int $accountId, string $signal): void
+    /** @param 'seen'|'changes' $what */
+    private function remember(int $accountId, string $what, string $signal): void
     {
-        $item = $this->cache->getItem($this->key('seen', $accountId));
+        $item = $this->cache->getItem($this->key($what, $accountId));
 
         $item->set($signal);
         $item->expiresAfter(self::MEMORY_SECONDS);

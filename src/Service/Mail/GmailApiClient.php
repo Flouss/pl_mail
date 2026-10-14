@@ -484,6 +484,107 @@ final class GmailApiClient
     }
 
     /**
+     * The newest history record that read, unread, starred or unstarred a
+     * message since a cursor, or null when none did — what an account is asked,
+     * after probeArrivals(), so that mail handled on a phone reaches plMail in
+     * seconds and not at the next quarter hour.
+     *
+     * Read and starred are labels on a Gmail message (UNREAD, STARRED), so a read
+     * elsewhere is a record of UNREAD coming off. probeArrivals() asks not to hear
+     * those, on purpose: its question is "has mail arrived?", and it names
+     * `historyTypes=messageAdded` to keep every flag the user's own phone sets
+     * from being one. This is the other question, and it is asked separately so
+     * that neither widens the other.
+     *
+     * NO `historyTypes`. labelAdded and labelRemoved are two types, and a query
+     * array cannot say "two" (GmailApiSyncer::syncIncremental has the details);
+     * omitted, the answer is every type, and the records wanted are picked out
+     * here. That window is longer than the arrivals one, so it is the likelier
+     * to reach the page cap, which answers with a marker that is the same every
+     * time for one cursor — see below.
+     *
+     * WHAT COUNTS: a label change where UNREAD or STARRED is among the labels
+     * that moved, on a message that is not a draft (Gmail rewrites a draft on
+     * every save, and its labels move with it). An archive, a tab change or a
+     * user label is a label change and is not this question's: the quarter-hourly
+     * sweep still has them. Arrivals and permanent deletions are not either; the
+     * first is probeArrivals()'s, and announcing it from both would be two syncs
+     * for one message.
+     *
+     * THE SIGNAL is the id of the newest such record, which is fixed for as long
+     * as the cursor is, so a read is announced once however many ticks the sync
+     * it asked for takes to run. Your own click in plMail is a record too, and
+     * wakes one sync: bounded by the clicking, not by the clock.
+     *
+     * @return string|null the id of the newest record that changed read or star
+     *                     state, null when none did. Reaching the page cap with
+     *                     more still to read answers `more:<cursor>` when nothing
+     *                     was found, because "could not rule it out" is a reason
+     *                     to let the real sync look.
+     */
+    public function probeStateChanges(Account $account, string $startHistoryId): ?string
+    {
+        $token  = $this->tokenManager->getValidAccessToken($account);
+        $newest = null;
+        $page   = null;
+
+        for ($fetched = 0; $fetched < self::PROBE_MAX_PAGES; $fetched++) {
+            $query = ['startHistoryId' => $startHistoryId];
+
+            if (null !== $page) {
+                $query['pageToken'] = $page;
+            }
+
+            $response = $this->httpClient->request('GET', self::BASE . '/history', [
+                'auth_bearer' => $token,
+                'query'       => $query,
+                'timeout'     => self::PROBE_TIMEOUT_SECONDS,
+            ]);
+
+            $body = $this->decode($account, $response, 'history.list');
+
+            foreach ($body['history'] ?? [] as $record) {
+                if (true === isset($record['id']) && true === self::changedReadOrStar($record)) {
+                    $newest = (string) $record['id'];
+                }
+            }
+
+            $page = $body['nextPageToken'] ?? null;
+
+            if (null === $page) {
+                return $newest;
+            }
+        }
+
+        return $newest ?? 'more:' . $startHistoryId;
+    }
+
+    /**
+     * Whether a history record moved UNREAD or STARRED on a message that is not
+     * a draft. See probeStateChanges() for what does and does not count.
+     *
+     * @param array<string, mixed> $record
+     */
+    private static function changedReadOrStar(array $record): bool
+    {
+        foreach (['labelsAdded', 'labelsRemoved'] as $type) {
+            foreach ($record[$type] ?? [] as $change) {
+                if (true === in_array('DRAFT', $change['message']['labelIds'] ?? [], true)) {
+                    continue;
+                }
+
+                foreach (['UNREAD', 'STARRED'] as $label) {
+                    if (true === in_array($label, $change['labelIds'] ?? [], true)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Whether a history record added anything but the user's own draft or sent
      * copy. See probeArrivals() for why those two, and why here.
      *

@@ -274,7 +274,7 @@ and both need an address the internet can reach. An install behind a firewall ha
 account without push used to be synced only by the quarter-hourly `app:mail:sync`: mail on the phone
 at once, in plMail up to fifteen minutes later.
 
-`app:mail:probe` runs every 30 seconds by default (Admin → Address, or `MAIL_PROBE_INTERVAL_SECONDS`, between 15 and 900) and asks each active Gmail and Outlook account one cheap question,
+`app:mail:probe` runs every 30 seconds by default (Admin → Address, or `MAIL_PROBE_INTERVAL_SECONDS`, between 15 and 900) and asks each active Gmail and Outlook account a cheap question or two,
 through `App\Service\Mail\InboxProbe`, and queues the ordinary `SyncAccountMessage` (trigger
 `SyncTrigger::Probe`) only when the answer is yes. It does not fetch anything itself and it does not
 replace the poll.
@@ -288,6 +288,39 @@ replace the poll.
 
 **The probe never moves a cursor.** Gmail's `historyId` and Graph's delta links belong to the real sync;
 a probe that advanced either would hand the sync it just asked for an empty window.
+
+**A second question: read, unread, starred.** "Has mail arrived?" does not hear a read on the phone, and
+that is the other half of "my phone has it and plMail does not". So each tick also asks what has been
+read, unread or starred elsewhere, remembers the answer separately, and one sync answers either.
+
+| | Gmail | Outlook |
+|---|---|---|
+| The question | `history.list` from the stored cursor with no type filter, keeping a record where `UNREAD` or `STARRED` was added or removed on a message that is not a draft (`GmailApiClient::probeStateChanges()`) | A GET of the Inbox's saved delta link, one small page, and nothing kept from the answer (`GraphApiClient::pendingChanges()`) |
+| The signal | The newest such record's id | A hash of what is pending: each message id with its read state, flag or "removed", sorted |
+| First look at an account | News, if anything is pending: it says something happened since the cursor was stored | The same |
+| An expired cursor or link | Left to the arrivals question, which names it once | One sync to recover it, named by the link |
+
+Why not the obvious Outlook query, the newest `lastModifiedDateTime`? Because Outlook does not move it
+when you toggle read state: two messages marked unread in Outlook web kept their September stamps. It
+moves when plMail itself PATCHes a message, which makes it look right in a test. The delta reports the
+toggle, but only for a chain begun with `isRead` and `flag` in its `$select`
+(`GraphApiClient::DELTA_SELECT`); a chain begun without them is not sent an entry at all for a message
+that was only read, which is why every Outlook account's links were reset once when that was fixed.
+
+**Reading the delta link is not moving it.** The comment on `newestReceivedAt()` is right that the link is
+the real sync's cursor, and wrong for a read that stores nothing. A GET of a stored link answers with what
+is pending since it and leaves it where it was: the same GET a few seconds later says the same thing,
+until the sync has run and stored the link it was handed. The probe passes the link in and never gets
+one back. Only the first page is read, because the question is whether anything is waiting and the sync,
+which has the time, reads the rest; more than a page is part of the signal.
+
+**Only the Inbox, on Outlook.** The second question is one extra request per account per tick, and
+that is what it stays at. A read in another folder waits for the poll. The Inbox's folder id is asked for by its well-known name and kept for
+an hour, because Graph does not promise a system folder's id stays put.
+
+**Your own click is a change too.** Marking a message read in plMail is a record on the provider and wakes
+one sync. That is bounded by the clicking and not by the clock, which is the property the next paragraph
+protects.
 
 **What stops it queueing a sync on every tick.** The answer stays "yes" until the sync it triggered has
 run, and that sync waits on the single `ingest` consumer, which can be minutes deep. So each account
@@ -316,8 +349,8 @@ this pair was sent to two live Outlook accounts (both personal; a work or school
 tried) and answered 200. A message just sent has a `receivedDateTime` about a second after it was sent,
 so a send there is one extra sync.
 
-**What it deliberately leaves to the poll.** Every change that is not an arrival — read state, labels,
-deletions made elsewhere. None of those is the "my phone has it and plMail does not" case, and
+**What it deliberately leaves to the poll.** Every change that is neither an arrival nor a read or a
+star: labels, moves, deletions made elsewhere, and a read in any Outlook folder but the Inbox.
 `Message::$arrivedBy` says which path delivered what: `probe` is the fast path working, `poll` is
 what it cannot see. Gmail push still announces the inbox alone (the watch is registered on that
 label), so on a Gmail account that has push as well, only the probe sees the rest.
@@ -326,8 +359,9 @@ label), so on a Gmail account that has push as well, only the probe sees the res
 Each request carries its own ten-second timeout, a run starts no further account once the interval less one request timeout has gone (20 seconds by default), and
 an account that fails is left alone — for as long as the provider's own `Retry-After` says when
 throttled, five minutes after anything else. Accounts whose grant is already known to be dead are not
-asked at all, because every look would begin with a token refresh. At two requests a minute per account
-this is a few units of a quota counted in thousands, and well inside Microsoft's per-mailbox limit.
+asked at all, because every look would begin with a token refresh. At the default 30 seconds that is
+four requests a minute per account (two questions, two ticks), a few units of a quota counted in
+thousands, and well inside Microsoft's per-mailbox limit.
 
 ## Threading
 

@@ -1,4 +1,4 @@
-<!-- translated-from: internals/mail-ingest.md sha1:1c9c9d3d0cc4ce9e95d18b4f296c61ddfb7dc752 -->
+<!-- translated-from: internals/mail-ingest.md sha1:360e9383feb98f447d6b66b0f5c25cd3dfcff2e9 -->
 # Mail-Ingest
 
 Vom Anbieter in die Datenbank: wie aus Bytes eine Zeile `Message` wird, was mit ihr geschieht,
@@ -313,7 +313,7 @@ einer Firewall hat keins von beiden, und ein Konto ohne Push wurde bisher nur vo
 plMail.
 
 `app:mail:probe` läuft standardmäßig alle 30 Sekunden (Admin → Adresse oder `MAIL_PROBE_INTERVAL_SECONDS`, zwischen 15 und 900) und stellt jedem aktiven Gmail- und Outlook-Konto eine billige
-Frage, über `App\Service\Mail\InboxProbe`, und reiht die gewöhnliche `SyncAccountMessage` (Trigger
+Frage oder zwei, über `App\Service\Mail\InboxProbe`, und reiht die gewöhnliche `SyncAccountMessage` (Trigger
 `SyncTrigger::Probe`) nur ein, wenn die Antwort Ja lautet. Es holt selbst nichts ab und ersetzt den
 Durchlauf nicht.
 
@@ -327,6 +327,43 @@ Durchlauf nicht.
 **Die Abfrage bewegt nie einen Cursor.** Gmails `historyId` und Graphs Delta-Links gehören dem echten
 Sync; eine Abfrage, die einen davon vorrückte, würde dem Sync, den sie gerade angefordert hat, ein
 leeres Fenster hinterlassen.
+
+**Eine zweite Frage: gelesen, ungelesen, markiert.** „Ist Mail angekommen?“ hört kein Lesen auf dem
+Handy, und das ist die andere Hälfte von „mein Handy hat es und plMail nicht“. Deshalb fragt jeder
+Durchgang auch, was anderswo gelesen, als ungelesen oder mit Stern markiert wurde, merkt sich die
+Antwort getrennt, und ein Sync beantwortet beide.
+
+| | Gmail | Outlook |
+|---|---|---|
+| Die Frage | `history.list` ab dem gespeicherten Cursor ohne Typfilter; es zählt ein Eintrag, in dem `UNREAD` oder `STARRED` bei einer Nachricht, die kein Entwurf ist, hinzugefügt oder entfernt wurde (`GmailApiClient::probeStateChanges()`) | Ein GET auf den gespeicherten Delta-Link des Posteingangs, eine kleine Seite, und von der Antwort wird nichts behalten (`GraphApiClient::pendingChanges()`) |
+| Das Signal | Die Id des neuesten solchen Eintrags | Ein Hash dessen, was aussteht: jede Nachrichten-Id mit Lesestatus, Markierung oder „entfernt“, sortiert |
+| Erster Blick auf ein Konto | Eine Neuigkeit, wenn etwas aussteht: es sagt, dass seit dem Speichern des Cursors etwas passiert ist | Dasselbe |
+| Ein abgelaufener Cursor oder Link | Der Ankunftsfrage überlassen, die ihn einmal benennt | Ein Sync, um ihn zu beheben, benannt nach dem Link |
+
+Warum nicht die naheliegende Outlook-Abfrage, das neueste `lastModifiedDateTime`? Weil Outlook es nicht
+bewegt, wenn man den Lesestatus umschaltet: zwei in Outlook im Web als ungelesen markierte Nachrichten
+behielten ihre September-Zeitstempel. Es bewegt sich, wenn plMail selbst eine Nachricht per PATCH
+ändert, und deshalb sieht es in einem Test richtig aus. Das Delta meldet das Umschalten, aber nur für
+eine Kette, die mit `isRead` und `flag` in ihrem `$select` begonnen wurde
+(`GraphApiClient::DELTA_SELECT`); für eine Kette ohne sie kommt für eine nur gelesene Nachricht gar kein
+Eintrag, weshalb die Links jedes Outlook-Kontos einmal zurückgesetzt wurden, als das behoben wurde.
+
+**Den Delta-Link zu lesen heißt nicht, ihn zu bewegen.** Der Kommentar bei `newestReceivedAt()` hat recht,
+dass der Link der Cursor des echten Syncs ist, und unrecht für ein Lesen, das nichts speichert. Ein GET
+auf einen gespeicherten Link antwortet mit dem, was seither aussteht, und lässt ihn, wo er war: derselbe
+GET ein paar Sekunden später sagt dasselbe, bis der Sync gelaufen ist und den Link gespeichert hat, den
+er bekam. Die Abfrage reicht den Link hinein und bekommt nie einen zurück. Gelesen wird nur die erste
+Seite, denn die Frage ist, ob etwas wartet, und der Sync, der die Zeit hat, liest den Rest; mehr als
+eine Seite gehört zum Signal.
+
+**Bei Outlook nur der Posteingang.** Die zweite Frage ist eine zusätzliche Anfrage pro Konto und
+Durchgang, und dabei bleibt es. Ein Lesen in einem anderen Ordner wartet auf den Durchlauf. Die Ordner-Id des Posteingangs wird über seinen
+wohlbekannten Namen erfragt und eine Stunde lang behalten, weil Graph nicht verspricht, dass die Id
+eines Systemordners gleich bleibt.
+
+**Der eigene Klick ist auch eine Änderung.** Eine in plMail als gelesen markierte Nachricht ist ein
+Eintrag beim Anbieter und weckt einen Sync. Das ist durch das Klicken begrenzt und nicht durch die
+Uhr, und genau diese Eigenschaft schützt der nächste Absatz.
 
 **Was sie davon abhält, bei jedem Durchlauf einen Sync einzureihen.** Die Antwort bleibt „Ja“, bis der
 ausgelöste Sync gelaufen ist, und der wartet auf den einen `ingest`-Consumer, der Minuten tief sein
@@ -360,9 +397,10 @@ Geschäfts- oder Schulkonto wurde nicht probiert) und mit 200 beantwortet. Eine 
 Nachricht hat ein `receivedDateTime` etwa eine Sekunde nach dem Senden, ein Senden ist dort also ein
 zusätzlicher Sync.
 
-**Was sie bewusst dem Durchlauf überlässt.** Jede Änderung, die keine Ankunft ist — Lesestatus,
-Labels, anderswo gelöschte Mail. Nichts davon ist der Fall „mein Handy hat es und plMail nicht“, und
-alles wird weiter vom viertelstündlichen Durchlauf erfasst, den das hier unverändert lässt.
+**Was sie bewusst dem Durchlauf überlässt.** Jede Änderung, die weder eine Ankunft noch ein Lesen oder
+eine Markierung ist: Labels, Verschiebungen, anderswo gelöschte Mail und ein Lesen in jedem
+Outlook-Ordner außer dem Posteingang. Alles wird weiter vom viertelstündlichen Durchlauf erfasst, den
+das hier unverändert lässt.
 `Message::$arrivedBy` sagt, welcher Weg was geliefert hat: `probe` ist der schnelle Weg bei der Arbeit,
 `poll` ist, was er nicht sieht. Gmail-Push meldet weiterhin nur den Posteingang (die Überwachung ist
 auf dieses Label registriert); bei einem Gmail-Konto mit Push sieht den Rest also nur die Abfrage.
@@ -372,8 +410,9 @@ geplanten Job. Jede Anfrage hat ihr eigenes Timeout von zehn Sekunden, ein Lauf 
 Sekunden) vergangen ist, und ein Konto, das scheitert, wird in Ruhe gelassen — so lange, wie
 das `Retry-After` des Anbieters es verlangt, wenn gedrosselt wird, sonst fünf Minuten. Konten, deren
 Grant bereits als tot bekannt ist, werden gar nicht erst gefragt, weil jeder Blick mit einer
-Token-Erneuerung begänne. Bei zwei Anfragen pro Minute und Konto sind das einige wenige Einheiten
-eines Kontingents, das in Tausenden gezählt wird, und weit unter Microsofts Grenze je Postfach.
+Token-Erneuerung begänne. Bei den standardmäßigen 30 Sekunden sind das vier Anfragen pro Minute und
+Konto (zwei Fragen, zwei Durchgänge), einige wenige Einheiten eines Kontingents, das in Tausenden
+gezählt wird, und weit unter Microsofts Grenze je Postfach.
 
 ## Konversationsbildung
 

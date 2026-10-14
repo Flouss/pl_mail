@@ -55,14 +55,29 @@ final class InboxProbeTest extends TestCase
     /** @var list<string> the host and bearer token of every request made, in order */
     private array $requests = [];
 
+    /**
+     * Answers to the Gmail probe's SECOND question — has anything been read,
+     * unread or starred? — which is the history call with no `historyTypes`.
+     * Quiet when empty, so the tests above, which are about arrivals and script
+     * one answer per tick, do not have to know there is a second question.
+     *
+     * @var list<ResponseInterface>
+     */
+    private array $stateScript = [];
+
+    /** @var list<string> every URL asked for, in order, both questions included */
+    private array $urls = [];
+
     private MockClock $clock;
 
     private InboxProbe $probe;
 
     protected function setUp(): void
     {
-        $this->script   = [self::GMAIL_HOST => [], self::GRAPH_HOST => []];
-        $this->requests = [];
+        $this->script      = [self::GMAIL_HOST => [], self::GRAPH_HOST => []];
+        $this->stateScript = [];
+        $this->urls        = [];
+        $this->requests    = [];
         $this->clock    = new MockClock('2026-10-10 12:00:00');
         $this->probe    = $this->probe();
     }
@@ -331,12 +346,296 @@ final class InboxProbeTest extends TestCase
         self::assertCount(2, $this->requests);
     }
 
+    // ── mail read, unread or starred somewhere else ───────────────────────
+    //
+    // The same discipline as arrivals: each thing is announced ONCE, however many
+    // ticks it stays true for. A read on the phone stays pending until the sync
+    // it asked for has run and stored a new link, and that sync waits behind a
+    // single worker; a probe that said "yes" on every tick until then would be
+    // the loop this class exists not to cause.
+
+    public function testAReadElsewhereOnOutlookIsASyncAnnouncedOnce(): void
+    {
+        $account = $this->graphWithInbox(10);
+
+        $this->script[self::GRAPH_HOST] = [
+            // tick 1: nothing pending (and the Inbox's id is asked once)
+            $this->graphNewest(self::T1), $this->graphInboxId(), $this->graphPending([]),
+            // tick 2: a message was read on the phone
+            $this->graphNewest(self::T1), $this->graphPending([['id' => 'm1', 'isRead' => true]]),
+            // tick 3: the sync it asked for has not run: the same thing is pending
+            $this->graphNewest(self::T1), $this->graphPending([['id' => 'm1', 'isRead' => true]]),
+            // tick 4: the sync ran and stored a new link: nothing pending
+            $this->graphNewest(self::T1), $this->graphPending([]),
+            // tick 5: the same message read again later is NEWS again
+            $this->graphNewest(self::T1), $this->graphPending([['id' => 'm1', 'isRead' => true]]),
+        ];
+
+        self::assertFalse($this->probe->shouldSync($account), 'nothing is pending');
+        self::assertTrue($this->probe->shouldSync($account), 'a read elsewhere is a sync');
+        self::assertFalse($this->probe->shouldSync($account), 'and one is already queued for it');
+        self::assertFalse($this->probe->shouldSync($account), 'quiet again once the sync has run');
+        self::assertTrue($this->probe->shouldSync($account), 'a later change, even to the same message, is another');
+    }
+
+    public function testChangesAlreadyPendingOnTheFirstLookAreNews(): void
+    {
+        // Unlike an arrival, where a first look has nothing to compare the
+        // newest message with. A pending change is evidence in itself: there is
+        // a link, and it says something happened since it was stored.
+        $this->script[self::GRAPH_HOST] = [
+            $this->graphNewest(self::T1), $this->graphInboxId(), $this->graphPending([['id' => 'm1', 'isRead' => false]]),
+        ];
+
+        self::assertTrue($this->probe->shouldSync($this->graphWithInbox(10)));
+    }
+
+    /**
+     * The one thing that must not happen, and the objection to this design that
+     * newestReceivedAt() makes in its own comment: the delta link is the real
+     * sync's cursor. Reading it must leave it exactly where it was — both the
+     * request, which is the stored URL as it is, and the account, which is
+     * never given a new link.
+     */
+    public function testTheProbeReadsTheSavedLinkAndNeverStoresAnother(): void
+    {
+        $account = $this->graphWithInbox(10);
+        $before  = $account->graphDeltaLinks;
+
+        $this->script[self::GRAPH_HOST] = [
+            $this->graphNewest(self::T1), $this->graphInboxId(), $this->graphPending([['id' => 'm1', 'isRead' => true]]),
+        ];
+
+        self::assertTrue($this->probe->shouldSync($account));
+
+        self::assertSame($before, $account->graphDeltaLinks, 'the cursor belongs to the real sync and is never moved');
+        self::assertContains($before['INBOX'], $this->urls, 'what was asked is the stored link, as stored');
+    }
+
+    public function testTheInboxFolderIsAskedForOncePerHourAndNotEveryTick(): void
+    {
+        $account = $this->graphWithInbox(10);
+
+        $this->script[self::GRAPH_HOST] = [
+            $this->graphNewest(self::T1), $this->graphInboxId(), $this->graphPending([]),
+            $this->graphNewest(self::T1), $this->graphPending([]),
+            $this->graphNewest(self::T1), $this->graphPending([]),
+            // an hour later: asked again, so an id that rotated is found
+            $this->graphNewest(self::T1), $this->graphInboxId(), $this->graphPending([]),
+        ];
+
+        $this->probe->shouldSync($account);
+        $this->probe->shouldSync($account);
+        $this->probe->shouldSync($account);
+
+        self::assertCount(1, $this->inboxLookups(), 'asked once for three ticks');
+
+        $this->clock->sleep(3601);
+        $this->probe->shouldSync($account);
+
+        self::assertCount(2, $this->inboxLookups(), 'and again after the hour');
+    }
+
+    public function testAnAccountWhoseInboxHasNoSavedLinkIsNotPeeked(): void
+    {
+        // A folder with no link is the import's: its history is still being read
+        // and there is no cursor to ask about. Only the arrivals question is
+        // put, and the script has no answer for a third.
+        $account = $this->graph(10);
+        $account->graphDeltaLinks = ['SOME-OTHER-FOLDER' => 'https://graph.microsoft.com/v1.0/me/mailFolders/x/messages/delta?$deltatoken=t'];
+
+        $this->script[self::GRAPH_HOST] = [$this->graphNewest(self::T1), $this->graphInboxId()];
+
+        self::assertFalse($this->probe->shouldSync($account));
+        self::assertCount(2, $this->urls, 'newest message, and the Inbox\'s id; no delta link read');
+    }
+
+    public function testAnExpiredInboxLinkIsOneSyncToRecoverItAndThenQuiet(): void
+    {
+        // Recovery is GraphApiSyncer's (it hands the folder back to the import).
+        // The probe starts it once, not on every tick until it has run.
+        $account = $this->graphWithInbox(10);
+
+        $gone = fn (): MockResponse => new MockResponse('{"error":{"code":"syncStateNotFound"}}', [
+            'http_code'        => 410,
+            'response_headers' => ['content-type' => 'application/json'],
+        ]);
+
+        $this->script[self::GRAPH_HOST] = [
+            $this->graphNewest(self::T1), $this->graphInboxId(), $gone(),
+            $this->graphNewest(self::T1), $gone(),
+        ];
+
+        self::assertTrue($this->probe->shouldSync($account));
+        self::assertFalse($this->probe->shouldSync($account));
+    }
+
+    public function testNewMailAndAChangeInOneTickAreOneSync(): void
+    {
+        // A new message is in the folder's delta as well as being the newest
+        // message. Two signals, one answer: a sync, not two.
+        $account = $this->graphWithInbox(10);
+
+        $this->script[self::GRAPH_HOST] = [
+            $this->graphNewest(self::T1), $this->graphInboxId(), $this->graphPending([]),
+            $this->graphNewest(self::T2), $this->graphPending([['id' => 'm2', 'isRead' => false]]),
+            $this->graphNewest(self::T2), $this->graphPending([['id' => 'm2', 'isRead' => false]]),
+        ];
+
+        self::assertFalse($this->probe->shouldSync($account));
+        self::assertTrue($this->probe->shouldSync($account), 'both signals changed');
+        self::assertFalse($this->probe->shouldSync($account), 'and both are remembered');
+    }
+
+    public function testAThrottledPeekPausesTheAccountForAsLongAsMicrosoftAsked(): void
+    {
+        $account = $this->graphWithInbox(10);
+
+        $this->script[self::GRAPH_HOST] = [
+            $this->graphNewest(self::T1), $this->graphInboxId(), $this->throttled(retryAfter: 90, status: 429),
+            $this->graphNewest(self::T1), $this->graphPending([['id' => 'm1', 'isRead' => true]]),
+        ];
+
+        self::assertFalse($this->probe->shouldSync($account), 'a refusal is not news');
+
+        $this->clock->sleep(89);
+        self::assertFalse($this->probe->shouldSync($account));
+        self::assertCount(3, $this->urls, 'newest message, the Inbox\'s id and the refused peek; nothing more inside the window');
+
+        $this->clock->sleep(2);
+        self::assertTrue($this->probe->shouldSync($account), 'and it does end');
+    }
+
+    public function testAReadElsewhereOnGmailIsASyncAnnouncedOnce(): void
+    {
+        $account = $this->gmail(1);
+
+        $this->script[self::GMAIL_HOST] = [$this->gmailQuiet(), $this->gmailQuiet(), $this->gmailQuiet(), $this->gmailQuiet()];
+        $this->stateScript = [
+            $this->gmailStateChange('710'),
+            $this->gmailStateChange('710'),
+            $this->gmailQuiet(),
+            $this->gmailStateChange('720'),
+        ];
+
+        self::assertTrue($this->probe->shouldSync($account), 'a read on the phone, with no mail arriving, is a sync (and first sight is news)');
+        self::assertFalse($this->probe->shouldSync($account), 'the same record is the same news');
+        self::assertFalse($this->probe->shouldSync($account), 'quiet once the cursor has moved');
+        self::assertTrue($this->probe->shouldSync($account), 'a later one is another');
+    }
+
+    public function testOtherLabelChangesOnGmailAreNoSync(): void
+    {
+        $this->script[self::GMAIL_HOST] = [$this->gmailQuiet(), $this->gmailQuiet()];
+        $this->stateScript = [
+            $this->json(['historyId' => '999', 'history' => [
+                ['id' => '710', 'labelsRemoved' => [['message' => ['id' => 'm', 'labelIds' => ['UNREAD']], 'labelIds' => ['INBOX']]]],
+            ]]),
+            // The presence companion: a read is a sync on the same account.
+            $this->gmailStateChange('711'),
+        ];
+
+        self::assertFalse($this->probe->shouldSync($this->gmail(1)), 'an archive is not a read');
+        self::assertTrue($this->probe->shouldSync($this->gmail(1)));
+    }
+
+    public function testAnArrivalAndAReadInOneTickAreOneSyncOnGmail(): void
+    {
+        $account = $this->gmail(1);
+
+        $this->script[self::GMAIL_HOST] = [$this->gmailArrival('705'), $this->gmailArrival('705')];
+        $this->stateScript = [$this->gmailStateChange('706'), $this->gmailStateChange('706')];
+
+        self::assertTrue($this->probe->shouldSync($account));
+        self::assertFalse($this->probe->shouldSync($account), 'both are remembered');
+    }
+
+    public function testAnExpiredCursorIsAnnouncedOnceNotOncePerQuestion(): void
+    {
+        // Both questions are answered 404. The arrivals one names the expiry
+        // (see testAnExpiredCursorIsOneSyncToRecoverItAndThenQuiet); the state
+        // one has nothing to add, and must not be a second reason to sync nor a
+        // failure that pauses the account.
+        $account = $this->gmail(1);
+
+        $this->script[self::GMAIL_HOST] = [$this->httpStatus(404), $this->httpStatus(404)];
+        $this->stateScript              = [$this->httpStatus(404), $this->httpStatus(404)];
+
+        self::assertTrue($this->probe->shouldSync($account));
+        self::assertFalse($this->probe->shouldSync($account));
+    }
+
+    public function testAThrottledStateQuestionOnGmailPausesTheAccount(): void
+    {
+        $account = $this->gmail(1);
+
+        $this->script[self::GMAIL_HOST] = [$this->gmailQuiet(), $this->gmailQuiet()];
+        $this->stateScript              = [$this->throttled(retryAfter: 120), $this->gmailStateChange('710')];
+
+        self::assertFalse($this->probe->shouldSync($account), 'a refusal is not news');
+
+        $this->clock->sleep(119);
+        self::assertFalse($this->probe->shouldSync($account));
+        self::assertCount(1, $this->requests, 'nothing was asked inside the window, of either question');
+
+        $this->clock->sleep(2);
+        self::assertTrue($this->probe->shouldSync($account));
+    }
+
     // ── Fixtures ──────────────────────────────────────────────────────────
+
+    /** An Outlook account whose Inbox is followed by a saved delta link. */
+    private function graphWithInbox(int $id): Account
+    {
+        $account = $this->graph($id);
+
+        $account->graphDeltaLinks = ['INBOX' => 'https://graph.microsoft.com/v1.0/me/mailFolders/INBOX/messages/delta?$deltatoken=saved'];
+
+        return $account;
+    }
+
+    private function graphInboxId(): MockResponse
+    {
+        return $this->json(['id' => 'INBOX']);
+    }
+
+    /**
+     * What a saved delta link answers with.
+     *
+     * @param list<array<string, mixed>> $items
+     */
+    private function graphPending(array $items): MockResponse
+    {
+        return $this->json(['value' => $items, '@odata.deltaLink' => 'https://graph.microsoft.com/v1.0/me/mailFolders/INBOX/messages/delta?$deltatoken=next']);
+    }
+
+    /** @return list<string> */
+    private function inboxLookups(): array
+    {
+        return array_values(array_filter($this->urls, static fn (string $url): bool => str_contains($url, '/mailFolders/inbox')));
+    }
+
+    private function gmailStateChange(string $recordId): MockResponse
+    {
+        return $this->json(['historyId' => '999', 'history' => [
+            ['id' => $recordId, 'labelsRemoved' => [['message' => ['id' => 'm-' . $recordId, 'labelIds' => ['INBOX']], 'labelIds' => ['UNREAD']]]],
+        ]]);
+    }
 
     private function probe(?\Throwable $tokenFailure = null): InboxProbe
     {
         $http = new MockHttpClient(function (string $method, string $url, array $options): ResponseInterface {
             $host = (string) parse_url($url, PHP_URL_HOST);
+
+            $this->urls[] = $url;
+
+            // The state question, told from the arrivals one by the filter the
+            // arrivals one carries. Not counted in $this->requests, which the
+            // tests above read as "how many times was the provider asked about
+            // arrivals".
+            if (self::GMAIL_HOST === $host && false === str_contains($url, 'historyTypes=')) {
+                return array_shift($this->stateScript) ?? $this->gmailQuiet();
+            }
 
             // MockHttpClient has already folded auth_bearer into the headers.
             $this->requests[] = $host . ' ' . str_replace('Authorization: Bearer ', '', (string) ($options['normalized_headers']['authorization'][0] ?? ''));

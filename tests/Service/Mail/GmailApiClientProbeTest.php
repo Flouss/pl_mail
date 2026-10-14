@@ -228,7 +228,194 @@ final class GmailApiClientProbeTest extends TestCase
         }
     }
 
+    // ── mail read, unread or starred somewhere else ───────────────────────
+    //
+    // probeStateChanges(), the other question the probe asks of a Gmail
+    // account. Read and starred are labels here (UNREAD, STARRED), so a read on
+    // a phone is a record of a label coming off — which probeArrivals() asks
+    // not to hear, on purpose, and which is what somebody reading mail on the
+    // phone wants plMail to hear within seconds and not at the next quarter hour.
+
+    public function testItAsksForEveryTypeOfChangeBecauseTwoTypesCannotBeNamed(): void
+    {
+        $client = $this->client([$this->page([])]);
+
+        $client->probeStateChanges($this->account(), '700');
+
+        self::assertCount(1, $this->requests);
+
+        $query = $this->queryOf($this->requests[0]['url']);
+
+        self::assertStringEndsWith('/history', (string) parse_url($this->requests[0]['url'], PHP_URL_PATH));
+        self::assertSame('700', $query['startHistoryId']);
+        // labelAdded and labelRemoved are two types, and a query array cannot
+        // say "two" (see GmailApiSyncer::syncIncremental: it comes out as
+        // historyTypes[0]=…, a name Google does not know). Omitted, the answer
+        // is every type, and this method keeps the records it wants.
+        self::assertArrayNotHasKey('historyTypes', $query);
+        self::assertArrayNotHasKey('labelId', $query);
+
+        $timeout = $this->requests[0]['options']['timeout'] ?? null;
+
+        self::assertIsFloat($timeout);
+        self::assertLessThanOrEqual(15.0, $timeout);
+    }
+
+    public function testNoHistoryIsNoStateChange(): void
+    {
+        self::assertNull($this->client([$this->page(null)])->probeStateChanges($this->account(), '700'));
+    }
+
+    public function testAReadElsewhereIsAStateChange(): void
+    {
+        $client = $this->client([$this->page([$this->labelChange('701', 'labelsRemoved', ['UNREAD'], ['INBOX'])])]);
+
+        self::assertSame('701', $client->probeStateChanges($this->account(), '700'));
+    }
+
+    public function testAnUnreadElsewhereIsAStateChange(): void
+    {
+        $client = $this->client([$this->page([$this->labelChange('702', 'labelsAdded', ['UNREAD'], ['INBOX', 'UNREAD'])])]);
+
+        self::assertSame('702', $client->probeStateChanges($this->account(), '700'));
+    }
+
+    public function testAStarAddedOrRemovedIsAStateChange(): void
+    {
+        $client = $this->client([
+            $this->page([$this->labelChange('703', 'labelsAdded', ['STARRED'], ['INBOX', 'STARRED'])]),
+            $this->page([$this->labelChange('704', 'labelsRemoved', ['STARRED'], ['INBOX'])]),
+        ]);
+
+        self::assertSame('703', $client->probeStateChanges($this->account(), '700'));
+        self::assertSame('704', $client->probeStateChanges($this->account(), '700'));
+    }
+
+    public function testTheSignalIsTheNewestRecordThatChangedState(): void
+    {
+        $client = $this->client([$this->page([
+            $this->labelChange('701', 'labelsRemoved', ['UNREAD'], ['INBOX']),
+            $this->labelChange('705', 'labelsAdded', ['STARRED'], ['INBOX', 'STARRED']),
+        ])]);
+
+        self::assertSame('705', $client->probeStateChanges($this->account(), '700'));
+    }
+
+    /**
+     * Only read and star. A label going on or off for any other reason —
+     * archiving, a tab change, a user label — is not what this asks about, and
+     * every one of them announced would be a sync for something the quarter-hour
+     * sweep already covers. The presence companion is in the same test: the
+     * records that do count are in the same window.
+     */
+    public function testOtherLabelChangesAreNotStateChanges(): void
+    {
+        $client = $this->client([$this->page([
+            $this->labelChange('701', 'labelsRemoved', ['INBOX'], ['UNREAD']),
+            $this->labelChange('702', 'labelsAdded', ['CATEGORY_PROMOTIONS'], ['INBOX', 'CATEGORY_PROMOTIONS']),
+            $this->labelChange('703', 'labelsAdded', ['Label_7'], ['INBOX', 'Label_7']),
+        ])]);
+
+        self::assertNull($client->probeStateChanges($this->account(), '700'), 'nothing here is a read or a star');
+
+        $client = $this->client([$this->page([
+            $this->labelChange('701', 'labelsRemoved', ['INBOX'], ['UNREAD']),
+            $this->labelChange('706', 'labelsRemoved', ['UNREAD'], ['INBOX']),
+        ])]);
+
+        self::assertSame('706', $client->probeStateChanges($this->account(), '700'), 'and the one that is, is found beside them');
+    }
+
+    public function testAnArrivalAndADeletionAreNotStateChanges(): void
+    {
+        // Arrivals are probeArrivals()'s, and announcing them from here too
+        // would queue a second sync for one message. A permanent deletion is
+        // a real change and is left to the quarter-hourly sweep, as before.
+        $client = $this->client([$this->page([
+            $this->added('701', ['INBOX', 'UNREAD']),
+            ['id' => '702', 'messagesDeleted' => [['message' => ['id' => 'gone']]]],
+        ])]);
+
+        self::assertNull($client->probeStateChanges($this->account(), '700'));
+    }
+
+    public function testALabelChangeOnADraftIsNotAStateChange(): void
+    {
+        // Gmail rewrites a draft on every save, and its labels move with it.
+        $client = $this->client([$this->page([
+            $this->labelChange('701', 'labelsRemoved', ['UNREAD'], ['DRAFT']),
+            $this->labelChange('702', 'labelsRemoved', ['UNREAD'], ['INBOX']),
+        ])]);
+
+        self::assertSame('702', $client->probeStateChanges($this->account(), '700'));
+
+        $client = $this->client([$this->page([$this->labelChange('701', 'labelsRemoved', ['UNREAD'], ['DRAFT'])])]);
+
+        self::assertNull($client->probeStateChanges($this->account(), '700'));
+    }
+
+    public function testAnEmptyPageWithAMoreTokenIsFollowedForStateChangesToo(): void
+    {
+        $client = $this->client([
+            $this->page(null, nextPageToken: 'next-1'),
+            $this->page([$this->labelChange('710', 'labelsRemoved', ['UNREAD'], ['INBOX'])]),
+        ]);
+
+        self::assertSame('710', $client->probeStateChanges($this->account(), '700'));
+        self::assertCount(2, $this->requests);
+        self::assertSame('next-1', $this->queryOf($this->requests[1]['url'])['pageToken']);
+    }
+
+    public function testItStopsFollowingPagesAndNamesWhatItCouldNotRuleOut(): void
+    {
+        // The unfiltered window is longer than the arrivals one — every label
+        // change anybody made — so this is the likelier place to hit the cap.
+        // The answer is a marker that is the same every time for one cursor, so
+        // it is announced once: the real sync reads the whole window.
+        $client = $this->client(array_fill(0, 20, $this->page(null, nextPageToken: 'again')));
+
+        $first = $client->probeStateChanges($this->account(), '700');
+
+        self::assertNotNull($first);
+        self::assertCount(5, $this->requests);
+
+        $second = $this->client(array_fill(0, 20, $this->page(null, nextPageToken: 'again')))->probeStateChanges($this->account(), '700');
+
+        self::assertSame($first, $second);
+    }
+
+    public function testAQuotaRejectionOnTheStateQuestionIsThrottling(): void
+    {
+        $client = $this->client([
+            new MockResponse(
+                json_encode(['error' => ['code' => 403, 'errors' => [['reason' => 'userRateLimitExceeded']]]], JSON_THROW_ON_ERROR),
+                ['http_code' => 403, 'response_headers' => ['content-type' => 'application/json', 'retry-after' => '120']],
+            ),
+        ]);
+
+        try {
+            $client->probeStateChanges($this->account(), '700');
+            self::fail('a rejection must not read as "nothing changed"');
+        } catch (GmailThrottledException $e) {
+            self::assertSame(120, $e->getRetryAfterSeconds());
+        }
+    }
+
     // ── Fixtures ──────────────────────────────────────────────────────────
+
+    /**
+     * One history record in which labels came off or went on a message.
+     *
+     * @param 'labelsAdded'|'labelsRemoved' $type
+     * @param list<string> $changed         the labels that moved
+     * @param list<string> $messageLabels   what the message carries after
+     *
+     * @return array<string, mixed>
+     */
+    private function labelChange(string $recordId, string $type, array $changed, array $messageLabels): array
+    {
+        return ['id' => $recordId, $type => [['message' => ['id' => 'm-' . $recordId, 'labelIds' => $messageLabels], 'labelIds' => $changed]]];
+    }
 
     /**
      * One history record that added one message with these labels.

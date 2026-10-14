@@ -124,6 +124,12 @@ final class GraphApiClient
      */
     private const float PROBE_TIMEOUT_SECONDS = InboxProbeInterval::REQUEST_TIMEOUT_SECONDS;
 
+    /**
+     * How many entries pendingChanges() asks a delta page to hold. Only whether
+     * there are any matters, so this is small; Graph rounds it as it likes.
+     */
+    private const int PEEK_PAGE_SIZE = 50;
+
     public function __construct(
         // The scoped client from framework.yaml, not the default one: it
         // retries a GET that Graph answers with 5xx, which is weather rather
@@ -273,6 +279,114 @@ final class GraphApiClient
         $receivedAt = $body['value'][0]['receivedDateTime'] ?? null;
 
         return null === $receivedAt ? null : (string) $receivedAt;
+    }
+
+    /**
+     * The Inbox's folder id, asked for by its well-known name — the one name
+     * every mailbox has, and the only reliable way to find a system folder (see
+     * resolveWellKnownFolders()). Null when the answer carries no id.
+     *
+     * What the probe needs to pick the Inbox's saved delta link out of the
+     * folder => link map on the account.
+     */
+    public function inboxFolderId(Account $account): ?string
+    {
+        $body = $this->request($account, 'GET', self::ME . '/mailFolders/inbox', [
+            'query'   => ['$select' => 'id'],
+            'timeout' => self::PROBE_TIMEOUT_SECONDS,
+        ])->toArray();
+
+        $id = (string) ($body['id'] ?? '');
+
+        return '' === $id ? null : $id;
+    }
+
+    /**
+     * What is waiting on a folder's saved delta link, as a signal — empty when
+     * nothing is, otherwise the same string for as long as the same things are.
+     *
+     * The other half of what an Outlook account is asked in place of a webhook,
+     * and the half newestReceivedAt() cannot be. A message read, unread,
+     * starred, moved or deleted somewhere else changes no message's received
+     * time, and changes no lastModifiedDateTime either (one marked unread in
+     * Outlook kept its September stamp). The delta reports it, because the link
+     * was begun asking for isRead and flag (DELTA_SELECT).
+     *
+     * THE LINK IS NOT MOVED, which is the objection newestReceivedAt() raises
+     * to reading one, and it holds for a read that stores the answer. This does
+     * not. A GET of a stored link returns what is pending since it and leaves it
+     * where it was: the same GET a few seconds later says the same thing, until
+     * the sync has run and stored the link it was given. Nothing here keeps the
+     * link this answer carries — and nothing may: the caller passes the link in
+     * and never gets one back.
+     *
+     * ONE PAGE, A SMALL ONE. The question is whether anything is waiting, and
+     * the answer to that is on the first page; the sync, which has the time,
+     * reads the rest. More than a page is part of the signal, so that a window
+     * that grows past one is announced as the different thing it is.
+     *
+     * A STABLE STRING, SORTED. Graph does not promise the same order twice, and
+     * a signal that moved with the order would be announced as often as it
+     * reordered. Each entry is the message id and what the delta says about it —
+     * read or unread, flagged or not, or removed — so a message toggled back and
+     * forth is a different signal each time.
+     *
+     * A link the server no longer honours is a signal too, named by the link:
+     * recovering is GraphApiSyncer's (it hands the folder back to the import),
+     * and the probe's part is to start that, once.
+     *
+     * Throttling reaches the caller as GraphThrottledException carrying
+     * Retry-After, as for newestReceivedAt().
+     */
+    public function pendingChanges(Account $account, string $deltaLink): string
+    {
+        try {
+            $body = $this->request($account, 'GET', $deltaLink, [
+                // One header, both preferences: request() merges by header name.
+                'headers' => ['Prefer' => sprintf('IdType="ImmutableId", odata.maxpagesize=%d', self::PEEK_PAGE_SIZE)],
+                'timeout' => self::PROBE_TIMEOUT_SECONDS,
+            ])->toArray();
+        } catch (GraphResyncRequiredException) {
+            return 'expired:' . sha1($deltaLink);
+        }
+
+        $entries = [];
+
+        foreach ($body['value'] ?? [] as $item) {
+            $id = (string) ($item['id'] ?? '');
+
+            if ('' === $id) {
+                continue;
+            }
+
+            if (true === array_key_exists('@removed', $item)) {
+                $entries[] = $id . ':removed';
+
+                continue;
+            }
+
+            $read = '-';
+
+            if (true === array_key_exists('isRead', $item)) {
+                $read = true === $item['isRead'] ? 'read' : 'unread';
+            }
+
+            $entries[] = $id . ':' . $read . ':' . (string) ($item['flag']['flagStatus'] ?? '-');
+        }
+
+        $more = true === array_key_exists('@odata.nextLink', $body);
+
+        if ([] === $entries && false === $more) {
+            return '';
+        }
+
+        sort($entries);
+
+        if (true === $more) {
+            $entries[] = 'more';
+        }
+
+        return sha1(implode("\n", $entries));
     }
 
     /**

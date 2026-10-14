@@ -145,4 +145,16 @@ enum SwipeAction: string
             self::None       => [],
         };
     }
+
+    /**
+     * Whatever was stored for a direction, read charitably: the settings bag is
+     * untyped and may hold a value a hand edit or a restored backup put there.
+     * Anything that is not one of the cases above, "trash" among them, reads as
+     * the direction's own default, so no stored string can bring a trash swipe
+     * back.
+     */
+    public static function fromSetting(mixed $value, self $default): self
+    {
+        return true === is_string($value) ? self::tryFrom($value) ?? $default : $default;
+    }
 }

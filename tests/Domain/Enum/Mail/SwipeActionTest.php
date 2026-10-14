@@ -155,6 +155,61 @@ final class SwipeActionTest extends KernelTestCase
         self::assertSame('app_status_archive', SwipeAction::Archive->requireRoute());
     }
 
+    /**
+     * Each stored action comes back as itself. Presence companion to the
+     * default cases below: without it, "every value falls back" would pass for
+     * a fromSetting that ignores what it is given.
+     */
+    public function testEveryStoredActionComesBackAsItself(): void
+    {
+        self::assertSame(SwipeAction::ReadUnread, SwipeAction::fromSetting('read_unread', SwipeAction::Archive));
+        self::assertSame(SwipeAction::Archive, SwipeAction::fromSetting('archive', SwipeAction::ReadUnread));
+        self::assertSame(SwipeAction::Star, SwipeAction::fromSetting('star', SwipeAction::Archive));
+        self::assertSame(SwipeAction::None, SwipeAction::fromSetting('none', SwipeAction::ReadUnread));
+    }
+
+    /**
+     * Two baselines, one per direction, so a fallback that always answers the
+     * same action fails one of them. Expected values are the literal defaults:
+     * right = read/unread, left = archive.
+     */
+    public function testAnUnreadableValueFallsBackToTheDefaultTheCallerPassed(): void
+    {
+        self::assertSame(SwipeAction::ReadUnread, SwipeAction::fromSetting(null, SwipeAction::ReadUnread));
+        self::assertSame(SwipeAction::Archive, SwipeAction::fromSetting(null, SwipeAction::Archive));
+    }
+
+    /**
+     * The stored "trash" is the value a hand-edited bag or an imported backup
+     * could carry. It must fall back, so no stored string brings a trash swipe
+     * back. The Star case is the presence companion in the same test.
+     */
+    public function testTrashIsNotAnActionEvenWhenStored(): void
+    {
+        self::assertSame(SwipeAction::ReadUnread, SwipeAction::fromSetting('trash', SwipeAction::ReadUnread));
+        self::assertSame(SwipeAction::Archive, SwipeAction::fromSetting('trash', SwipeAction::Archive));
+        self::assertSame(SwipeAction::Star, SwipeAction::fromSetting('star', SwipeAction::Archive));
+    }
+
+    #[DataProvider('unreadableSettings')]
+    public function testAValueThatIsNotAnActionIsTheDefaultRatherThanAnError(mixed $stored): void
+    {
+        self::assertSame(SwipeAction::Archive, SwipeAction::fromSetting($stored, SwipeAction::Archive));
+        self::assertSame(SwipeAction::ReadUnread, SwipeAction::fromSetting($stored, SwipeAction::ReadUnread));
+    }
+
+    /** @return iterable<string, array{mixed}> */
+    public static function unreadableSettings(): iterable
+    {
+        yield 'an action that does not exist' => ['bounce'];
+        yield 'the wrong case'                 => ['Archive'];
+        yield 'an empty string'                => [''];
+        yield 'a boolean'                      => [true];
+        yield 'a number'                       => [1];
+        yield 'an array'                       => [['archive']];
+        yield 'nothing stored'                 => [null];
+    }
+
     private static function catalogueHas(string $locale, string $key): bool
     {
         $tree = Yaml::parseFile(dirname(__DIR__, 4) . '/translations/messages.' . $locale . '.yaml');

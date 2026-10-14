@@ -5740,9 +5740,13 @@ li[data-swipe-side] > [data-swipe-content] {
    presses it. Only the picker's panel takes pointer events, so the entry under it
    stays tappable. Unlayered, like the rules above. */
 
+/* Both spellings: iOS Safari reads only -webkit-user-select, and the stylesheet build adds no
+   prefix to a hand-written rule (only to Tailwind's own utilities). Unprefixed alone, the
+   press on a word still starts a selection on an iPhone. */
 [data-pressed],
 [data-pressed] > a {
     -webkit-touch-callout: none;
+    -webkit-user-select: none;
     user-select: none;
 }
 

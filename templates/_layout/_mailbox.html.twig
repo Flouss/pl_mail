@@ -303,11 +303,13 @@ csrf token. Both measured: see App\Twig\ListFragmentGlobal.
                         {# One data-controller attribute: a second one is dropped by the parser. The
                            pull gesture is outside the frame, so a refresh cannot take it away, and
                            it reaches the topbar's sync button by lookup, not by DOM position. #}
+                        {# The row swipe is outside the frame for the same reason, and one delegated
+                           listener serves every row, so a refresh cannot leave a row without it. #}
                         {% if app.user %}
-                            data-controller="mail--new-marker mail--pull-to-refresh"
+                            data-controller="mail--new-marker mail--pull-to-refresh mail--row-swipe"
                             data-mail--new-marker-url-value="{{ path('app_mail_threads_listed') }}"
                         {% else %}
-                            data-controller="mail--pull-to-refresh"
+                            data-controller="mail--pull-to-refresh mail--row-swipe"
                         {% endif %}
                         {# @container, so the rows below switch to their stacked
                            layout on the LIST's width. They used to switch on the

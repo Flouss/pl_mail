@@ -1,0 +1,22 @@
+{#
+One direction's revealed action on a mail row, for the row swipe.
+
+Included once per live direction (see _thread_row.html.twig), so a direction
+the resolver makes inert draws nothing at all. The button posts its own URL
+and body through mail--message-row, the same write path as the strip's
+buttons; the gesture only decides when the press happens.
+
+`side`  left or right: which edge the panel sits on, and so its colour.
+`swipe` a SwipeAffordance: url, body, label (a translation key), icon.
+#}
+<div data-swipe-panel="{{ side }}" class="swipe-panel">
+    <button type="button"
+            data-swipe-commit
+            data-action="click->mail--row-swipe#commit"
+            data-swipe-url="{{ swipe.url }}"
+            data-swipe-body="{{ swipe.body ? swipe.body|json_encode : '{}' }}"
+            class="swipe-panel__action">
+        <i class="{{ swipe.icon }}" aria-hidden="true"></i>
+        <span>{{ swipe.label|trans }}</span>
+    </button>
+</div>

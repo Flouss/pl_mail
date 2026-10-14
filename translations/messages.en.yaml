@@ -1,6 +1,7 @@
 account:
     add_title: Add account
     added: Account added successfully
+    colour_set: Account colour changed
     disabled: Account disabled
     enabled: Account enabled
     form:
@@ -17,6 +18,9 @@ account:
         smtp:
             heading: Outgoing — SMTP
             host: Host
+            password: Sending password
+            same: Use the same password for sending
+            separate: Use a different password for sending
         username: Username
     oauth:
         calendar_declined: The account is connected, but calendar access was not granted — so its calendars will not sync. Reconnect it and tick calendar access on Google's consent screen.
@@ -166,7 +170,7 @@ admin:
             qwen3-embedding_0_6b: 'The default, and the one to pick unless you have a reason. Multilingual, which matters more than any benchmark for a mailbox that is not all in one language, and the only one here that reached perfect precision in testing. 639 MB.'
         field:
             base_url: 'Model host'
-            base_url_help: 'The address of an Ollama container on your network, including the port.'
+            base_url_help: 'For Ollama, the address of the container on your network, including the port. For an OpenAI-compatible endpoint, the API root including its version, such as https://api.example.com/v1.'
             categorisation: 'Sort mail into tabs'
             categorisation_help: 'Runs on every message that arrives. Only ever a tie-breaker — the ordinary rules decide first.'
             chat_keep_alive: 'Keep the writing model loaded for'
@@ -175,7 +179,11 @@ admin:
             chat_model_help: 'Used for replies, summaries and sorting. Something instruction-tuned.'
             embedding_keep_alive: 'Keep the search model loaded for'
             embedding_keep_alive_help: 'Same format as above. This model is small and asked for constantly, so -1 — loaded for good — usually costs little and saves a wait on every search; it is worth setting if the host has the memory to spare. Leave empty to use whatever the host itself is set to.'
+            embedding_base_url: 'Search host'
             embedding_model: 'Search model'
+            embedding_own: 'Search uses a different model host'
+            embedding_own_help: 'For running the search model somewhere other than the writing model: a hosted model for writing and a small one at home for search, or the reverse. Every message is sent to the search host once to be indexed. If the search model has the same name there, the existing index is kept.'
+            embedding_provider: 'Search host provider'
             embedding_model_help: 'Turns mail into vectors so search can find meaning rather than words.'
             hold: 'Wait for the assistant before showing new mail in a tab'
             hold_help: 'For people who let the assistant sort their mail. New mail is kept out of the inbox tabs for the moment the assistant needs, so it appears once, in the right tab, instead of appearing in one and moving to another. Mail brought in by a first import is never held.'
@@ -186,27 +194,36 @@ admin:
             semantic_min_similarity: 'Minimum similarity'
             semantic_min_similarity_help: 'How close a match has to be, from 0 to 1. Every model answers on its own scale, so this belongs with the model above: too high finds nothing, too low returns the whole mailbox.'
             enabled: 'Use a language model'
+            headers: 'Extra headers'
+            headers_clear: 'Remove the stored headers'
+            headers_help: 'One per line, written Name: value. Sent with every request to the model host, for a proxy or gateway that asks for more than a token. Stored encrypted and never shown again.'
+            headers_help_set: 'On file: %names%. Leave empty to keep them. Anything typed here replaces all of them; the stored values are never shown.'
+            provider: 'Provider'
+            provider_help: 'Which API the model host speaks. Ollama is the one plMail knows most about: it can keep a model loaded and load one ahead of time. OpenAI-compatible covers nearly everything else, on your own network or hosted.'
             enabled_help: 'Off by default. Everything below is ignored while this is off.'
             search: 'Search by meaning'
             search_help: 'Adds results that match what you meant. The ordinary search is unchanged.'
             summary: 'Thread summaries'
             summary_help: 'Uses the writing model. A cold request takes about a minute and holds the GPU for all of it.'
             token: 'Token'
-            token_help: 'Only if you have put the host behind something that asks for one.'
-            token_help_set: 'A token is on file. Leave blank to keep it.'
+            token_help: 'Only if you have put the host behind something that asks for one. Sent as a bearer token with every request.'
+            token_help_set: 'A token is on file. Leave blank to keep it. Changing the address above without typing one drops it.'
             writing_help: 'Help me write'
             writing_help_help: 'Offers drafts and rewrites in the composer, when you ask for them.'
         heading: 'Language model'
+        headers:
+            summary: 'Extra headers for a proxy or gateway'
         hold:
             details: 'See each message'
             measured: 'Last 7 days: %count% messages held, typically for %median% s (95% within %p95% s). %timeout% were shown without an answer because the wait ran out.'
             no_data: 'No mail has been held in the last 7 days, so there is no delay to report yet.'
-        intro: 'plMail can use a language model you run yourself. Nothing is sent anywhere else, nothing is switched on until you say so, and the mail client works exactly as it does now while this is off.'
+        intro: 'plMail can use a language model, on a machine you run yourself or at an endpoint you choose. Mail is sent to the address you enter here and nowhere else, nothing is switched on until you say so, and the mail client works exactly as it does now while this is off.'
         perf:
             by_model: 'Per model'
             chip:
                 cold: 'Nothing loaded'
                 off: 'Off'
+                answering: 'Answering'
                 split: 'Partly on the CPU'
                 unreachable: 'No answer'
                 warm: 'Loaded'
@@ -255,9 +272,18 @@ admin:
                 day: '24 hours'
                 hour: 'Hour'
                 week: '7 days'
+        provider:
+            ollama: 'Ollama'
+            openai: 'OpenAI-compatible'
         probe:
+            host:
+                search: 'Search host'
+                writing: 'Model host'
             missing_model: 'That host answered, but it is not holding: %models%. Pull them on the host first.'
             no_host: 'Type an address first.'
+            no_model_list: 'Something answered at that address, but it has no model list (HTTP %status%). Check that the address ends in the API version, usually /v1. Some servers have no list and still work; save and try a draft to find out.'
+            not_an_api: 'Something answered at that address, but not with JSON. That is usually a login page or a proxy, not the API.'
+            refused: 'That host answered and refused the request (HTTP %status%). Check the token.'
             ok: 'That host answered, and is holding %count% models.'
             models: 'Show the %count% models it is holding'
             status: 'That host answered with HTTP %status%.'
@@ -310,6 +336,7 @@ admin:
             model_missing: 'That host has no model called “%model%”. Pull it there, or name one that is on it. (%error%)'
             no_host: 'Set a model host first, and save.'
             no_model: 'Name a writing model first, and save.'
+            not_ollama: 'Only an Ollama host can be asked to load a model ahead of time.'
             status: 'The host refused with HTTP %status%. (%error%)'
             timeout: 'The host was still loading after four minutes and plMail stopped waiting. It may well finish; the model is very likely too big for the memory it has.'
             unexpected: 'Something went wrong before the host could answer. (%error%)'
@@ -733,6 +760,7 @@ admin:
         performance: Performance
         push: Push
         reset: Reset
+        sso: 'SSO'
         system: System
         updates: Updates
         users: Users
@@ -919,6 +947,32 @@ admin:
     refresh_hint: 'Live panels refresh every 10s'
     # Shown in a card's header while it is collapsed — short enough to read at
     # a glance, specific enough to be worth expanding for.
+    sso:
+        clear_secret: 'Forget the stored client secret'
+        clear_secret_help: 'Empty the issuer and the client ID as well. Sign-in then falls back to the OIDC_* variables in the environment, or switches off if there are none.'
+        env_note: 'Leave issuer, client ID and secret all empty and sign-in falls back to OIDC_ISSUER, OIDC_CLIENT_ID and OIDC_CLIENT_SECRET in the environment, so an installation configured that way keeps working. What is saved here wins over them.'
+        field:
+            auto_create: 'Create an account for people plMail has not seen'
+            auto_create_help: 'On, everybody the provider lets through gets an ordinary account here, so limit who that is at the provider. Off, an administrator creates each account first, with the same address.'
+            button_label: 'Name on the button'
+            button_label_help: 'The login button reads "Sign in with …" and this name. Empty says "single sign-on".'
+            client_id: 'Client ID'
+            client_secret: 'Client secret'
+            issuer: 'Issuer'
+            issuer_help: 'The provider''s issuer URL, exactly as its discovery document states it. In Authentik it is the "OpenID Configuration Issuer" on the provider''s page.'
+            require_verified_email: 'Only link an address the provider has verified'
+            require_verified_email_help: 'A first sign-in finds its account by email address. Switch this off only where people cannot edit their own address at the provider: with it off, anybody who can is able to claim any account that has not signed in through the provider yet.'
+            scopes: 'Scopes'
+            scopes_help: 'Separated by spaces. "openid" is always added, and without "email" a first sign-in cannot find its account. Empty asks for openid, email and profile.'
+        heading: 'Single sign-on'
+        intro: 'Let people sign in through an OpenID Connect provider you already run: Authentik, Keycloak, Authelia and the like. The login page then shows a button above the password form, which stays.'
+        redirect_uri_help: 'Register this at the provider as the redirect URI, exactly as shown.'
+        save: 'Save'
+        saved: 'Single sign-on saved.'
+        status:
+            environment: 'On, from the environment'
+            'off': 'Off'
+            'on': 'On'
     summary:
         accounts: '%count% accounts'
         active: '%count% active'
@@ -1134,9 +1188,16 @@ admin:
         hint: The build this installation is running — the release, and the commit it was built from.
 alias:
     added: 'Address added.'
+    catch_all_added: 'Catch-all domain added.'
+    catch_all_duplicate: 'That domain is already a catch-all on this account.'
+    catch_all_invalid: "That doesn't look like a domain. Enter it like example.com."
+    catch_all_removed: 'Catch-all domain removed.'
+    catch_all_unsupported: 'Gmail and Outlook only send as addresses the provider knows, so a catch-all domain cannot be used on this account.'
     deleted: 'Address removed.'
     duplicate: 'That address is already on this account.'
     invalid: "That doesn't look like a valid email address."
+    name_cleared: 'Sender name removed. This address sends under the account name again.'
+    name_set: 'Sender name saved.'
     primary_set: 'Primary address updated.'
     refreshed: 'Refreshed from provider.'
     status_blocked: "The primary address can't be disabled — make another primary first."
@@ -2172,7 +2233,24 @@ integration:
         too_big: 'Too large to attach'
 
 jobs:
+    button:
+        failed: "Something failed"
+        importing: "Importing"
+        importing_percent: "Importing · %percent%%"
+        working: "Working…"
     heading: Background work
+    import:
+        folder: "Now: %folder%"
+        heading: "Importing %account%"
+        newest_first: "Newest mail first"
+        quota: "Gmail quota: about %used% of %limit% units this minute"
+        quota_assumed: "Gmail quota: about %used% of %limit% units this minute (limit assumed until Google names it)"
+        quota_paused: "Paused by Gmail's quota · continues in %seconds% s"
+        quota_refused: "Gmail said no at about %used% of %limit% units a minute"
+        rate: "About %count% messages a minute"
+        remaining_hours: "About %hours% h %minutes% min left"
+        remaining_minutes: "About %minutes% min left"
+        waiting: "Waiting to continue"
     started: 'Started %action% — this runs in the background.'
     failure:
         abandoned: 'Interrupted — this stopped part-way, and whatever it had already done was kept.'
@@ -2185,6 +2263,7 @@ jobs:
         snooze: Snoozing
         wake: Bringing back from snooze
         move_to: Moving
+        purge: Deleting for good
         reclassify: Sorting recent mail again
     state:
         done: '%count% done'
@@ -2239,6 +2318,10 @@ login:
         password: Password
         remember_me: Keep me logged in
         submit: Sign in
+    oidc:
+        button: Sign in with single sign-on
+        button_named: Sign in with %provider%
+        or: or
     page_title: Sign in
     register:
         coming_soon: Registration coming soon.
@@ -2424,7 +2507,7 @@ onboarding:
                 For Gmail and Outlook, use the sign-in buttons under Settings → Mail
                 accounts instead — no server addresses needed.
         admin_ai:
-            body: 'The address of an Ollama container on your network, and the names of two models it is holding — one for writing, one for search. Nothing leaves your network.'
+            body: 'The address of an Ollama container on your network, or of any OpenAI-compatible endpoint, and the names of two models it offers — one for writing, one for search. Mail goes to that address and nowhere else.'
             heading: 'What you need'
             skip_body: 'Press Next with everything empty. plMail is a complete mail client without any of this, and you can come back to it later in Admin → AI.'
             skip_heading: 'Not interested?'
@@ -2488,7 +2571,7 @@ onboarding:
             lead: Connect the mailbox you actually read, and plMail starts syncing it.
             title: Mail account
         admin-ai:
-            intro: 'plMail can use a language model you run yourself — for searching by meaning, sorting mail, and help with writing. It is entirely optional, and you can leave every box below empty.'
+            intro: 'plMail can use a language model — one you run yourself, or an endpoint you choose — for searching by meaning, sorting mail, and help with writing. It is entirely optional, and you can leave every box below empty.'
             lead: 'Optional. Leave it empty if you do not want it.'
             title: 'Language model'
         admin-integrations:
@@ -2706,6 +2789,17 @@ settings:
             off: 'Off'
             on: 'On'
     accounts:
+        colour:
+            change: 'Change the colour of %account%'
+            swatch:
+                '0': Orange
+                '1': Green
+                '2': Blue
+                '3': Violet
+                '4': Amber
+                '5': Pink
+                '6': Teal
+                '7': Olive
         delete: Remove account
         delete_confirm: 'Remove %account%? This permanently deletes all synced messages for this account and cannot be undone.'
         disable: Disable account
@@ -2788,6 +2882,12 @@ settings:
     aliases:
         add: 'Add'
         add_placeholder: 'Add another address…'
+        catch_all:
+            add: 'Set as catch-all'
+            hint: 'If every address at a domain reaches this mailbox, add the domain here. A reply then goes out from the address the mail was sent to, without adding each one above.'
+            label: 'Catch-all domains'
+            placeholder: 'example.com'
+            remove: 'Remove %domain%'
         delete: 'Remove'
         disable: 'Disable'
         empty: 'No addresses yet.'
@@ -2796,6 +2896,9 @@ settings:
         make_primary: 'Make primary'
         ms_sender_hint: 'Outlook sends as your account’s primary alias regardless of the address chosen here — change it in your'
         ms_sender_hint_link: 'Microsoft account settings'
+        name_for: 'Sender name for %alias%'
+        name_placeholder: 'Sender name'
+        name_save: 'Save name'
         primary: 'Primary'
         refresh: 'Refresh from provider'
         subheading: 'Addresses this account sends and receives as.'
@@ -2894,6 +2997,8 @@ settings:
             heading: Message list
             listAvatars: Sender discs
             listAvatarsHint: The coloured circle carrying the sender's initial. Switched off it becomes a plain circle rather than disappearing — it is also the row's checkbox.
+            tabUnreadCount: 'Unread count on inbox tabs'
+            tabUnreadCountHint: 'The number beside each tab''s name: how many conversations in that category hold unread mail. The tabs add up to the Inbox badge in the sidebar. The "3 new" pill is separate and stays.'
             previewLines: Preview lines
             previewLines0: None
             previewLines1: One line
@@ -3543,6 +3648,14 @@ settings:
         test_failed: 'Connection test failed'
         test_ok: 'Connection is working'
         unavailable_heading: 'Not available here'
+    calendar_behaviour:
+        button: Calendar button
+        button_hint: 'Which views the button in the top bar steps through. A view it leaves out is not removed: the drag handle still reaches it.'
+        heading: Behaviour
+        option_calendar: Split only
+        option_none: All three
+        option_split: Full width only
+        subheading: 'How the calendar button in the top bar moves between views.'
     calendars:
         account_hint: Where events found in mail from %address% are filed.
         caldav:
@@ -3652,13 +3765,25 @@ settings:
     language:
         heading: Language
         subheading: The language plMail's interface is shown in. Your mail is left as it was written.
+    disposal:
+        delete_now: Delete-now buttons
+        delete_now_hint: >-
+            Offers Delete forever on a row in Spam and the bin, and above a ticked
+            selection there. It removes the mail from your mail server too and
+            cannot be undone, so it is off until you turn it on.
+        heading: Disposal
+        'off': 'Off'
+        'on': 'On'
+        subheading: How mail is thrown away for good.
     nav:
         accounts: Mail accounts
         ai: 'Assistant'
         aliases: Aliases
         app_passwords: App passwords
         appearance: Appearance
+        calendar_behaviour: Behaviour
         calendars: Calendars
+        disposal: Disposal
         filters: Filters
         general: General
         group:
@@ -3848,6 +3973,17 @@ settings:
         reverted: 'Back to the account signature.'
         save: 'Save signature'
         saved: 'Saved.'
+        source:
+            clean: 'Nothing was removed.'
+            embedded: 'Images stored in the signature: %count%.'
+            failed: 'The signature could not be rendered. Your HTML is unchanged. Try again.'
+            html: 'HTML'
+            label: '%label% as HTML'
+            placeholder: 'Paste or write the HTML of your signature…'
+            remote: 'Images that could not be stored and stay linked: %count%. They do not show here and some recipients have to allow them first.'
+            removed: 'Removed, because mail clients would not show it or it is not safe to send: %items%.'
+            rendered: 'Rendered'
+            toggle: 'Signature view'
         subheading: 'What is added to the bottom of the messages you write.'
     sorting:
         again:
@@ -4174,9 +4310,15 @@ toolbar:
         mark_unread: Mark as unread
         more: More
         move_to: Move to
+        purge: Delete forever
         snooze: Snooze
         spam: 'Mark as spam'
         star: Star
+    # Asked before a selection in Spam is deleted for good. Two sentences rather
+    # than one with a number swapped in, because "1 conversations" is not English.
+    purge_confirm:
+        one: 'Delete this conversation for good? It cannot be brought back, and it is removed from the mail server too.'
+        many: 'Delete these %count% conversations for good? They cannot be brought back, and they are removed from the mail server too.'
     filter:
         show_all: Show all
         unread_only: Unread only

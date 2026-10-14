@@ -1,6 +1,7 @@
 account:
     add_title: Konto hinzufügen
     added: Konto wurde hinzugefügt
+    colour_set: Kontofarbe geändert
     disabled: Konto deaktiviert
     enabled: Konto aktiviert
     form:
@@ -17,6 +18,9 @@ account:
         smtp:
             heading: Ausgehend — SMTP
             host: Server
+            password: Passwort zum Senden
+            same: Zum Senden dasselbe Passwort verwenden
+            separate: Zum Senden ein anderes Passwort verwenden
         username: Benutzername
     oauth:
         calendar_declined: Das Konto ist verbunden, aber der Kalenderzugriff wurde nicht erteilt — seine Kalender werden also nicht synchronisiert. Verbinde es neu und hak auf Googles Zustimmungsseite den Kalenderzugriff an.
@@ -171,7 +175,17 @@ admin:
             qwen3-embedding_0_6b: 'Die Voreinstellung, und ohne besonderen Grund die richtige Wahl. Mehrsprachig, was für ein Postfach, das nicht nur eine Sprache spricht, mehr zählt als jeder Benchmark — und das einzige hier, das im Test perfekte Präzision erreicht hat. 639 MB.'
         field:
             base_url: 'Modell-Host'
-            base_url_help: 'Die Adresse eines Ollama-Containers in deinem Netz, mit Port.'
+            embedding_base_url: 'Such-Host'
+            embedding_own: 'Die Suche nutzt einen anderen Modell-Host'
+            embedding_own_help: 'Wenn das Such-Modell woanders laufen soll als das Schreib-Modell: ein gehostetes Modell zum Schreiben und ein kleines zu Hause für die Suche, oder umgekehrt. Jede Nachricht geht einmal an den Such-Host, um indiziert zu werden. Heißt das Such-Modell dort gleich, bleibt der vorhandene Index erhalten.'
+            embedding_provider: 'Anbieter des Such-Hosts'
+            headers: 'Zusätzliche Header'
+            headers_clear: 'Gespeicherte Header entfernen'
+            headers_help: 'Einer pro Zeile, geschrieben Name: Wert. Gehen mit jeder Anfrage an den Modell-Host, für einen Proxy oder ein Gateway, das mehr als ein Token verlangt. Verschlüsselt gespeichert und nie wieder angezeigt.'
+            headers_help_set: 'Hinterlegt: %names%. Leer lassen, um sie zu behalten. Was du hier eintippst, ersetzt alle; die gespeicherten Werte werden nie angezeigt.'
+            provider: 'Anbieter'
+            provider_help: 'Welche API der Modell-Host spricht. Über Ollama weiß plMail am meisten: Es kann ein Modell geladen halten und eines vorab laden. OpenAI-kompatibel deckt fast alles andere ab, im eigenen Netz oder gehostet.'
+            base_url_help: 'Bei Ollama die Adresse des Containers in deinem Netz, mit Port. Bei einem OpenAI-kompatiblen Endpunkt die Wurzel der API samt Version, etwa https://api.example.com/v1.'
             categorisation: 'Mail in Tabs einsortieren'
             categorisation_help: 'Läuft bei jeder eingehenden Nachricht. Immer nur als Stichentscheid — zuerst entscheiden die normalen Regeln.'
             chat_keep_alive: 'Schreib-Modell geladen lassen für'
@@ -197,21 +211,24 @@ admin:
             summary: 'Zusammenfassungen von Gesprächen'
             summary_help: 'Nutzt das Schreibmodell. Eine kalte Anfrage dauert etwa eine Minute und belegt so lange die GPU.'
             token: 'Token'
-            token_help: 'Nur nötig, wenn du den Host hinter etwas gestellt hast, das danach fragt.'
-            token_help_set: 'Ein Token ist hinterlegt. Leer lassen, um es zu behalten.'
+            token_help: 'Nur nötig, wenn du den Host hinter etwas gestellt hast, das danach fragt. Geht als Bearer-Token mit jeder Anfrage.'
+            token_help_set: 'Ein Token ist hinterlegt. Leer lassen, um es zu behalten. Änderst du oben die Adresse, ohne eines einzutippen, wird es verworfen.'
             writing_help: 'Beim Schreiben helfen'
             writing_help_help: 'Bietet im Editor Entwürfe und Umformulierungen an, wenn du danach fragst.'
         heading: 'Sprachmodell'
+        headers:
+            summary: 'Zusätzliche Header für einen Proxy oder ein Gateway'
         hold:
             details: 'Jede Nachricht ansehen'
             measured: 'Letzte 7 Tage: %count% Nachrichten zurückgehalten, typischerweise %median% s (95 % innerhalb von %p95% s). %timeout% wurden ohne Antwort angezeigt, weil die Wartezeit abgelaufen war.'
             no_data: 'In den letzten 7 Tagen wurde keine Mail zurückgehalten — es gibt noch keine Verzögerung zu berichten.'
-        intro: 'plMail kann ein Sprachmodell benutzen, das du selbst betreibst. Es geht nichts nach außen, nichts wird eingeschaltet, bis du es sagst, und solange das aus ist, funktioniert der Mail-Client genau wie bisher.'
+        intro: 'plMail kann ein Sprachmodell benutzen, auf einer Maschine, die du selbst betreibst, oder an einem Endpunkt deiner Wahl. Mails gehen an die Adresse, die du hier einträgst, und sonst nirgendwohin. Nichts wird eingeschaltet, bis du es sagst, und solange das aus ist, funktioniert der Mail-Client genau wie bisher.'
         perf:
             by_model: 'Nach Modell'
             chip:
                 cold: 'Nichts geladen'
                 off: 'Aus'
+                answering: 'Antwortet'
                 split: 'Teils auf der CPU'
                 unreachable: 'Keine Antwort'
                 warm: 'Geladen'
@@ -260,9 +277,18 @@ admin:
                 day: '24 Stunden'
                 hour: 'Stunde'
                 week: '7 Tage'
+        provider:
+            ollama: 'Ollama'
+            openai: 'OpenAI-kompatibel'
         probe:
             missing_model: 'Der Host hat geantwortet, hat aber nicht: %models%. Zieh sie dort erst.'
+            host:
+                search: 'Such-Host'
+                writing: 'Modell-Host'
             no_host: 'Trag zuerst eine Adresse ein.'
+            no_model_list: 'Unter der Adresse antwortet etwas, aber es gibt keine Modell-Liste (HTTP %status%). Prüf, ob die Adresse auf die API-Version endet, meist /v1. Manche Server haben keine Liste und funktionieren trotzdem; speichere und probier einen Entwurf aus.'
+            not_an_api: 'Unter der Adresse antwortet etwas, aber nicht mit JSON. Das ist meist eine Anmeldeseite oder ein Proxy, nicht die API.'
+            refused: 'Der Host hat geantwortet und die Anfrage abgelehnt (HTTP %status%). Prüf das Token.'
             ok: 'Der Host hat geantwortet und hält %count% Modelle bereit.'
             models: 'Die %count% vorhandenen Modelle anzeigen'
             status: 'Der Host hat mit HTTP %status% geantwortet.'
@@ -315,6 +341,7 @@ admin:
             model_missing: 'Auf dem Host gibt es kein Modell namens „%model%“. Zieh es dort, oder trag eines ein, das da ist. (%error%)'
             no_host: 'Trag zuerst einen Modell-Host ein und speichere.'
             no_model: 'Trag zuerst ein Schreib-Modell ein und speichere.'
+            not_ollama: 'Nur ein Ollama-Host lässt sich bitten, ein Modell vorab zu laden.'
             status: 'Der Host hat mit HTTP %status% abgelehnt. (%error%)'
             timeout: 'Der Host hat nach vier Minuten immer noch geladen, plMail hat aufgehört zu warten. Gut möglich, dass er fertig wird — vermutlich ist das Modell aber zu groß für seinen Speicher.'
             unexpected: 'Etwas ist schiefgegangen, bevor der Host antworten konnte. (%error%)'
@@ -745,6 +772,7 @@ admin:
         performance: Leistung
         push: Push
         reset: Zurücksetzen
+        sso: 'SSO'
         system: System
         updates: Aktualisierungen
         users: Benutzer
@@ -930,6 +958,32 @@ admin:
         running_for: 'seit %duration%'
         waiting_since: 'Wartet seit'
     refresh_hint: 'Live-Bereiche aktualisieren sich alle 10 s'
+    sso:
+        clear_secret: 'Gespeichertes Client-Secret vergessen'
+        clear_secret_help: 'Leere dazu auch den Issuer und die Client-ID. Die Anmeldung fällt dann auf die OIDC_*-Variablen der Umgebung zurück oder schaltet sich aus, wenn es keine gibt.'
+        env_note: 'Lass Issuer, Client-ID und Secret alle leer, und die Anmeldung fällt auf OIDC_ISSUER, OIDC_CLIENT_ID und OIDC_CLIENT_SECRET aus der Umgebung zurück — eine so eingerichtete Installation läuft also weiter. Was hier gespeichert ist, hat Vorrang.'
+        field:
+            auto_create: 'Konto für Personen anlegen, die plMail noch nicht kennt'
+            auto_create_help: 'An, und jede Person, die der Anbieter durchlässt, bekommt hier ein gewöhnliches Konto — begrenz also beim Anbieter, wer das ist. Aus, und die Administration legt jedes Konto vorher mit derselben Adresse an.'
+            button_label: 'Name auf dem Button'
+            button_label_help: 'Auf dem Login-Button steht „Mit … anmelden“ und dieser Name. Leer heißt es „Single Sign-on“.'
+            client_id: 'Client-ID'
+            client_secret: 'Client-Secret'
+            issuer: 'Issuer'
+            issuer_help: 'Die Issuer-URL des Anbieters, genau so, wie sein Discovery-Dokument sie angibt. In Authentik ist das der „OpenID Configuration Issuer“ auf der Seite des Providers.'
+            require_verified_email: 'Nur eine Adresse verknüpfen, die der Anbieter bestätigt hat'
+            require_verified_email_help: 'Eine erste Anmeldung findet ihr Konto über die E-Mail-Adresse. Schalt das nur aus, wenn man die eigene Adresse beim Anbieter nicht selbst ändern kann: Ist es aus, kann jede Person, die das darf, jedes Konto übernehmen, das sich noch nicht über den Anbieter angemeldet hat.'
+            scopes: 'Scopes'
+            scopes_help: 'Durch Leerzeichen getrennt. „openid“ wird immer ergänzt, und ohne „email“ findet eine erste Anmeldung ihr Konto nicht. Leer fragt openid, email und profile an.'
+        heading: 'Single Sign-on'
+        intro: 'Lass Menschen sich über einen OpenID-Connect-Anbieter anmelden, den du ohnehin betreibst: Authentik, Keycloak, Authelia und ähnliche. Die Login-Seite zeigt dann einen Button über dem Passwortformular, das bleibt.'
+        redirect_uri_help: 'Trag das beim Anbieter als Redirect-URI ein, genau so, wie es hier steht.'
+        save: 'Speichern'
+        saved: 'Single Sign-on gespeichert.'
+        status:
+            environment: 'An, aus der Umgebung'
+            'off': 'Aus'
+            'on': 'An'
     summary:
         accounts: '%count% Konten'
         active: '%count% aktiv'
@@ -1149,9 +1203,16 @@ admin:
         hint: Der Build, den diese Installation ausführt — die Version und der Commit, aus dem sie gebaut wurde.
 alias:
     added: 'Adresse hinzugefügt.'
+    catch_all_added: 'Catch-all-Domain hinzugefügt.'
+    catch_all_duplicate: 'Diese Domain ist in diesem Konto bereits als Catch-all eingetragen.'
+    catch_all_invalid: 'Das sieht nicht nach einer Domain aus. Gib sie so ein: example.com.'
+    catch_all_removed: 'Catch-all-Domain entfernt.'
+    catch_all_unsupported: 'Gmail und Outlook senden nur über Adressen, die der Anbieter kennt. Eine Catch-all-Domain lässt sich in diesem Konto deshalb nicht nutzen.'
     deleted: 'Adresse entfernt.'
     duplicate: 'Diese Adresse ist bereits in diesem Konto vorhanden.'
     invalid: 'Das sieht nicht nach einer gültigen E-Mail-Adresse aus.'
+    name_cleared: 'Absendername entfernt. Diese Adresse sendet wieder unter dem Namen des Kontos.'
+    name_set: 'Absendername gespeichert.'
     primary_set: 'Hauptadresse aktualisiert.'
     refreshed: 'Vom Anbieter aktualisiert.'
     status_blocked: 'Die Hauptadresse kann nicht deaktiviert werden — lege zuerst eine andere als Hauptadresse fest.'
@@ -2174,7 +2235,24 @@ integration:
         too_big: 'Zu groß zum Anhängen'
 
 jobs:
+    button:
+        failed: "Etwas ist fehlgeschlagen"
+        importing: "Import läuft"
+        importing_percent: "Import · %percent% %"
+        working: "Arbeitet …"
     heading: Hintergrundarbeit
+    import:
+        folder: "Gerade: %folder%"
+        heading: "%account% wird importiert"
+        newest_first: "Neueste Mail zuerst"
+        quota: "Gmail-Kontingent: etwa %used% von %limit% Einheiten in dieser Minute"
+        quota_assumed: "Gmail-Kontingent: etwa %used% von %limit% Einheiten in dieser Minute (Limit angenommen, bis Google es nennt)"
+        quota_paused: "Pausiert durch Gmails Kontingent · weiter in %seconds% s"
+        quota_refused: "Gmail hat bei etwa %used% von %limit% Einheiten pro Minute abgelehnt"
+        rate: "Etwa %count% Nachrichten pro Minute"
+        remaining_hours: "Noch etwa %hours% Std. %minutes% Min."
+        remaining_minutes: "Noch etwa %minutes% Min."
+        waiting: "Wartet darauf, weiterzumachen"
     started: '%action% gestartet — das läuft im Hintergrund.'
     failure:
         abandoned: 'Unterbrochen — das ist auf halber Strecke stehen geblieben; was schon erledigt war, bleibt erledigt.'
@@ -2187,6 +2265,7 @@ jobs:
         snooze: Zurückstellen
         wake: Zurückholen
         move_to: Verschieben
+        purge: Endgültig löschen
         reclassify: Sortiert neueste Mail neu
     state:
         done: '%count% erledigt'
@@ -2241,6 +2320,10 @@ login:
         password: Passwort
         remember_me: Angemeldet bleiben
         submit: Anmelden
+    oidc:
+        button: Mit Single Sign-on anmelden
+        button_named: Mit %provider% anmelden
+        or: oder
     page_title: Anmelden
     register:
         coming_soon: Registrierung folgt in Kürze.
@@ -2410,7 +2493,7 @@ onboarding:
                 Für Gmail und Outlook nimm stattdessen die Anmelde-Buttons unter
                 Einstellungen → Mail-Konten — dort brauchst du keine Serveradressen.
         admin_ai:
-            body: 'Die Adresse eines Ollama-Containers in deinem Netz und die Namen zweier Modelle, die dort liegen — eines zum Schreiben, eines für die Suche. Es verlässt nichts dein Netz.'
+            body: 'Die Adresse eines Ollama-Containers in deinem Netz oder eines beliebigen OpenAI-kompatiblen Endpunkts, und die Namen zweier Modelle, die es dort gibt — eines zum Schreiben, eines für die Suche. Mails gehen an diese Adresse und sonst nirgendwohin.'
             heading: 'Was du brauchst'
             skip_body: 'Klick auf Weiter, ohne etwas auszufüllen. plMail ist auch ohne das ein vollständiger Mail-Client, und du kannst später jederzeit unter Administration → KI zurückkommen.'
             skip_heading: 'Kein Interesse?'
@@ -2475,7 +2558,7 @@ onboarding:
             lead: Verbinde das Postfach, das du wirklich liest — plMail beginnt dann zu synchronisieren.
             title: Mail-Konto
         admin-ai:
-            intro: 'plMail kann ein Sprachmodell benutzen, das du selbst betreibst — zum Suchen nach Bedeutung, zum Einsortieren und als Hilfe beim Schreiben. Das ist völlig optional, du darfst hier alles leer lassen.'
+            intro: 'plMail kann ein Sprachmodell benutzen — eines, das du selbst betreibst, oder einen Endpunkt deiner Wahl — zum Suchen nach Bedeutung, zum Einsortieren und als Hilfe beim Schreiben. Das ist völlig optional, du darfst hier alles leer lassen.'
             lead: 'Optional. Lass es leer, wenn du es nicht willst.'
             title: 'Sprachmodell'
         admin-integrations:
@@ -2689,6 +2772,17 @@ settings:
             off: 'Aus'
             on: 'An'
     accounts:
+        colour:
+            change: 'Farbe von %account% ändern'
+            swatch:
+                '0': Orange
+                '1': Grün
+                '2': Blau
+                '3': Violett
+                '4': Bernstein
+                '5': Pink
+                '6': Petrol
+                '7': Oliv
         delete: Konto entfernen
         delete_confirm: '%account% entfernen? Dadurch werden alle synchronisierten Nachrichten dieses Kontos endgültig gelöscht. Das lässt sich nicht rückgängig machen.'
         disable: Konto deaktivieren
@@ -2778,6 +2872,12 @@ settings:
     aliases:
         add: 'Hinzufügen'
         add_placeholder: 'Weitere Adresse hinzufügen…'
+        catch_all:
+            add: 'Als Catch-all eintragen'
+            hint: 'Wenn jede Adresse einer Domain in diesem Postfach ankommt, trage die Domain hier ein. Eine Antwort geht dann von der Adresse aus, an die die Mail gerichtet war, ohne dass du jede einzeln oben hinzufügst.'
+            label: 'Catch-all-Domains'
+            placeholder: 'example.com'
+            remove: '%domain% entfernen'
         delete: 'Entfernen'
         disable: 'Deaktivieren'
         empty: 'Noch keine Adressen.'
@@ -2786,6 +2886,9 @@ settings:
         make_primary: 'Als Hauptadresse festlegen'
         ms_sender_hint: 'Outlook versendet unabhängig von der hier gewählten Adresse immer über den primären Alias deines Kontos — ändere ihn in deinen'
         ms_sender_hint_link: 'Microsoft-Kontoeinstellungen'
+        name_for: 'Absendername für %alias%'
+        name_placeholder: 'Absendername'
+        name_save: 'Namen speichern'
         primary: 'Primär'
         refresh: 'Vom Anbieter aktualisieren'
         subheading: 'Adressen, unter denen dieses Konto sendet und empfängt.'
@@ -2886,6 +2989,8 @@ settings:
             heading: Nachrichtenliste
             listAvatars: Absenderkreise
             listAvatarsHint: Der farbige Kreis mit der Initiale des Absenders. Ausgeschaltet wird daraus ein schlichter Kreis, statt zu verschwinden — er ist zugleich das Auswahlkästchen der Zeile.
+            tabUnreadCount: 'Ungelesen-Zahl auf den Posteingangs-Tabs'
+            tabUnreadCountHint: 'Die Zahl neben dem Namen jedes Tabs: in wie vielen Unterhaltungen dieser Kategorie Ungelesenes liegt. Zusammen ergeben die Tabs den Posteingangs-Badge der Seitenleiste. Das Fähnchen „3 neu“ ist davon getrennt und bleibt.'
             previewLines: Vorschauzeilen
             previewLines0: Keine
             previewLines1: Eine Zeile
@@ -3555,6 +3660,14 @@ settings:
         test_failed: 'Verbindungstest fehlgeschlagen'
         test_ok: 'Verbindung funktioniert'
         unavailable_heading: 'Hier nicht verfügbar'
+    calendar_behaviour:
+        button: Kalenderschaltfläche
+        button_hint: 'Welche Ansichten die Schaltfläche in der Kopfleiste durchläuft. Eine ausgelassene Ansicht wird nicht entfernt: Mit dem Ziehgriff erreichst du sie weiterhin.'
+        heading: Verhalten
+        option_calendar: Nur geteilt
+        option_none: Alle drei
+        option_split: Nur volle Breite
+        subheading: 'Wie die Kalenderschaltfläche in der Kopfleiste zwischen den Ansichten wechselt.'
     calendars:
         account_hint: Hier landen Termine aus E-Mails von %address%.
         caldav:
@@ -3666,13 +3779,25 @@ settings:
     language:
         heading: Sprache
         subheading: Die Sprache der plMail-Oberfläche. Deine E-Mails bleiben so, wie sie geschrieben wurden.
+    disposal:
+        delete_now: Knöpfe zum sofortigen Löschen
+        delete_now_hint: >-
+            Zeigt „Endgültig löschen“ an einer Zeile im Spam und im Papierkorb und
+            über einer Auswahl dort. Die Mail wird auch vom Mailserver entfernt und
+            lässt sich nicht zurückholen, deshalb ist es aus, bis du es einschaltest.
+        heading: Entsorgen
+        'off': Aus
+        'on': An
+        subheading: Wie Mail endgültig weggeworfen wird.
     nav:
         accounts: E-Mail-Konten
         ai: 'Assistent'
         aliases: Aliase
         app_passwords: App-Passwörter
         appearance: Darstellung
+        calendar_behaviour: Verhalten
         calendars: Kalender
+        disposal: Entsorgen
         filters: Filter
         general: Allgemein
         group:
@@ -3868,6 +3993,17 @@ settings:
         reverted: 'Wieder die Signatur des Kontos.'
         save: 'Signatur speichern'
         saved: 'Gespeichert.'
+        source:
+            clean: 'Es wurde nichts entfernt.'
+            embedded: 'In der Signatur gespeicherte Bilder: %count%.'
+            failed: 'Die Signatur konnte nicht dargestellt werden. Dein HTML ist unverändert. Versuch es noch einmal.'
+            html: 'HTML'
+            label: '%label% als HTML'
+            placeholder: 'Füge das HTML deiner Signatur ein oder schreib es hier…'
+            remote: 'Bilder, die nicht gespeichert werden konnten und verlinkt bleiben: %count%. Sie werden hier nicht angezeigt, und manche Empfänger müssen sie erst erlauben.'
+            removed: 'Entfernt, weil Mailprogramme es nicht anzeigen würden oder es nicht sicher zu versenden ist: %items%.'
+            rendered: 'Darstellung'
+            toggle: 'Ansicht der Signatur'
         subheading: 'Was am Ende der Nachrichten steht, die du schreibst.'
     sorting:
         again:
@@ -4170,9 +4306,15 @@ toolbar:
         mark_unread: Als ungelesen markieren
         more: Mehr
         move_to: Verschieben nach
+        purge: Endgültig löschen
         snooze: Zurückstellen
         spam: 'Als Spam markieren'
         star: Markieren
+    # Asked before a selection in Spam is deleted for good. Two sentences rather
+    # than one with a number swapped in, because the singular reads differently.
+    purge_confirm:
+        one: 'Diese Unterhaltung endgültig löschen? Sie lässt sich nicht zurückholen und wird auch vom Mailserver entfernt.'
+        many: 'Diese %count% Unterhaltungen endgültig löschen? Sie lassen sich nicht zurückholen und werden auch vom Mailserver entfernt.'
     filter:
         show_all: Alle anzeigen
         unread_only: Nur ungelesene

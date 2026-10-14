@@ -164,15 +164,21 @@ messages reports from. You can close the settings page; it carries on.
 
 Each tab reads the way Gmail's do: an icon — filled in on the tab you are on — and, while a
 category holds mail you have never been shown, a **"3 new"** pill in that category's colour with
-a second line naming who that new mail is from, newest arrival first. That is deliberately the
-only number on a tab: unread already has the sidebar badge and the bold rows, so the tab keeps
-the one thing only it can say. The strip is live — pill and sender names update in place when
-mail arrives, without waiting for a reload, and a hint is retired the moment you look at its tab.
+a second line naming who that new mail is from, newest arrival first. "New" and "unread" are
+different questions, so a tab carries two numbers: the pill says what arrived that you have never
+been shown, and a plain **unread count** beside the tab's name says how many conversations in that
+category hold unread mail. The count is the sidebar's Inbox badge split by tab, so the tabs add up
+to it; it shows on every tab including the one you are on, and is hidden at zero. It can be
+switched off under **Settings → Appearance → Message list**. (Earlier
+versions kept this number off the tabs, on the argument that the badge and the bold rows already
+say unread. They cannot say *where*: with the Inbox badge reading 1 and Primary open and empty,
+nothing on the strip pointed at the tab holding the mail.) The strip is live — pills, counts and
+sender names update in place when mail arrives, without waiting for a reload, and a hint is
+retired the moment you look at its tab.
 
 A tab holding unread mail also wears its category's colour on the icon. Not the tab you are on —
 its mail is already in the list underneath it, and the tint is there to point at what you
-*cannot* see. Still no second number: the colour says *there is something here* and the list
-header says how much.
+*cannot* see. The colour says *there is something here*; the count beside the name says how much.
 
 It matters most under **Unread only**, where the strip is otherwise mute — every row on screen
 is unread, so boldness no longer separates anything, and the sidebar's Inbox badge is a single
@@ -233,12 +239,17 @@ delivery day promised in words rather than digits ("arriving today", "Arriving M
 against the mail's own arrival, never against the clock, so re-reading an old mail lands on the day
 it always did.
 
-The French carriers are read too — Colissimo, Chronopost, Mondial Relay, Colis Privé, DPD France
-and Cainiao, with Amazon.fr treated like the other Amazon shops. A parcel waiting at a relay point
-or a locker is its own stage, **Ready for pickup**, neither on its way nor delivered. Not read yet:
-GLS France and the Pickup relay network, whose mail states no number the radar can recognise, and
-the "returned to sender" and "delivery attempt failed" stages. The satisfaction survey a carrier
-sends after delivery is ignored, so it cannot turn a **Delivered** card back into something else.
+The French carriers are read too — Colissimo, Chronopost, Mondial Relay, Colis Privé, DPD France,
+GLS France (the eight-character code under "Numéro de colis") and Cainiao, with Amazon.fr treated
+like the other Amazon shops. A parcel waiting at a relay point or a locker is its own stage, **Ready
+for pickup**, neither on its way nor delivered, and once its recipient has collected it ("Votre
+colis a été retiré", "récupéré par son destinataire") it is **Delivered**. The Pickup relay network
+(network1.pickup.fr, network2.pickup.fr) is read too, but it hands over the parcels of several
+carriers, so its address names none of them: a card takes its carrier from the sender's name when
+that starts with Chronopost or Colissimo, and is headed **Pickup** with no carrier and no tracking
+link otherwise. Not read yet: the "returned to sender" and "delivery attempt failed" stages. The
+satisfaction survey a carrier sends after delivery is ignored, so it cannot turn a **Delivered**
+card back into something else.
 
 ### The strip above the mail list
 
@@ -279,7 +290,8 @@ One-time codes are the one source with an expiry rather than an occurrence. A co
 the moment the mail says the code stops working — "valid for 10 minutes", "gültig bis 09:30" — so
 it drops off the radar when it goes dead instead of sitting there looking usable. When the mail
 states no lifetime, the card carries no time at all: guessing ten minutes would either retire a
-code that still works or, worse, keep a dead one looking fresh.
+code that still works or, worse, keep a dead one looking fresh. The radar still offers such a code,
+but only for fifteen minutes after its mail arrived; the card above the mail itself keeps it.
 
 ### Reporting a mail the radar missed
 
@@ -604,6 +616,42 @@ Moving mail to spam tells plMail nothing about the next message. plMail has no s
 own that learns; whether your provider treats the move as a signal is up to the provider. A filter
 is how you make it stick here.
 
+### Deleting spam for good
+
+Mail in Spam, and in the bin, can be deleted for good — the only deletion in plMail that is not a
+move. There is no Undo, so the buttons that do it are **off until you turn them on**: **Settings →
+Mail → Disposal**, **Delete-now buttons**. It is a choice you make for your own account, and a
+config backup carries it.
+
+With it on, each row in Spam and the bin has a **Delete forever** button (the flame) beside **Move
+to inbox**, and it asks first. Nothing else can be deleted for good: a conversation in the inbox or
+the archive has to be thrown away once before this is offered, because there is no Undo to catch a
+slip.
+
+In **Spam** and in the bin, the toolbar above a selection has the same **Delete forever** in place of
+**Delete**. In Spam that makes a page of spam one click and one question rather than a trip to the
+bin and a second deletion there; in the bin a Delete could only trash mail that was already
+trashed, so it would take the rows off the list and leave the mail where it was. The question says
+how many conversations it is about. It is removed from the mail server too,
+not only from plMail, and it cannot be brought back — **Move to inbox** is the way out beforehand.
+
+With it off, Spam keeps its ordinary **Delete**, which moves the mail to the bin, and the bin has no
+**Delete** above a selection at all: mail already in the bin cannot be trashed again, and **Move to
+inbox** is the way out of it. Switching it off again takes the buttons away at once. The server
+refuses a request to delete for good while it is off as well, so it is the choice that decides, not
+only what is drawn.
+
+To empty Spam or the bin, tick **All**, take the **Select all N** it offers, and press **Delete
+forever**. The question then names the whole count, not the rows on the page. A folder is emptied in
+the background, with the same progress indicator as any other action over a whole view, and a
+conversation moved back to the inbox before the job reaches it is left alone. Only Spam and the bin
+can be emptied this way; a search or a label cannot.
+
+`#` presses **Delete**. With the switch on, that button is not there above a selection in Spam or the
+bin, so `#` does nothing in those places; the flame, with its question, is the one way to delete a
+selection there. With it off, `#` works in Spam as it does elsewhere, and does nothing in the bin,
+which has no **Delete**.
+
 ## The reading pane
 
 **Settings → Reading pane** decides where the message you open goes: **Off** or **Right**. Off is how plMail
@@ -616,6 +664,14 @@ With the pane on the right, the list stays where it is when you open something. 
 marked with a tint and a bar on its leading edge, and the area beside the list says
 *Select a conversation to read it here* until you open one. The back arrow closes the message and
 leaves the list as it was.
+
+The open message also stays put while you move around the list. Choosing another folder, switching
+a category tab, turning the page, sorting or searching changes what the list shows and leaves the
+conversation you were reading where it is, so you can look for the next one without losing this one.
+No row is marked while the list shows a folder the message is not in, and the mark comes back when
+you return to its folder. The back arrow then closes the message and leaves you on the folder you
+switched to. With one pane at a time (see below) the message has covered the list, so choosing a
+folder closes it and shows the new list, as it always did.
 
 **The divider** between the two is dragged with the mouse, or moved with the arrow keys once it has
 focus (two percent a step; Home and End go to the ends). A double-click puts it back to the
@@ -713,7 +769,8 @@ attachment has never touched plMail's disk; it is materialised on first access.
 **Compose** opens a window docked at the bottom right. Replying from inside a thread opens the
 editor at the foot of the conversation instead, on a wide screen; below that it falls back to the
 dock. Either way the window offers rich text, contact autocomplete on the address fields, and a
-**From** selector listing every active account and every sending alias on it.
+**From** selector listing every active account and every sending alias on it. A reply opens on the
+address the mail was sent to; see [Accounts and aliases](accounts.md#sending-aliases).
 
 Autocomplete only ever offers **your own** harvested contacts. On an install with more than one
 person, nobody's correspondents are visible to anybody else, and an address belonging to another
@@ -788,6 +845,24 @@ on, and the caret starts in the **To** row, since the recipient is the one thing
 leave without; **Insert signature** adds the block when you want it. That button replaces the block
 in place instead of adding a second one, and so does changing the **From** account: the signature
 block is swapped and a paragraph you have already typed survives the change.
+
+**A signature you already have as HTML** — from a generator, a brand guide, another mail client —
+goes in through the **HTML** view of the editor. **Rendered** and **HTML** above the field switch
+between the two: HTML is the signature as source, to paste or edit; Rendered is the signature as it
+will be stored. Switching to Rendered is not the browser drawing what you pasted. The source goes to
+the server, through the same clean-up every signature is saved through, and what comes back is what
+you see — so the rendered view cannot look better than what recipients get. A line under the editor
+names anything that was taken out: typically a `<style>` block and the `class` attributes that
+pointed into it, since most mail clients ignore both. Put the styling on the elements themselves
+(`style="…"`), which is kept. Saving from either view stores the same thing.
+
+**Images in a signature are stored in the signature.** A picture referenced by address
+(`<img src="https://…">`) is fetched when you render or save and kept inside the signature
+itself. It then travels with every mail as an attached inline image — the recipient sees your logo
+without being asked to load remote content, and it keeps working after the web address stops. An
+image stays a plain reference instead when it cannot be fetched over https, is not a PNG, JPEG, GIF
+or WebP, or is larger than 256 KB (768 KB for one signature in all); the line under the editor
+counts those, and they do not show in the editor, which loads no images from elsewhere.
 
 Writing inside a conversation gets a **reduced header**: the **To** field itself, typable, with
 From, Cc, Bcc and the subject folded away behind the chevron beside it. Replying rarely means
@@ -963,11 +1038,10 @@ the search box says how far it has got, and until it says nothing at all, "meani
 from this view" — the dialog is a shortcut to the same operation, across every account, nested labels
 included.
 
-**A signature image cannot be an inline image.** A picture placed in a *signature* is stored as an
-ordinary image reference, not as a `cid:` part: the sanitiser every signature is written through
-drops the marker attribute that would make it one, deliberately, so a signature cannot smuggle in
-something that looks like one of the message's own inline pictures. Inline images work in the
-message body, where you put them.
+**A signature image has to be small to travel with the mail.** A picture in a *signature* is stored
+inside it and sent as an inline part, up to 256 KB each and 768 KB per signature; see
+[Signature](#signature). Anything larger, an SVG, or an image that could not be fetched stays a
+reference to its web address, which recipients may have to allow before it shows.
 
 **"New" is not "unread", and losing the badge is not reading anything.** Scrolling past a row in the
 inbox retires its New badge, because the row was put in front of you. The conversation stays unread
@@ -1015,6 +1089,8 @@ administrator can read and download it. That is what makes a new extractor writa
 the dialog says so before you send. On an installation you do not run yourself, report the mail
 whose shape you want recognised — not one whose contents you would rather keep.
 
-**A one-time code with no stated lifetime gets no expiry.** The card shows the code and no time,
-and it stays until you dismiss it. plMail will not invent ten minutes, so the card cannot tell you
-whether the code still works — the mail it came from is the only thing that can.
+**A one-time code with no stated lifetime gets no expiry.** The card shows the code and no time. On
+the radar it is offered for fifteen minutes after its mail arrived and then goes, so a code from
+last week is not left there readable; the card above the mail itself keeps it. plMail will not
+invent ten minutes, so the card cannot tell you whether the code still works — the mail it came
+from is the only thing that can.

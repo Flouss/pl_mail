@@ -134,6 +134,62 @@ test.describe("signature settings", () => {
     });
 
     /**
+     * A signature that already exists as HTML: pasted as source, rendered by
+     * the server, and saved as what was shown.
+     *
+     * In a browser because the claim is about what is on screen. The rendered
+     * view has to be the sanitised signature and not the browser's own reading
+     * of the source — the `<style>` rule below would turn the text red if the
+     * source were simply dropped into the page — and the line under the editor
+     * has to name what was taken out.
+     */
+    test("HTML pasted as source is rendered as it will be saved", async ({
+        page,
+    }) => {
+        await page.goto("/settings?section=signature");
+
+        const block = accountBlock(page);
+        const editor = block.locator(EDITOR).first();
+        const source = block.getByRole("textbox", { name: /as HTML/ }).first();
+        const stamp = `Ada ${Date.now()}`;
+
+        await expect(source).toBeHidden();
+
+        await block.getByRole("button", { name: "HTML", exact: true }).first().click();
+
+        await expect(source).toBeVisible();
+        await expect(editor).toBeHidden();
+
+        await source.fill(
+            `<style>.sig { color: rgb(255, 0, 0) }</style><p class="sig"><b>${stamp}</b></p><script>window.pwned = true</script>`,
+        );
+
+        await block.getByRole("button", { name: "Rendered", exact: true }).first().click();
+
+        await expect(editor).toBeVisible();
+        await expect(source).toBeHidden();
+        await expect(editor.locator("b")).toHaveText(stamp);
+        await expect(editor.locator("style, script")).toHaveCount(0);
+        await expect(editor.locator("p")).not.toHaveCSS("color", "rgb(255, 0, 0)");
+        await expect(block.getByRole("status").first()).toContainText("<script>, <style>, class");
+        expect(await page.evaluate(() => (window as any).pwned)).toBeUndefined();
+
+        // Back in the source view, the source is the cleaned one.
+        await block.getByRole("button", { name: "HTML", exact: true }).first().click();
+        await expect(source).toHaveValue(`<p><b>${stamp}</b></p>`);
+
+        // Saving from the source view stores what was typed, cleaned the same way.
+        await source.fill(`<p><i>${stamp}</i></p><script>window.pwned = true</script>`);
+        await block.getByRole("button", { name: "Save signature" }).first().click();
+
+        await expect(page.getByText("Saved.")).toBeVisible();
+
+        await page.goto("/settings?section=signature");
+        await expect(accountBlock(page).locator(EDITOR).first().locator("i")).toHaveText(stamp);
+        await expect(accountBlock(page).locator(EDITOR).first().locator("script")).toHaveCount(0);
+    });
+
+    /**
      * Overriding reveals a usable editor on the FIRST render — no toggle
      * round trip — and reverting takes the row back to one line.
      */

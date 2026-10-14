@@ -1007,6 +1007,56 @@ on a submission decides the From address the mail really goes out with, and one 
 identity of that account is refused with `forbiddenFrom` rather than falling back to the account
 address.
 
+**Which identity answers a mail** is the server's to say, and it says it in `replyFrom` — a plMail
+property of `Email/get`. Ask for it by name when you fetch the message a reply or a forward is built
+from; it is left out of a get with no `properties`, because it carries a signature:
+
+```json
+["Email/get", {"accountId": "1", "ids": ["42"], "properties": ["subject", "from", "to", "replyFrom"]}, "g"]
+```
+
+```json
+"replyFrom": {
+  "id": "addr-eW9Ac2hvcC5leGFtcGxl", "name": "John Smith", "email": "yo@shop.example",
+  "replyTo": null, "bcc": null, "textSignature": "", "htmlSignature": "", "mayDelete": false
+}
+```
+
+It is a whole Identity, or `null`. Open the reply on it — sender, name and signature — and pass its
+`id` as the submission's `identityId`; on `null`, or against a server that does not know the
+property and leaves it out, stay on the primary identity. It is the address the mail was sent to:
+the same answer the web composer opens a reply on, so do not work it out from To and Cc yourself.
+
+- For mail that came in for an alias it is that alias's identity, with the `id` it has in
+  `Identity/get`.
+- For mail that came in for an address at one of the account's **catch-all domains** it is an
+  identity `Identity/get` does not list — there is one per address anybody ever writes to. Its `id`
+  is good in `EmailSubmission/set` like any other, for as long as the account still has the domain;
+  after that it is `forbiddenFrom`. Show it in your From picker beside the listed ones for this one
+  message, and do not store it as something to offer on the next.
+- On a draft it is the address the draft is already written from, which is what to reopen it on.
+
+**Say which identity a draft is written from when you save it.** RFC 8621 names the identity on the
+submission only, so a draft would otherwise have no sender until it is sent, and one written from an
+alias would come back from Drafts on the primary address. plMail takes `identityId` on `Email/set`
+too, on a create and in an update patch:
+
+```json
+["Email/set", {"accountId": "1", "update": {"87": {"identityId": "addr-eW9Ac2hvcC5leGFtcGxl", "subject": "Re: Order"}}}, "s"]
+```
+
+The draft is then stored from that address, `from` and `replyFrom` report it, and it is what the
+draft reopens on, on any device. Send the id with every save, and include it in whatever decides
+that a draft has unsaved changes — a From menu that changes nothing else must still save.
+
+- The ids are the ones `EmailSubmission/set` takes, an address identity included.
+- An id the account may not send as is **ignored**, and the rest of the save goes through: this is
+  an autosave, and losing the text over the sender would be the worse failure. The submission still
+  names its identity and is where `forbiddenFrom` is answered.
+- **Check the session first.** A server that knows the property says so with `"draftIdentity": true`
+  in the account's `urn:ietf:params:jmap:mail` capability. One that does not refuses the whole
+  update patch as `invalidPatch` for naming a property it cannot change, so leave the key out there.
+
 ### Templates
 
 Reusable messages: the user writes one in **Settings → Templates** (or in your app) and inserts it
@@ -1401,7 +1451,7 @@ Ordered roughly by how much users will miss them.
 
 **Settings**
 - Appearance — `Appearance/get` and `Appearance/set` serve the whole object, including `fontFamily`,
-  `fontScale`, `previewLines`, `unreadEmphasis`, `accountCorner`, `listAvatars`, the three
+  `fontScale`, `previewLines`, `unreadEmphasis`, `accountCorner`, `listAvatars`, `tabUnreadCount`, the three
   per-surface densities and the read-only `logoStyle`, `logoMotif` and `logoPaint` (see [§2](#2-look-and-feel)). Build the token system regardless; read the
   server's values into it rather than inventing your own defaults.
 - Account list and order.

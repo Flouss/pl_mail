@@ -2,6 +2,7 @@
 
 namespace App\Entity\Mail;
 
+use App\Domain\Enum\Mail\LabelRole;
 use App\Domain\Enum\Mail\ArrivalPlace;
 use App\Domain\Enum\Mail\MessageCategory;
 use App\Domain\Enum\Mail\MessageFlag;
@@ -651,6 +652,44 @@ class Message extends MessageModel
      * Stays a method: it takes an argument and asks the collection about it, so
      * there is no single piece of state here to expose as a property.
      */
+    /**
+     * Whether the message is in Spam or Trash.
+     *
+     * Mail there is kept, listed and searchable like any other, and is not
+     * WORKED ON: no language model categorises it, nothing reads parcels,
+     * invoices or meetings out of it, its senders do not become contacts and
+     * it is not held back from the inbox tabs it is not in. Spam is where a
+     * forged invitation or a fake delivery notice ends up, and Trash is mail
+     * the user has already finished with — paying a model to read either, or
+     * putting an event from it in the calendar, is the wrong way round. See
+     * PostIngestPipeline and the steps it runs.
+     *
+     * Read off the labels the builders file a message under before it is
+     * stored, the same labels the folder list draws.
+     */
+    public function isSetAside(): bool
+    {
+        foreach ($this->labels as $label) {
+            if (LabelRole::Spam === $label->role || LabelRole::Trash === $label->role) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** Whether the message is in Spam. See isSetAside(). */
+    public function isSpam(): bool
+    {
+        foreach ($this->labels as $label) {
+            if (LabelRole::Spam === $label->role) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function hasLabel(Label $label): bool
     {
         return $this->labels->contains($label);

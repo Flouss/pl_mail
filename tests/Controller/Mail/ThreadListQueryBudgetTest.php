@@ -79,7 +79,11 @@ final class ThreadListQueryBudgetTest extends WebTestCase
      * against plain unread, and they are two answers rather than one asked
      * twice.
      */
-    private const int BUDGET = 27;
+    // 28 since the sidebar reads the user's change sequence when it is drawn
+    // (SidebarCounts::changeSequence()): one MAX over an index, per page that
+    // has a sidebar and not per row. A list-frame navigation draws no sidebar
+    // and FRAME_BUDGET below is unchanged.
+    private const int BUDGET = 28;
 
     /**
      * The ceiling for the same list NAVIGATED rather than visited.

@@ -1,4 +1,4 @@
-<!-- translated-from: features/mail.md sha1:713358fc065ed7968b682a1336e6b57f184e3727 -->
+<!-- translated-from: features/mail.md sha1:2011fd5dbb57811a13d924f3a11665842104a0ad -->
 
 # Mail
 
@@ -182,16 +182,23 @@ läuft weiter.
 Jeder Tab liest sich wie bei Gmail: ein Symbol — ausgefüllt auf dem Tab, auf dem du gerade bist
 — und, solange in einer Kategorie Post liegt, die dir nie gezeigt wurde, ein Fähnchen **„3 neu”**
 in der Farbe der Kategorie, mit einer zweiten Zeile, die nennt, von wem diese neue Post ist,
-neueste zuerst. Das ist mit Absicht die einzige Zahl auf einem Tab: Ungelesenes hat schon den
-Badge in der Seitenleiste und die fetten Zeilen selbst, also behält der Tab das eine, das nur er
-sagen kann. Die Leiste ist live — Fähnchen und Absendernamen aktualisieren sich an Ort und
+neueste zuerst. „Neu” und „ungelesen” sind verschiedene Fragen, deshalb trägt ein Tab zwei Zahlen:
+Das Fähnchen sagt, was angekommen ist, ohne dir gezeigt worden zu sein, und eine schlichte
+**Ungelesen-Zahl** neben dem Namen des Tabs sagt, in wie vielen Unterhaltungen dieser Kategorie
+Ungelesenes liegt. Die Zahl ist der Posteingangs-Badge der Seitenleiste, nach Tabs aufgeteilt — die
+Tabs ergeben zusammen also genau ihn. Sie steht auf jedem Tab, auch auf dem, auf dem du gerade bist,
+und ist bei null ausgeblendet. Abschalten lässt sie sich unter **Einstellungen → Erscheinungsbild →
+Nachrichtenliste**. (Frühere Versionen hielten diese Zahl von den Tabs fern, mit dem
+Argument, Badge und fette Zeilen sagten Ungelesenes schon. Sie können aber nicht sagen, *wo*: Zeigt
+der Posteingangs-Badge 1, ist Primär geöffnet und leer, deutete nichts auf der Leiste auf den Tab
+mit der Post.) Die Leiste ist live — Fähnchen, Zahlen und Absendernamen aktualisieren sich an Ort und
 Stelle, wenn Post eintrifft, ohne auf ein Neuladen zu warten, und ein Hinweis verschwindet in
 dem Moment, in dem du seinen Tab anschaust.
 
 Ein Tab mit ungelesener Post trägt außerdem die Farbe seiner Kategorie auf dem Symbol. Nicht der
 Tab, auf dem du gerade bist — dessen Post steht ohnehin in der Liste darunter, und die Farbe soll
-auf das zeigen, was du *nicht* siehst. Weiterhin keine zweite Zahl: Die Farbe sagt *hier liegt
-etwas*, und der Kopf der Liste sagt, wie viel.
+auf das zeigen, was du *nicht* siehst. Die Farbe sagt *hier liegt etwas*, die Zahl neben dem Namen
+sagt, wie viel.
 
 Am meisten bringt das unter **Nur ungelesene**, wo die Leiste sonst stumm ist: Jede Zeile auf dem
 Schirm ist ungelesen, fette Schrift unterscheidet also nichts mehr, und der Posteingangs-Badge in
@@ -257,12 +264,17 @@ gegen den Eingang der Mail aufgelöst und nie gegen die Uhr: Wer eine alte Mail 
 landet auf demselben Tag wie beim ersten Mal.
 
 Auch die französischen Zusteller werden gelesen — Colissimo, Chronopost, Mondial Relay, Colis Privé,
-DPD France und Cainiao, und Amazon.fr wie die anderen Amazon-Shops. Ein Paket, das in einem
-Paketshop oder Locker auf dich wartet, hat eine eigene Stufe, **Abholbereit**, weder unterwegs noch
-zugestellt. Noch nicht gelesen werden GLS France und das Pickup-Relaisnetz, deren Mails keine Nummer
-nennen, die das Radar erkennen kann, sowie die Stufen "an den Absender zurück" und "Zustellversuch
-gescheitert". Die Zufriedenheitsumfrage, die ein Zusteller nach der Zustellung schickt, wird
-ignoriert, damit sie eine Karte **Zugestellt** nicht in etwas anderes zurückverwandelt.
+DPD France, GLS France (der achtstellige Code unter "Numéro de colis") und Cainiao, und Amazon.fr
+wie die anderen Amazon-Shops. Ein Paket, das in einem Paketshop oder Locker auf dich wartet, hat
+eine eigene Stufe, **Abholbereit**, weder unterwegs noch zugestellt, und sobald es abgeholt wurde
+("Votre colis a été retiré", "récupéré par son destinataire"), ist es **Zugestellt**. Das
+Pickup-Relaisnetz (network1.pickup.fr, network2.pickup.fr) wird ebenfalls gelesen, übergibt aber
+die Pakete mehrerer Zusteller, seine Adresse nennt also keinen davon: Eine Karte übernimmt den
+Zusteller aus dem Absendernamen, wenn der mit Chronopost oder Colissimo beginnt, und trägt sonst
+die Überschrift **Pickup**, ohne Zusteller und ohne Sendungslink. Noch nicht gelesen werden die
+Stufen "an den Absender zurück" und "Zustellversuch gescheitert". Die Zufriedenheitsumfrage, die
+ein Zusteller nach der Zustellung schickt, wird ignoriert, damit sie eine Karte **Zugestellt**
+nicht in etwas anderes zurückverwandelt.
 
 ### Die Leiste über der Mailliste
 
@@ -308,7 +320,8 @@ trägt den Moment, an dem der Code laut Mail nicht mehr gilt — "gültig für 1
 09:30" —, und verschwindet damit vom Radar, wenn er tot ist, statt dort weiter benutzbar
 auszusehen. Nennt die Mail keine Gültigkeit, trägt die Karte gar keine Zeit: Zehn Minuten zu raten
 würde entweder einen Code zurückziehen, der noch geht, oder schlimmer, einen toten frisch
-aussehen lassen.
+aussehen lassen. Das Radar zeigt so einen Code trotzdem, aber nur fünfzehn Minuten nach Eingang der
+Mail; die Karte über der Mail selbst behält ihn.
 
 ### Eine Mail melden, die das Radar übersehen hat
 
@@ -662,6 +675,45 @@ Mail in den Spam zu verschieben sagt plMail nichts über die nächste Nachricht.
 eigenen Spamfilter, der lernt; ob dein Anbieter das Verschieben als Signal wertet, entscheidet
 der Anbieter. Ein Filter ist der Weg, es hier dauerhaft zu machen.
 
+### Spam endgültig löschen
+
+Mail im Spam und im Papierkorb lässt sich endgültig löschen — das einzige Löschen in plMail, das
+kein Verschieben ist. Es gibt kein Rückgängig, deshalb sind die Knöpfe dafür **aus, bis du sie
+einschaltest**: **Einstellungen → E-Mail → Entsorgen**, **Knöpfe zum sofortigen Löschen**. Das ist
+eine Entscheidung für dein eigenes Konto, und eine Konfigurationssicherung enthält sie.
+
+Ist sie an, hat jede Zeile im Spam und im Papierkorb neben **In den Posteingang** einen Knopf
+**Endgültig löschen** (die Flamme), und er fragt vorher nach. Sonst lässt sich nichts endgültig
+löschen: Eine Konversation im Posteingang oder im Archiv muss erst einmal weggeworfen worden sein,
+bevor das angeboten wird, denn es gibt kein Rückgängig, das einen Fehlklick auffängt.
+
+Im **Spam** und im Papierkorb hat die Werkzeugleiste über einer Auswahl dasselbe **Endgültig
+löschen** anstelle von **Löschen**. Im Spam ist eine Seite voll Spam so ein Klick und eine Frage
+statt eines Umwegs über den Papierkorb und eines zweiten Löschens dort; im Papierkorb konnte ein
+Löschen nur Mail wegwerfen, die schon weggeworfen war, und hätte die Zeilen aus der Liste genommen,
+während die Mail liegen blieb. Die Frage nennt, um wie viele Konversationen es geht. Die
+Mail wird auch vom Mailserver entfernt, nicht nur aus plMail, und lässt sich nicht zurückholen —
+**In den Posteingang** ist der Ausweg davor.
+
+Ist sie aus, behält der Spam sein gewöhnliches **Löschen**, das die Mail in den Papierkorb
+verschiebt, und der Papierkorb hat über einer Auswahl gar kein **Löschen**: Mail, die schon im
+Papierkorb liegt, lässt sich nicht noch einmal wegwerfen, und **In den Posteingang** ist der Weg
+hinaus. Schaltest du sie wieder aus, verschwinden die Knöpfe sofort. Der Server lehnt eine Anfrage
+zum endgültigen Löschen auch ab, solange sie aus ist; es entscheidet also deine Wahl, nicht nur,
+was gezeichnet wird.
+
+Um Spam oder den Papierkorb zu leeren, hake **Alle** an, nimm das angebotene **Alle N auswählen**
+und drücke **Endgültig löschen**. Die Rückfrage nennt dann die gesamte Anzahl, nicht die Zeilen auf
+der Seite. Ein Ordner wird im Hintergrund geleert, mit derselben Fortschrittsanzeige wie jede andere
+Aktion über eine ganze Ansicht, und eine Unterhaltung, die vorher zurück in den Posteingang
+verschoben wurde, bleibt unangetastet. Nur Spam und der Papierkorb lassen sich so leeren, eine Suche
+oder ein Label nicht.
+
+`#` drückt **Löschen**. Ist die Einstellung an, gibt es das über einer Auswahl im Spam und im
+Papierkorb nicht, und `#` tut dort nichts; die Flamme mit ihrer Frage ist der einzige Weg, dort
+eine Auswahl zu löschen. Ist sie aus, funktioniert `#` im Spam wie überall sonst und tut im
+Papierkorb nichts, der kein **Löschen** hat.
+
 ## Der Lesebereich
 
 **Einstellungen → Lesebereich** legt fest, wohin die Nachricht kommt, die du öffnest: **Aus** oder
@@ -675,6 +727,15 @@ Steht der Lesebereich rechts, bleibt die Liste beim Öffnen stehen, wo sie ist. 
 ist mit einem Farbton und einem Balken an der vorderen Kante markiert, und der Bereich neben der
 Liste sagt *Wähle eine Unterhaltung aus, um sie hier zu lesen*, bis du eine öffnest. Der
 Zurück-Pfeil schließt die Nachricht und lässt die Liste, wie sie war.
+
+Die geöffnete Nachricht bleibt auch stehen, während du dich in der Liste bewegst. Wählst du einen
+anderen Ordner, wechselst du den Kategorie-Tab, blätterst um, sortierst oder suchst, ändert sich,
+was die Liste zeigt, und die Konversation, die du gerade liest, bleibt, wo sie ist, sodass du nach
+der nächsten suchen kannst, ohne diese zu verlieren. Solange die Liste einen Ordner zeigt, in dem die
+Nachricht nicht liegt, ist keine Zeile markiert, und die Markierung kommt zurück, wenn du in ihren
+Ordner zurückkehrst. Der Zurück-Pfeil schließt die Nachricht dann und lässt dich in dem Ordner, zu dem
+du gewechselt hast. Bei einem Bereich nach dem anderen (siehe unten) hat die Nachricht die Liste
+verdeckt, deshalb schließt die Wahl eines Ordners sie und zeigt die neue Liste, wie es immer war.
 
 **Der Trenner** dazwischen wird mit der Maus gezogen, oder mit den Pfeiltasten bewegt, sobald er den
 Fokus hat (zwei Prozent pro Schritt; Pos1 und Ende springen an die Enden). Ein Doppelklick setzt ihn
@@ -782,7 +843,9 @@ materialisiert.
 Konversation heraus, öffnet sich der Editor auf einem breiten Bildschirm stattdessen am Fuß der
 Konversation; darunter fällt er auf das angedockte Fenster zurück. So oder so bietet das
 Fenster formatierten Text, Kontakt-Vervollständigung in den Adressfeldern und eine
-**From**-Auswahl, die jedes aktive Konto und jede Absendeadresse darauf auflistet.
+**From**-Auswahl, die jedes aktive Konto und jede Absendeadresse darauf auflistet. Eine Antwort
+öffnet sich mit der Adresse, an die die Mail gerichtet war; siehe
+[Konten und Aliase](accounts.md).
 
 Die Vervollständigung bietet ausschließlich **deine eigenen** gesammelten Kontakte an. Auf einer
 Installation mit mehreren Personen sind die Korrespondenten der einen für die andere unsichtbar, und
@@ -865,6 +928,27 @@ Empfängerin geht eine Weiterleitung nirgendwohin; **Signatur einfügen** holt d
 willst. Dieser Knopf ersetzt den Block an Ort und Stelle, statt einen zweiten anzuhängen, und
 dasselbe tut ein Wechsel des Kontos in der **From**-Auswahl: Der Signaturblock wird getauscht, ein
 bereits getippter Absatz überlebt den Wechsel.
+
+**Eine Signatur, die du schon als HTML hast** — aus einem Generator, einem Markenhandbuch, einem
+anderen Mailprogramm — kommt über die **HTML**-Ansicht des Editors hinein. **Darstellung** und
+**HTML** über dem Feld wechseln zwischen beiden: HTML ist die Signatur als Quelltext, zum Einfügen
+oder Bearbeiten; Darstellung ist die Signatur so, wie sie gespeichert wird. Der Wechsel zur
+Darstellung ist nicht der Browser, der zeichnet, was du eingefügt hast. Der Quelltext geht an den
+Server, durch dieselbe Bereinigung, durch die jede Signatur gespeichert wird, und was zurückkommt,
+ist das, was du siehst — die Darstellung kann also nicht besser aussehen als das, was Empfänger
+bekommen. Eine Zeile unter dem Editor nennt alles, was entfernt wurde: typischerweise einen
+`<style>`-Block und die `class`-Attribute, die darauf verwiesen, denn die meisten Mailprogramme
+ignorieren beides. Schreib die Gestaltung an die Elemente selbst (`style="…"`), das bleibt
+erhalten. Speichern aus beiden Ansichten legt dasselbe ab.
+
+**Bilder in einer Signatur werden in der Signatur gespeichert.** Ein Bild, auf das per Adresse
+verwiesen wird (`<img src="https://…">`), wird geholt, wenn du darstellst oder speicherst, und in
+der Signatur selbst abgelegt. Es reist dann mit jeder Mail als eingebettetes Bild mit — die
+Empfängerin sieht dein Logo, ohne externe Inhalte laden zu müssen, und es funktioniert auch dann
+noch, wenn die Webadresse verschwindet. Ein Bild bleibt stattdessen ein bloßer Verweis, wenn es
+sich nicht über https holen lässt, kein PNG, JPEG, GIF oder WebP ist oder größer als 256 KB ist
+(768 KB für eine Signatur insgesamt); die Zeile unter dem Editor zählt diese, und im Editor
+erscheinen sie nicht, weil er keine Bilder von anderswo lädt.
 
 Schreibst du direkt in der Konversation, bekommst du eine **verkürzte Kopfzeile**: das
 **An**-Feld selbst, tippbar, und dahinter — hinter dem Pfeil daneben — eingeklappt Absender, Cc,
@@ -1056,12 +1140,11 @@ zurückzugeben, die bereits unterwegs ist, und das liest sich wie ein Abbruch, d
 ist kein „aus dieser Ansicht entfernen“ — der Dialog ist eine Abkürzung zu genau derselben Operation,
 über alle Konten hinweg, untergeordnete Labels eingeschlossen.
 
-**Ein Bild in der Signatur kann kein eingebettetes Bild sein.** Ein Bild in einer *Signatur* wird
-als gewöhnlicher Bildverweis gespeichert und nicht als `cid:`-Teil: Die Bereinigung, durch die
-jede Signatur geschrieben wird, entfernt bewusst genau das Attribut, das daraus eines machen
-würde — damit eine Signatur nichts einschmuggeln kann, das aussieht wie eines der eingebetteten
-Bilder der Nachricht selbst. Eingebettete Bilder funktionieren im Nachrichtentext, dort, wo du sie
-hinsetzt.
+**Ein Bild in der Signatur muss klein sein, um mit der Mail zu reisen.** Ein Bild in einer
+*Signatur* wird in ihr gespeichert und als eingebetteter Teil verschickt, bis 256 KB je Bild und
+768 KB je Signatur; siehe den Abschnitt *Signatur* weiter oben. Alles Größere, ein SVG oder ein
+Bild, das sich nicht holen ließ, bleibt ein Verweis auf seine Webadresse, den Empfänger
+möglicherweise erst erlauben müssen.
 
 **„Neu“ ist nicht „ungelesen“, und das Fähnchen zu verlieren heißt nicht, etwas gelesen zu
 haben.** An einer Zeile im Posteingang vorbeizuscrollen räumt ihr „Neu“ ab, denn die Zeile wurde
@@ -1121,5 +1204,7 @@ die du nicht selbst betreibst, melde die Mail, deren Form erkannt werden soll �
 Inhalt du lieber behältst.
 
 **Ein Einmalcode ohne genannte Gültigkeit bekommt keinen Ablauf.** Die Karte zeigt den Code und
-keine Zeit, und sie bleibt, bis du sie ausblendest. plMail erfindet keine zehn Minuten, also kann
-die Karte dir nicht sagen, ob der Code noch geht — das kann nur die Mail, aus der er stammt.
+keine Zeit. Auf dem Radar wird sie fünfzehn Minuten nach Eingang der Mail angeboten und verschwindet
+dann, damit ein Code von letzter Woche nicht lesbar dort stehen bleibt; die Karte über der Mail
+selbst behält ihn. plMail erfindet keine zehn Minuten, also kann die Karte dir nicht sagen, ob der
+Code noch geht — das kann nur die Mail, aus der er stammt.

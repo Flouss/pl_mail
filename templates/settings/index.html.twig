@@ -154,6 +154,7 @@
                                         { section: 'templates',     icon: 'fa-regular fa-file-lines' },
                                         { section: 'labels',        icon: 'fa-solid fa-tag' },
                                         { section: 'filters',       icon: 'fa-solid fa-filter' },
+                                        { section: 'disposal',      icon: 'fa-solid fa-trash-can' },
                                         { section: 'insights',      icon: 'fa-solid fa-satellite-dish' },
                                     ]|merge(ai_settings_available() or section == 'ai'
                                             ? [{ section: 'ai', icon: 'fa-solid fa-wand-magic-sparkles' }]
@@ -162,6 +163,7 @@
                                     ]) },
                                     { label: 'settings.nav.group.calendar', items: [
                                         { section: 'calendars',     icon: 'fa-regular fa-calendar' },
+                                        { section: 'calendar-behaviour', icon: 'fa-solid fa-arrows-left-right', label: 'settings.nav.calendar_behaviour' },
                                         { section: 'sharing',       icon: 'fa-solid fa-share-nodes' },
                                     ] },
                                     { label: 'settings.nav.group.features', items: [
@@ -418,6 +420,28 @@
                                             {% block body %}
                                                 {% include 'settings/_reading_pane.html.twig' with {
                                                     mode: app.user.readingPaneMode,
+                                                } only %}
+                                            {% endblock %}
+                                        {% endembed %}
+                                    {% elseif section == 'calendar-behaviour' %}
+                                        {% embed 'settings/_card.html.twig' with {
+                                            heading:    'settings.calendar_behaviour.heading'|trans,
+                                            subheading: 'settings.calendar_behaviour.subheading'|trans,
+                                        } %}
+                                            {% block body %}
+                                                {% include 'settings/_calendar_behaviour.html.twig' with {
+                                                    skip: app.user.calendarSwitchSkip,
+                                                } only %}
+                                            {% endblock %}
+                                        {% endembed %}
+                                    {% elseif section == 'disposal' %}
+                                        {% embed 'settings/_card.html.twig' with {
+                                            heading:    'settings.disposal.heading'|trans,
+                                            subheading: 'settings.disposal.subheading'|trans,
+                                        } %}
+                                            {% block body %}
+                                                {% include 'settings/_disposal.html.twig' with {
+                                                    deleteNow: app.user.deleteNowButtons,
                                                 } only %}
                                             {% endblock %}
                                         {% endembed %}

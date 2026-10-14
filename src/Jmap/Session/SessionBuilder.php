@@ -190,6 +190,12 @@ final class SessionBuilder
             'maxSizeAttachmentsPerEmail' => 50_000_000,
             'emailQuerySortOptions' => ['receivedAt', 'from', 'to', 'subject', 'size'],
             'mayCreateTopLevelMailbox' => true,
+            // A plMail key in the standard object: Email/set stores an
+            // `identityId` named on a draft. A client has to know before it
+            // sends one, because a server from before this refuses the whole
+            // patch for naming a property it cannot update — and the patch is
+            // an autosave. Clients ignore keys they do not know.
+            'draftIdentity' => true,
         ];
     }
 

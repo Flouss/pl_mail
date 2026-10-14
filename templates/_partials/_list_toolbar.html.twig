@@ -133,6 +133,8 @@ closes the menu: ui--dropdown closes on a click OUTSIDE it, and a row is inside.
         selectAllAction: 'toolbar.view_select.offer_action'|trans,
         allSelected:     'toolbar.view_select.selected'|trans,
         clear:           'toolbar.view_select.clear'|trans,
+        purgeConfirmOne:  'toolbar.purge_confirm.one'|trans,
+        purgeConfirmMany: 'toolbar.purge_confirm.many'|trans,
     }|json_encode }}"
 >
 
@@ -280,7 +282,25 @@ closes the menu: ui--dropdown closes on a click OUTSIDE it, and a row is inside.
         aria-hidden="true"
     >
         {{ m.tbtn('click->mail--list-toolbar#archiveSelected',    'fa-solid fa-box-archive',  'toolbar.actions.archive'|trans) }}
-        {{ m.tbtn('click->mail--list-toolbar#deleteSelected',     'fa-solid fa-trash',         'toolbar.actions.delete'|trans,   'hover:text-danger') }}
+        {# Delete, or Delete forever where the selection is already thrown away.
+
+           Delete forever is the user's choice (Settings → Mail → Disposal), off
+           until they make it, and is the one button here that cannot be undone.
+           With it on, Spam and the bin offer it in place of Delete, as the rows
+           there do: in Spam the trash would only be a second place to delete the
+           same mail from, and in the bin it trashes mail that already carries
+           Trash, which changes nothing on the server while the answer still
+           takes the rows out of the list, so mail looked deleted and was back on
+           the next load.
+
+           With it off, Spam keeps Delete, and the bin has no Delete at all, for
+           the second reason: the only way out of it is Move to inbox. What asks
+           first before a delete forever is mail--list-toolbar#purgeSelected. #}
+        {% if list_scope|default('') in ['spam', 'trash'] and app.user and app.user.deleteNowButtons %}
+            {{ m.tbtn('click->mail--list-toolbar#purgeSelected',  'fa-solid fa-fire',          'toolbar.actions.purge'|trans,    'hover:text-danger') }}
+        {% elseif 'trash' != list_scope|default('') %}
+            {{ m.tbtn('click->mail--list-toolbar#deleteSelected', 'fa-solid fa-trash',         'toolbar.actions.delete'|trans,   'hover:text-danger') }}
+        {% endif %}
         {# Beside archive and delete because it is the third way a selection
            LEAVES this list, and those three are what a selection is nearly
            always made for. #}

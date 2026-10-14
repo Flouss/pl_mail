@@ -469,26 +469,47 @@ final readonly class ThreadStatusUpdater
      */
     public function markRead(array $messages, bool $read): void
     {
-        $unread = 0;
-
         // Collected before the loop writes seenAt, because "was unread until
         // just now" is the whole condition a receipt fires on and one line
         // later it is unrecoverable.
         $firstReads = [];
 
+        // Only the messages this call actually changes. Opening a conversation
+        // marks it read every time, and most conversations a person opens are
+        // ones they have read before — so most calls here change nothing. They
+        // used to be written anyway: seenAt was replaced with the time of the
+        // latest look, the provider was told to mark read what it already had
+        // as read, and a JMAP change was recorded for every message, which
+        // woke every phone and every open tab to re-read numbers that could
+        // not have moved.
+        $changed = [];
+
         foreach ($messages as $message) {
             if (true === $read) {
+                if (null !== $message->seenAt && true === $message->hasFlag(MessageFlag::SEEN)) {
+                    continue;
+                }
+
                 if (null === $message->seenAt) {
                     $firstReads[] = $message;
                 }
 
                 $message->addFlag(MessageFlag::SEEN);
-                $message->seenAt = new DateTimeImmutable();
-            } else {
-                $message->removeFlag(MessageFlag::SEEN);
-                $message->seenAt = null;
-                $unread++;
+                // The first time it was seen, kept: a message read on Monday
+                // and looked at again on Friday was read on Monday.
+                $message->seenAt ??= new DateTimeImmutable();
+                $changed[]         = $message;
+
+                continue;
             }
+
+            if (null === $message->seenAt && false === $message->hasFlag(MessageFlag::SEEN)) {
+                continue;
+            }
+
+            $message->removeFlag(MessageFlag::SEEN);
+            $message->seenAt = null;
+            $changed[]       = $message;
         }
 
         // Per thread, counted from that thread's own messages.
@@ -516,12 +537,27 @@ final readonly class ThreadStatusUpdater
             }
         }
 
+        // A counter that disagrees with its messages is put right even when no
+        // message changed, and that counts as a change: the list and the
+        // badges are drawn from the counter.
+        $counterMoved = false;
+
         foreach ($counts as ['thread' => $thread, 'unread' => $threadUnread]) {
-            $thread->unreadCount = $threadUnread;
+            if ($thread->unreadCount !== $threadUnread) {
+                $thread->unreadCount = $threadUnread;
+                $counterMoved        = true;
+            }
         }
 
-        $this->propagator->markRead($messages, $read);
-        $this->recordJmapUpdates($messages);
+        if ([] === $changed && false === $counterMoved) {
+            return;
+        }
+
+        if ([] !== $changed) {
+            $this->propagator->markRead($changed, $read);
+        }
+
+        $this->recordJmapUpdates([] !== $changed ? $changed : $messages);
         $this->em->flush();
 
         // After the flush: the handler re-reads these rows from the database,

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Backup;
 
 use App\Domain\Enum\Account\MailProvider;
+use App\Domain\Enum\Ai\AiProvider;
 use App\Domain\Enum\Ai\PromptSlot;
 use App\Domain\Enum\Integration\Provider;
 use App\Domain\Enum\Mail\CategorySource;
@@ -183,6 +184,7 @@ final class ConfigBackupRoundTripTest extends KernelTestCase
 
         // ── The account ───────────────────────────────────────────────────
         $this->check('account.password (IMAP)', self::MAILBOX_PASSWORD, $account->password);
+        $this->check('account.smtpPassword', 'the-smtp-password-4c1e', $account->smtpPassword);
         $this->check('account.imapHost', 'imap.audit.test', $account->imapHost);
         $this->check('account.colorIndex', 3, $account->colorIndex);
         $this->check('account.oauthGrantedScopes', 'https://mail.google.com/ openid', $account->oauthGrantedScopes);
@@ -191,6 +193,7 @@ final class ConfigBackupRoundTripTest extends KernelTestCase
         $this->check('account setting sync.backfill_target', null, $account->getSetting(Account::SETTING_BACKFILL_TARGET));
         $this->check('account setting compose.signature', '<p>Viele Grüße, Anna</p>', $account->getSetting(Account::SETTING_SIGNATURE));
         $this->check('account setting compose.read_receipt.default', 'ask', $account->getSetting(Account::SETTING_READ_RECEIPT_DEFAULT));
+        $this->check('account setting mail.catch_all_domains', ['shop.test'], $account->catchAllDomains);
         $this->check(
             'account setting compose.signature.alias.N',
             '<p>Anna, privat</p>',
@@ -230,7 +233,14 @@ final class ConfigBackupRoundTripTest extends KernelTestCase
         $this->check('aiSettings row exists', true, $ai instanceof AiSettings);
         $this->check('aiSettings.baseUrl', 'http://10.0.0.5:11434', $ai?->baseUrl);
         $this->check('aiSettings.apiToken', self::AI_TOKEN, $ai?->apiToken);
+        $this->check('aiSettings.provider', AiProvider::OpenAi, $ai?->provider);
+        $this->check('aiSettings.headers', '{"X-Tenant":"acme"}', $ai?->headers);
         $this->check('aiSettings.chatModel', 'llama3.1:8b', $ai?->chatModel);
+        $this->check('aiSettings.embeddingOwnConnection', true, $ai?->embeddingOwnConnection);
+        $this->check('aiSettings.embeddingProvider', AiProvider::Ollama, $ai?->embeddingProvider);
+        $this->check('aiSettings.embeddingBaseUrl', 'http://10.0.0.9:11434', $ai?->embeddingBaseUrl);
+        $this->check('aiSettings.embeddingApiToken', 'a-search-token', $ai?->embeddingApiToken);
+        $this->check('aiSettings.embeddingHeaders', '{"X-Home":"yes"}', $ai?->embeddingHeaders);
         $this->check('aiSettings.embeddingModel', 'nomic-embed-text', $ai?->embeddingModel);
         $this->check('aiSettings.embeddingDimensions', 768, $ai?->embeddingDimensions);
         $this->check('aiSettings.isEnabled', true, $ai?->isEnabled);
@@ -407,6 +417,7 @@ final class ConfigBackupRoundTripTest extends KernelTestCase
         $account->email              = 'anna@work.audit.test';
         $account->username           = 'anna@work.audit.test';
         $account->password           = self::MAILBOX_PASSWORD;
+        $account->smtpPassword       = 'the-smtp-password-4c1e';
         $account->imapHost           = 'imap.audit.test';
         $account->imapPort           = 993;
         $account->smtpHost           = 'smtp.audit.test';
@@ -419,6 +430,7 @@ final class ConfigBackupRoundTripTest extends KernelTestCase
         $account->setSetting(Account::SETTING_BACKFILL_TARGET, 0);
         $account->setSetting(Account::SETTING_SIGNATURE, '<p>Viele Grüße, Anna</p>');
         $account->setSetting(Account::SETTING_READ_RECEIPT_DEFAULT, 'ask');
+        $account->catchAllDomains = ['shop.test'];
 
         $this->entityManager->persist($account);
 
@@ -444,7 +456,14 @@ final class ConfigBackupRoundTripTest extends KernelTestCase
         $ai->isEnabled           = true;
         $ai->baseUrl             = 'http://10.0.0.5:11434';
         $ai->apiToken            = self::AI_TOKEN;
+        $ai->provider            = AiProvider::OpenAi;
+        $ai->headers             = '{"X-Tenant":"acme"}';
         $ai->chatModel           = 'llama3.1:8b';
+        $ai->embeddingOwnConnection = true;
+        $ai->embeddingProvider   = AiProvider::Ollama;
+        $ai->embeddingBaseUrl    = 'http://10.0.0.9:11434';
+        $ai->embeddingApiToken   = 'a-search-token';
+        $ai->embeddingHeaders    = '{"X-Home":"yes"}';
         $ai->embeddingModel      = 'nomic-embed-text';
         $ai->embeddingDimensions = 768;
         $ai->searchEnabled       = true;

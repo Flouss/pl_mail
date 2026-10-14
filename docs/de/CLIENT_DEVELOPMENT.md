@@ -1,4 +1,4 @@
-<!-- translated-from: CLIENT_DEVELOPMENT.md sha1:5fd7a5bbb81ccdbec381ba28943880f345abd8cb -->
+<!-- translated-from: CLIENT_DEVELOPMENT.md sha1:e5b7f30a39d80384afd9adcc2750f854b0792c3d -->
 # Einen Client für plMail bauen
 
 Alles, was eine Entwicklerin (oder ein Agent) braucht, um einen *neuen* plMail-Client zu schreiben
@@ -1106,6 +1106,63 @@ Absenderadresse, mit der die Nachricht tatsächlich hinausgeht, und eine, die ke
 dieses Kontos ist, wird mit `forbiddenFrom` abgelehnt, statt auf die Kontoadresse
 zurückzufallen.
 
+**Welche Identität eine Nachricht beantwortet**, sagt der Server, und zwar in `replyFrom` — einer
+plMail-Eigenschaft von `Email/get`. Frag sie namentlich an, wenn du die Nachricht holst, aus der
+eine Antwort oder eine Weiterleitung gebaut wird; bei einem Get ohne `properties` fehlt sie, weil
+sie eine Signatur mitbringt:
+
+```json
+["Email/get", {"accountId": "1", "ids": ["42"], "properties": ["subject", "from", "to", "replyFrom"]}, "g"]
+```
+
+```json
+"replyFrom": {
+  "id": "addr-eW9Ac2hvcC5leGFtcGxl", "name": "John Smith", "email": "yo@shop.example",
+  "replyTo": null, "bcc": null, "textSignature": "", "htmlSignature": "", "mayDelete": false
+}
+```
+
+Es ist eine vollständige Identität oder `null`. Öffne die Antwort damit — Absender, Name und
+Signatur — und gib ihre `id` als `identityId` der Submission mit; bei `null`, oder gegenüber einem
+Server, der die Eigenschaft nicht kennt und sie weglässt, bleibst du bei der primären Identität.
+Es ist die Adresse, an die die Nachricht ging: dieselbe Antwort, mit der auch der Web-Editor eine
+Antwort öffnet — leite sie also nicht selbst aus An und Cc ab.
+
+- Bei einer Nachricht, die für einen Alias ankam, ist es die Identität dieses Alias, mit der `id`,
+  die sie in `Identity/get` hat.
+- Bei einer Nachricht, die für eine Adresse an einer der **Catch-all-Domains** des Kontos ankam,
+  ist es eine Identität, die `Identity/get` nicht auflistet — es gibt eine pro Adresse, an die je
+  jemand schreibt. Ihre `id` gilt in `EmailSubmission/set` wie jede andere, solange das Konto die
+  Domain noch hat; danach gibt es `forbiddenFrom`. Zeig sie für diese eine Nachricht in deinem
+  Von-Auswahlfeld neben den aufgelisteten, und speichere sie nicht als etwas, das du bei der
+  nächsten wieder anbietest.
+- Bei einem Entwurf ist es die Adresse, von der der Entwurf bereits geschrieben ist — damit
+  öffnest du ihn wieder.
+
+**Sag beim Speichern, von welcher Identität ein Entwurf geschrieben ist.** RFC 8621 nennt die
+Identität nur an der Submission; ein Entwurf hätte sonst bis zum Senden keinen Absender, und einer,
+der von einem Alias geschrieben wurde, käme aus den Entwürfen mit der primären Adresse zurück.
+plMail nimmt `identityId` auch in `Email/set` an, beim Anlegen und im Patch eines Updates:
+
+```json
+["Email/set", {"accountId": "1", "update": {"87": {"identityId": "addr-eW9Ac2hvcC5leGFtcGxl", "subject": "Re: Order"}}}, "s"]
+```
+
+Der Entwurf wird dann von dieser Adresse gespeichert, `from` und `replyFrom` melden sie, und mit
+ihr öffnet sich der Entwurf wieder, auf jedem Gerät. Schick die id bei jedem Speichern mit, und
+nimm sie in das auf, was entscheidet, ob ein Entwurf ungespeicherte Änderungen hat — ein
+Von-Auswahlfeld, das sonst nichts ändert, muss trotzdem speichern.
+
+- Die ids sind die, die `EmailSubmission/set` annimmt, eine Adress-Identität eingeschlossen.
+- Eine id, unter der das Konto nicht senden darf, wird **ignoriert**, und der Rest des Speicherns
+  geht durch: Das hier ist ein automatisches Speichern, und den Text wegen des Absenders zu
+  verlieren, wäre der schlimmere Fehler. Die Submission nennt ihre Identität weiterhin selbst, und
+  dort wird mit `forbiddenFrom` geantwortet.
+- **Prüf zuerst die Session.** Ein Server, der die Eigenschaft kennt, sagt das mit
+  `"draftIdentity": true` in der `urn:ietf:params:jmap:mail`-Capability des Kontos. Einer, der sie
+  nicht kennt, lehnt den ganzen Update-Patch als `invalidPatch` ab, weil er eine Eigenschaft nennt,
+  die er nicht ändern kann — lass den Schlüssel dort also weg.
+
 ### Vorlagen
 
 Wiederverwendbare Nachrichten: Der Benutzer schreibt eine unter **Einstellungen → Vorlagen** (oder
@@ -1540,7 +1597,7 @@ Grob danach geordnet, wie sehr Nutzerinnen sie vermissen werden.
 
 **Einstellungen**
 - Erscheinungsbild — `Appearance/get` und `Appearance/set` liefern das gesamte Objekt, samt
-  `fontFamily`, `fontScale`, `previewLines`, `unreadEmphasis`, `accountCorner`, `listAvatars`,
+  `fontFamily`, `fontScale`, `previewLines`, `unreadEmphasis`, `accountCorner`, `listAvatars`, `tabUnreadCount`,
   den drei Dichten pro Oberfläche und den nur lesbaren `logoStyle`, `logoMotif` und `logoPaint`
   (siehe [§2](#2-aussehen-und-verhalten)). Bau das Token-System
   trotzdem; lies die Werte des Servers hinein, statt eigene Vorgaben zu erfinden.

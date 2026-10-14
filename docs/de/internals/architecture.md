@@ -1,4 +1,4 @@
-<!-- translated-from: internals/architecture.md sha1:945944f01eaa7d5c41f3009a7fe85b370258e0b4 -->
+<!-- translated-from: internals/architecture.md sha1:9a71407f7557ff10c7e390efae4605835733b595 -->
 # Architektur
 
 Die Schichten, was wo liegt, und die Regeln, die das so halten. Diese Seite beschreibt die
@@ -177,7 +177,7 @@ Workers, damit ein verzögerter Retry nie auf einen Neustart warten muss.
 
 Getrennte Transports allein genügen nicht. Ein Worker, der bereits in einem langen Handler
 steckt, kann eine Sendung nicht aufnehmen, wie hoch sie auch priorisiert ist — also hat jeder
-Transport seinen eigenen Prozess: `worker-export`, `worker-ingest`, `worker-live`, `worker-release`, `worker-enrich`,
+Transport seinen eigenen Prozess: `worker-export`, `worker-ingest`, `worker-backlog`, `worker-live`, `worker-release`, `worker-enrich`,
 `worker-maintenance` und `worker-bulk`, die `app:work` nebeneinander im Worker-Container betreibt.
 `worker-enrich` ist der eine, der zwei Transports abarbeitet, `enrich` und `enrich_backlog`, in
 dieser Reihenfolge — siehe [Mail-Ingest](mail-ingest.md#was-auf-eine-nachricht-folgt-und-wo-es-läuft). Ein fünfter Transport, `async`, wird ohne Routing

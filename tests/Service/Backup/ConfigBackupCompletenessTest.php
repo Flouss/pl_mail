@@ -161,6 +161,7 @@ final class ConfigBackupCompletenessTest extends TestCase
         yield 'the assistant configuration (Admin → AI)' => [ConfigBackupDatabase::AI_SETTINGS];
         yield 'the chosen log level (Admin → Logs)' => [ConfigBackupDatabase::LOG_SETTINGS];
         yield 'the update channel (Admin → Updates)' => [ConfigBackupDatabase::UPDATE_SETTINGS];
+        yield 'the sign-in provider (Admin → SSO)' => [ConfigBackupDatabase::OIDC_CONFIG];
     }
 
     #[\PHPUnit\Framework\Attributes\DataProvider('adminConfiguredTables')]

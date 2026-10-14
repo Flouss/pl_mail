@@ -38,6 +38,13 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/mail', name: 'app_mail_')]
 final class MailController extends AbstractController
 {
+    /**
+     * The key the counts payload carries its change sequence under. Namespaced
+     * so it cannot be taken for a badge: no element has a count key starting
+     * "state:".
+     */
+    public const string COUNTS_SEQUENCE_KEY = 'state:sequence';
+
     use ChecksCsrf;
 
     public function __construct(
@@ -724,7 +731,12 @@ final class MailController extends AbstractController
     {
         $this->denyAccessUnlessGranted('ROLE_USER');
 
+        // How far along this user's mail was when these numbers were read. A
+        // tab keeps it and ignores a `mail.changed` nudge that is not newer.
+        // First in the payload because it has to be read first — see
+        // SidebarCounts::changeSequence().
         $payload = [
+            self::COUNTS_SEQUENCE_KEY     => $counts->changeSequence(),
             'starred'                     => $counts->forStarred(),
             'unread'                      => $counts->forUnread(),
             NewMailMarkers::STARRED_KEY   => $newMail->forStarred(),
@@ -751,15 +763,17 @@ final class MailController extends AbstractController
         // unread count ("category:", the unprefixed namespace every other
         // unread number here already uses — "role:", "label:").
         //
-        // The unread one is NOT a number the tab prints, and that distinction is
-        // the whole reason it can exist without reopening the argument it used
-        // to lose. A tab still shows one figure and one only. This feeds the
-        // icon tint in the unread-only view, where the reasoning that kept
-        // unread off the tabs — the sidebar badge and the bold rows already say
-        // it — stops holding: every row on screen is unread, so the rows say
-        // nothing that distinguishes them, and the sidebar's Inbox badge is one
-        // total that cannot say WHICH tab its mail is sitting in. The tint is
-        // the only thing on the page that can, and it says it without counting.
+        // The unread one feeds two things on the tab: the icon tint, and the
+        // number printed beside the tab's name (data-tab-unread). It used to
+        // feed only the tint, and the number was kept off the tabs on the
+        // argument that the sidebar badge and the bold rows already say unread.
+        // That held until the badge read 1 and the open tab showed nothing
+        // unread: the badge could not say WHERE, and a colour nobody has had
+        // explained points at nothing. The figure is the badge's own unit —
+        // conversations holding unread mail — so the tabs add up to it.
+        //
+        // The "new:" pill stays a different statement and a different number:
+        // what arrived that the reader has never been shown, not what is unread.
         //
         // None of the three for somebody with the tabs switched off: there is
         // no element on their page carrying any of these keys, and each family

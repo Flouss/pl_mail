@@ -25,8 +25,9 @@ it and from the account's other folders beside it.
 
     {# The category tabs, for this account's mail.
 
-       The same five as the unified inbox and chosen by the same rule — one
-       exists while it holds mail, the one you are on stays — but deliberately
+       The same tabs as the unified inbox — the five and the reader's own — and
+       chosen by the same rule (MailController::visibleTabs()): one exists while
+       it holds mail in THIS account, the one you are on stays. But deliberately
        plainer: an icon and a name. What the unified strip adds is a set of
        counters ("3 new", the sender hint, the unread tint) that are summed
        across EVERY account and rewritten by the sidebar controller from that
@@ -46,7 +47,7 @@ it and from the account's other folders beside it.
         <div class="border-b border-line px-1">
             <nav class="flex text-sm overflow-x-auto overflow-y-hidden pb-px -mb-px [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {% for tabCase in tabs %}
-                    {% set isActive = tabCase === tab %}
+                    {% set isActive = tab is not null and tabCase.value == tab.value %}
                     <a
                         href="{{ path('app_mail_account', {account: account.id}|merge(tabQuery)|merge({tab: tabCase.value})) }}"
                         data-turbo-frame="inbox-list-frame"
@@ -55,14 +56,14 @@ it and from the account's other folders beside it.
                     >
                         {% if isActive %}
                             <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                <path fill-rule="evenodd" clip-rule="evenodd" d="{{ glyphs.solid(tabCase.value) }}"/>
+                                <path fill-rule="evenodd" clip-rule="evenodd" d="{{ glyphs.solid(tabCase.isCustom ? 'custom' : tabCase.value) }}"/>
                             </svg>
                         {% else %}
                             <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ glyphs.outline(tabCase.value) }}"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ glyphs.outline(tabCase.isCustom ? 'custom' : tabCase.value) }}"/>
                             </svg>
                         {% endif %}
-                        {{ ('tabs.' ~ tabCase.value)|trans }}
+                        {{ tabCase.isCustom ? tabCase.name : ('tabs.' ~ tabCase.value)|trans }}
                     </a>
                 {% endfor %}
             </nav>

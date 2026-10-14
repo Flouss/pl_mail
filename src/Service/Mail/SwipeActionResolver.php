@@ -133,7 +133,7 @@ final class SwipeActionResolver
             SheetEntry::Restore => false === $ordinary,
             SheetEntry::Purge   => $discarded && $this->deletesNow(),
             SheetEntry::Snooze  => $ordinary,
-            SheetEntry::Move    => true,
+            SheetEntry::Move    => $item instanceof MessageThread,
             SheetEntry::Labels  => true,
             SheetEntry::Spam    => $item instanceof MessageThread && false === $discarded,
             SheetEntry::Select  => true,

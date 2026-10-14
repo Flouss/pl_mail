@@ -42,7 +42,10 @@ enum SheetEntry: string
     /** Snooze the row. The wake time is the snooze menu's, posted with the URL. */
     case Snooze = 'snooze';
 
-    /** Pick a destination for the row. Opens the move picker; posts nothing itself. */
+    /**
+     * Pick a destination for the row. Opens the move picker; posts nothing itself. Threads only:
+     * the picker's move route looks up thread ids, so a bare message has no Move.
+     */
     case Move = 'move';
 
     /** Tick labels on the row. Opens the label picker; posts nothing itself. */

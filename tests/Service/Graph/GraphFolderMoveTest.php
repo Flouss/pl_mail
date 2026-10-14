@@ -15,6 +15,7 @@ use App\Entity\Mail\MessageThread;
 use App\Entity\User\User;
 use App\Service\Graph\GraphApiSyncer;
 use App\Service\Mail\GraphApiClient;
+use App\Tests\Support\Mercure\RecordingHub;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -46,6 +47,7 @@ final class GraphFolderMoveTest extends KernelTestCase
     private Label $drafts;
     private Label $trash;
     private Label $receipts;
+    private RecordingHub $hub;
 
     private const string DRAFTS_FOLDER  = 'AAMkAD-drafts';
     private const string TRASH_FOLDER   = 'AAMkAD-trash';
@@ -64,6 +66,7 @@ final class GraphFolderMoveTest extends KernelTestCase
 
         $this->connection->beginTransaction();
 
+        $this->hub      = new RecordingHub();
         $this->user     = $this->seedUser();
         $this->account  = $this->seedAccount();
         $this->drafts   = $this->seedLabel('Drafts', LabelRole::Drafts, self::DRAFTS_FOLDER);
@@ -296,6 +299,105 @@ final class GraphFolderMoveTest extends KernelTestCase
         $this->syncFolders([self::DRAFTS_FOLDER => [$this->removedItem('AAkALgAAsomeoneelse')]]);
 
         self::assertNotNull($this->em->find(Message::class, (int) $message->id));
+    }
+
+    // ── telling the open list ────────────────────────────────────────────────
+
+    /**
+     * A move made in Outlook web changes only rows: no mail is ingested, so
+     * nothing published account.synced and the open list kept showing the
+     * message in its old folder until the page was reloaded.
+     */
+    public function testAMoveMadeInOutlookTellsTheOpenListToRefresh(): void
+    {
+        $message = $this->seedMessage($this->drafts);
+
+        $this->syncFolder(self::TRASH_FOLDER, $message->graphId);
+
+        self::assertSame(['Trash'], $this->labelNamesOf($message), 'the move itself was applied');
+        $this->assertListToldToRefresh();
+    }
+
+    /**
+     * Re-reporting a message where it already is — the echo of plMail's own
+     * move, coming back on the next delta — is not news. The same message is
+     * then really moved, so the silence is not that of a notifier that never
+     * speaks.
+     */
+    public function testAMessageStayingPutIsNotAnnouncedButMovingItIs(): void
+    {
+        $this->seedLabel('Archive', LabelRole::Archive, self::ARCHIVE_FOLDER);
+        $message = $this->seedMessage($this->trash, $this->receipts);
+
+        $this->syncFolder(self::TRASH_FOLDER, $message->graphId);
+
+        self::assertSame([], $this->hub->updates, 'already there: nothing to refresh');
+
+        $this->syncFolder(self::ARCHIVE_FOLDER, $message->graphId);
+
+        self::assertContains('Archive', $this->labelNamesOf($message));
+        $this->assertListToldToRefresh();
+    }
+
+    /**
+     * The source half of a move, on its own: the message still wears another
+     * folder label afterwards, so it is not erased and the detach is the only
+     * thing that changed.
+     */
+    public function testARemovalThatTakesAFolderLabelOffIsAnnounced(): void
+    {
+        $message = $this->seedMessage($this->drafts, $this->trash);
+
+        $this->syncFolders([self::DRAFTS_FOLDER => [$this->removedItem($message->graphId)]]);
+
+        self::assertSame(['Trash'], $this->labelNamesOf($message), 'only the detach happened');
+        $this->assertListToldToRefresh();
+    }
+
+    /**
+     * A deletion on its own: the row wears no folder label, so the removal
+     * detaches nothing and the only change is the erase.
+     */
+    public function testADeletionMadeInOutlookTellsTheOpenListToRefresh(): void
+    {
+        $message = $this->seedMessage($this->receipts);
+        $rowId   = (int) $message->id;
+
+        $this->syncFolders([self::DRAFTS_FOLDER => [$this->removedItem($message->graphId)]]);
+
+        self::assertNull($this->em->find(Message::class, $rowId), 'the erase itself happened');
+        $this->assertListToldToRefresh();
+    }
+
+    /**
+     * Removals that change nothing are not announced: an id plMail holds no
+     * row for, and a removal for a message that has no such label to lose.
+     */
+    public function testARemovalThatChangesNothingIsNotAnnounced(): void
+    {
+        $message = $this->seedMessage($this->trash);
+
+        $this->syncFolders([self::DRAFTS_FOLDER => [
+            $this->removedItem('AAkALgAAsomeoneelse'),
+            $this->removedItem($message->graphId),
+        ]]);
+
+        self::assertSame(['Trash'], $this->labelNamesOf($message), 'it was never in Drafts');
+        self::assertSame([], $this->hub->updates);
+    }
+
+    private function assertListToldToRefresh(): void
+    {
+        self::assertCount(1, $this->hub->updates);
+
+        $update = $this->hub->updates[0];
+
+        self::assertSame(['mail/user/' . $this->user->id], $update->getTopics());
+        self::assertTrue($update->isPrivate());
+        self::assertSame(
+            ['type' => 'account.synced', 'accountId' => $this->account->id],
+            json_decode($update->getData(), true, flags: JSON_THROW_ON_ERROR),
+        );
     }
 
     // ── Fixtures ─────────────────────────────────────────────────────────────

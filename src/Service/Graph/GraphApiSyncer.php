@@ -103,10 +103,20 @@ final class GraphApiSyncer
     ) {}
 
     /**
+     * Set by partition() and eraseVanished() when a row we already hold
+     * changed, consumed by announceChanges() at the end of the run that set
+     * it. Reset at the start of each public entry point, so a run that threw
+     * halfway cannot announce on behalf of the next.
+     */
+    private bool $changedExisting = false;
+
+    /**
      * @param list<string> $folderIds
      */
     public function sync(Account $account, array $folderIds): void
     {
+        $this->changedExisting = false;
+
         $deltaLinks = $account->graphDeltaLinks;
         $pending    = [];
 
@@ -236,6 +246,8 @@ final class GraphApiSyncer
 
         $this->em->flush();
 
+        $this->announceChanges($account);
+
         $this->dispatchBatches($account, array_map(strval(...), array_keys($pending)));
     }
 
@@ -255,6 +267,8 @@ final class GraphApiSyncer
      */
     public function importPage(Account $account): GraphImportStep
     {
+        $this->changedExisting = false;
+
         $plan = $account->graphImport;
 
         if ([] === $plan) {
@@ -318,11 +332,13 @@ final class GraphApiSyncer
 
             $account->graphImport = [...$plan, ['folder' => $folderId, 'since' => $entry['since'], 'next' => null]];
             $this->em->flush();
+            $this->announceChanges($account);
 
             return GraphImportStep::Waiting;
         }
 
         $this->em->flush();
+        $this->announceChanges($account);
 
         return [] === $account->graphImport ? GraphImportStep::Finished : GraphImportStep::More;
     }
@@ -496,6 +512,8 @@ final class GraphApiSyncer
         }
 
         if ($erased > 0) {
+            $this->changedExisting = true;
+
             $this->logger->info('GraphApiSyncer: messages removed from every folder were deleted here', [
                 'accountId' => $account->id,
                 'reported'  => count($graphIds),
@@ -522,6 +540,7 @@ final class GraphApiSyncer
 
         $needsFetch = [];
         $flagStates = [];
+        $changed    = false;
 
         // Before the loop, because the echo guard is measured from the moment
         // the provider was asked and the delta was already in hand when this
@@ -536,7 +555,8 @@ final class GraphApiSyncer
             }
 
             if (true === array_key_exists('@removed', $item)) {
-                $this->detachFolderLabel($account, $graphId, $folderId);
+                // The call first: `||` would skip it once $changed is true.
+                $changed = $this->detachFolderLabel($account, $graphId, $folderId) || $changed;
                 continue;
             }
 
@@ -547,7 +567,7 @@ final class GraphApiSyncer
 
             // Already synced and still present — where it lives, and what state
             // it is in.
-            $this->attachFolderLabel($account, $graphId, (string) ($item['parentFolderId'] ?? $folderId));
+            $changed = $this->attachFolderLabel($account, $graphId, (string) ($item['parentFolderId'] ?? $folderId)) || $changed;
 
             // Read state used to stop here. The comment above this block said
             // the only cheap thing that could have changed was location, and it
@@ -568,18 +588,42 @@ final class GraphApiSyncer
         // change log, and it is where the echo guard keeps an unconfirmed local
         // change from being reverted by a delta that predates it.
         if ([] !== $flagStates && 0 < $this->status->applyRemoteFlags($flagStates, $readAt)) {
-            // The open list has to hear about it. A delta that only changed
-            // flags builds no message, so SyncGraphMessageBatchHandler never
-            // runs and never publishes account.synced; GraphAccountSyncer
-            // returns no mailbox ids, so there is no mailbox.synced either. The
-            // sidebar counts do move (mail.changed), and the list kept showing
-            // the old row until the page was reloaded. Only when a row really
-            // changed: the guard declining it, or the server agreeing with us
-            // (every echo of our own push), is not news.
-            $this->notifier->publishAccountSynced($account);
+            $changed = true;
+        }
+
+        if (true === $changed) {
+            $this->changedExisting = true;
         }
 
         return $needsFetch;
+    }
+
+    /**
+     * Tell the open list that rows changed under it, once, and only after the
+     * commit that makes the change visible to the request it triggers.
+     *
+     * A delta that only moved, deleted or re-flagged mail we already hold
+     * builds nothing, so SyncGraphMessageBatchHandler never runs and never
+     * publishes account.synced; GraphAccountSyncer returns no mailbox ids, so
+     * there is no mailbox.synced either. The sidebar counts do move
+     * (mail.changed), and the list kept showing the old rows until the page was
+     * reloaded. Only when a row really changed: a delta that agrees with what
+     * we hold (every echo of our own push), or a change the echo guard declines,
+     * is not news.
+     *
+     * One flag per run rather than a publish per folder page: partition() is
+     * reached from sync(), importPage() and receivedSince(), and publishing
+     * from inside it would announce label changes that are not flushed yet.
+     */
+    private function announceChanges(Account $account): void
+    {
+        if (false === $this->changedExisting) {
+            return;
+        }
+
+        $this->changedExisting = false;
+
+        $this->notifier->publishAccountSynced($account);
     }
 
     /**
@@ -624,19 +668,25 @@ final class GraphApiSyncer
         );
     }
 
-    private function attachFolderLabel(Account $account, string $graphId, string $folderId): void
+    /**
+     * @return bool whether the message's folder labels changed, i.e. whether it
+     *              really moved. Re-reporting it where it already is does not.
+     */
+    private function attachFolderLabel(Account $account, string $graphId, string $folderId): bool
     {
         $message = $this->messageRepository->findOneBy(['graphId' => $graphId, 'account' => $account]);
 
         if (null === $message) {
-            return;
+            return false;
         }
 
         $label = $this->folderResolver->resolveFolder($folderId, $account);
 
         if (null === $label) {
-            return;
+            return false;
         }
+
+        $moved = false === $message->hasLabel($label);
 
         // Exclusive, not additive. An Exchange message is in exactly one
         // folder, and this half of a move used to rely on the other half —
@@ -656,6 +706,7 @@ final class GraphApiSyncer
         foreach ($this->labelPolicy->folderLabels($message) as $current) {
             if ($current !== $label) {
                 $message->removeLabel($current);
+                $moved = true;
             }
         }
 
@@ -673,19 +724,25 @@ final class GraphApiSyncer
         $this->syncThreadLabels($message);
     }
 
-    private function detachFolderLabel(Account $account, string $graphId, string $folderId): void
+    /**
+     * @return bool whether the message was wearing the label, so whether
+     *              anything changed
+     */
+    private function detachFolderLabel(Account $account, string $graphId, string $folderId): bool
     {
         $message = $this->messageRepository->findOneBy(['graphId' => $graphId, 'account' => $account]);
 
         if (null === $message) {
-            return;
+            return false;
         }
 
         $label = $this->folderResolver->resolveFolder($folderId, $account);
 
         if (null === $label) {
-            return;
+            return false;
         }
+
+        $wasThere = $message->hasLabel($label);
 
         $message->removeLabel($label);
         $this->recordMoved($account, $message);

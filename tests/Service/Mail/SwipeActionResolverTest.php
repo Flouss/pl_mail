@@ -25,6 +25,7 @@ use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
+use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use Twig\Environment;
 
 /**
@@ -127,11 +128,117 @@ final class SwipeActionResolverTest extends KernelTestCase
         self::assertSame('/status/message/' . $message->id . '/archive', $left->url);
     }
 
-    public function testTheDefaultsAreFixedPerDirection(): void
+    /**
+     * Each direction does what the signed-in user's own setting says, and the two
+     * do not affect each other. The expected actions are the literal choices made
+     * here: left = star, right = none.
+     */
+    public function testEachDirectionFollowsTheSignedInUsersOwnSetting(): void
     {
-        // Two baselines, each named, so a swap of the two is a failure of both.
-        self::assertSame(SwipeAction::ReadUnread, SwipeDirection::Right->defaultAction());
-        self::assertSame(SwipeAction::Archive, SwipeDirection::Left->defaultAction());
+        $user                   = new User();
+        $user->swipeLeftAction  = SwipeAction::Star;
+        $user->swipeRightAction = SwipeAction::None;
+        $this->signIn($user);
+
+        $thread = $this->seedThread(unreadCount: 1);
+
+        $left = $this->resolver->forDirection(SwipeDirection::Left, $thread, draft: false);
+
+        self::assertInstanceOf(SwipeAffordance::class, $left, 'presence companion: the left direction is offered');
+        self::assertSame(SwipeAction::Star, $left->action);
+        self::assertSame('/status/thread/' . $thread->id . '/star', $left->url);
+        self::assertSame('thread_row.star', $left->label);
+        self::assertNull($this->resolver->forDirection(SwipeDirection::Right, $thread, draft: false), 'right is set to none, so inert');
+    }
+
+    /**
+     * With no one signed in there is no setting to read, so each direction keeps
+     * its own default: right = read/unread, left = archive.
+     */
+    public function testWithNobodySignedInEachDirectionKeepsItsDefault(): void
+    {
+        $thread = $this->seedThread(unreadCount: 1);
+
+        $right = $this->resolver->forDirection(SwipeDirection::Right, $thread, draft: false);
+        $left  = $this->resolver->forDirection(SwipeDirection::Left, $thread, draft: false);
+
+        self::assertInstanceOf(SwipeAffordance::class, $right);
+        self::assertSame(SwipeAction::ReadUnread, $right->action);
+        self::assertInstanceOf(SwipeAffordance::class, $left);
+        self::assertSame(SwipeAction::Archive, $left->action);
+    }
+
+    /**
+     * Both directions may be set to the same action (ASSUMPTION in the plan; the
+     * owner may forbid it). Each offers it on its own, with its own route.
+     */
+    public function testTheSameActionOnBothDirectionsResolvesToItOnBoth(): void
+    {
+        $user                   = new User();
+        $user->swipeRightAction = SwipeAction::Archive;
+        $user->swipeLeftAction  = SwipeAction::Archive;
+        $this->signIn($user);
+
+        $thread = $this->seedThread(unreadCount: 1);
+
+        $right = $this->resolver->forDirection(SwipeDirection::Right, $thread, draft: false);
+        $left  = $this->resolver->forDirection(SwipeDirection::Left, $thread, draft: false);
+
+        self::assertInstanceOf(SwipeAffordance::class, $right);
+        self::assertSame('/status/thread/' . $thread->id . '/archive', $right->url);
+        self::assertInstanceOf(SwipeAffordance::class, $left);
+        self::assertSame('/status/thread/' . $thread->id . '/archive', $left->url);
+    }
+
+    /**
+     * A setting does not lift the strip's rules: archive chosen for the right is
+     * offered in the Inbox and inert in the archive, as the default was.
+     */
+    public function testAChosenArchiveOnTheRightIsOfferedOnlyInOrdinaryMail(): void
+    {
+        $user                   = new User();
+        $user->swipeRightAction = SwipeAction::Archive;
+        $this->signIn($user);
+
+        $thread = $this->seedThread(unreadCount: 1);
+
+        $inbox = $this->resolver->forDirection(SwipeDirection::Right, $thread, draft: false);
+
+        self::assertInstanceOf(SwipeAffordance::class, $inbox, 'presence companion: in the Inbox');
+        self::assertSame(SwipeAction::Archive, $inbox->action, 'the chosen action, not the default read/unread');
+
+        $this->placeIn($thread, LabelRole::Archive);
+
+        self::assertNull($this->resolver->forDirection(SwipeDirection::Right, $thread, draft: false));
+    }
+
+    /**
+     * A stored "trash" never reaches the resolver as an action: the direction falls
+     * back to its own default, so left archives, and right keeps its own setting.
+     */
+    public function testAStoredTrashFallsBackToTheDirectionsDefaultInTheResolver(): void
+    {
+        $user = new User();
+        $user->setSetting(User::SETTING_SWIPE_LEFT_ACTION, 'trash');
+        $user->setSetting(User::SETTING_SWIPE_RIGHT_ACTION, 'star');
+        $this->signIn($user);
+
+        $thread = $this->seedThread(unreadCount: 1);
+
+        $left  = $this->resolver->forDirection(SwipeDirection::Left, $thread, draft: false);
+        $right = $this->resolver->forDirection(SwipeDirection::Right, $thread, draft: false);
+
+        self::assertInstanceOf(SwipeAffordance::class, $left);
+        self::assertSame(SwipeAction::Archive, $left->action);
+        self::assertInstanceOf(SwipeAffordance::class, $right, 'presence companion: the valid right value is still used');
+        self::assertSame(SwipeAction::Star, $right->action);
+    }
+
+    private function signIn(User $user): void
+    {
+        self::getContainer()->get('security.token_storage')->setToken(
+            new UsernamePasswordToken($user, 'main', $user->getRoles()),
+        );
     }
 
     /**

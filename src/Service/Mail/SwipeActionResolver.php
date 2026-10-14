@@ -9,7 +9,9 @@ use App\Domain\Enum\Mail\SwipeAction;
 use App\Domain\Enum\Mail\SwipeDirection;
 use App\Entity\Mail\Message;
 use App\Entity\Mail\MessageThread;
+use App\Entity\User\User;
 use LogicException;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 /**
@@ -26,8 +28,9 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
  * template decides that, from the same flag the strip uses), and the row's own
  * unread and starred state, which the labels are drawn from.
  *
- * Directions are resolved through SwipeDirection::defaultAction(), which is the
- * fixed default. A per-user setting replaces that call, and nothing else here.
+ * Directions are resolved through the signed-in user's own setting (actionFor()),
+ * and through SwipeDirection::defaultAction() when nobody is signed in. Only the
+ * action is per user: the strip's rules and the URLs are the same for everybody.
  * Every URL comes from the router by route name, so a route that is renamed
  * breaks here, in a test, rather than posting to a path that no longer exists.
  *
@@ -40,13 +43,33 @@ final class SwipeActionResolver
     public function __construct(
         private readonly MailPlacement $placement,
         private readonly UrlGeneratorInterface $urls,
+        private readonly Security $security,
     ) {
     }
 
-    /** The action a direction does on this row, by its fixed default. Null when it is inert here. */
+    /** The action a direction does on this row for the signed-in user. Null when it is inert here. */
     public function forDirection(SwipeDirection $direction, MessageThread|Message $item, bool $draft): ?SwipeAffordance
     {
-        return $this->for($direction->defaultAction(), $item, $draft);
+        return $this->for($this->actionFor($direction), $item, $draft);
+    }
+
+    /**
+     * The action the signed-in user chose for a direction. Nobody signed in has
+     * no setting to read, so the direction's default answers; a signed-in user's
+     * unreadable value falls back to the same default inside User.
+     */
+    public function actionFor(SwipeDirection $direction): SwipeAction
+    {
+        $user = $this->security->getUser();
+
+        if (!$user instanceof User) {
+            return $direction->defaultAction();
+        }
+
+        return match ($direction) {
+            SwipeDirection::Right => $user->swipeRightAction,
+            SwipeDirection::Left  => $user->swipeLeftAction,
+        };
     }
 
     /**

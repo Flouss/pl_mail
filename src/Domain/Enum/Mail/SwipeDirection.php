@@ -11,9 +11,10 @@ namespace App\Domain\Enum\Mail;
  * the reading direction of the interface. No right-to-left locale ships, so a
  * reader adding one has to decide how the two sides mirror. The docs say so.
  *
- * `defaultAction()` is the one place the fixed defaults live. A per-user setting
- * (a later change) replaces the body of the call site, not this table, so the
- * defaults stay visible here for anyone who reads the enum first.
+ * `defaultAction()` is the one place the defaults live. Each direction's user
+ * setting (User::swipeRightAction, User::swipeLeftAction) falls back to it, and
+ * so does a signed-out reader, so the defaults stay visible here for anyone who
+ * reads the enum first.
  */
 enum SwipeDirection: string
 {

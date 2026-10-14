@@ -159,6 +159,14 @@ class Message extends MessageModel
 
 
 
+    /**
+     * When the message went out (for received mail, when it arrived).
+     *
+     * An unsent draft has none, however it came to be here: the editor, the
+     * send queue and the thread all read "has a sentAt" as "has gone out". So
+     * a sync builder must leave it null for a draft, or a draft written in
+     * another client is listed and then refused (404) by the editor.
+     */
     #[ORM\Column(nullable: true)]
     public ?DateTimeImmutable $sentAt = null;
 

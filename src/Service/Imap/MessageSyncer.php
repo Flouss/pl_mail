@@ -4,6 +4,7 @@ namespace App\Service\Imap;
 
 use App\Domain\Helper\ImapFolderLocator;
 use App\Domain\DTO\Mail\IngestedMessage;
+use App\Domain\Enum\Mail\MessageFlag;
 use App\Domain\Enum\Mail\MessagePriority;
 use App\Domain\Helper\AddressHelper;
 use App\Domain\Helper\AttachmentStorageHelper;
@@ -933,14 +934,18 @@ class MessageSyncer
         $message->ccAddresses = self::addressesOf($imapMessage->getCc());
         $message->bccAddresses = self::addressesOf($imapMessage->getBcc());
 
-        // Dates
-        $receivedAt = $this->receivedAtOf($imapMessage);
-        $message->sentAt = $receivedAt;
-        $message->receivedAt = $receivedAt;
-
         // Flags
         $flagNames = array_values($imapMessage->getFlags()->toArray());
         $message->flags = $flagNames;
+
+        // Dates. Compared canonically because webklex reports `Draft` from some
+        // servers and `\Draft` from others. A draft has not been sent, whatever
+        // its Date header says (see Message::$sentAt).
+        $receivedAt = $this->receivedAtOf($imapMessage);
+        $isDraft    = true === in_array(MessageFlag::DRAFT->value, MessageFlag::canonicalList($flagNames), true);
+
+        $message->sentAt = true === $isDraft ? null : $receivedAt;
+        $message->receivedAt = $receivedAt;
 
         if (
             true === in_array('Seen', $flagNames, true)

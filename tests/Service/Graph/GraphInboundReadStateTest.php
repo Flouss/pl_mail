@@ -218,6 +218,7 @@ final class GraphInboundReadStateTest extends KernelTestCase
             $container->get('App\Service\Mail\MessageEraser'),
             $container->get('App\Service\Mail\ThreadStatusUpdater'),
             new \App\Service\Mail\SyncOrigin(),
+            $container->get('App\Service\Label\ThreadLabelSynchronizer'),
         );
 
         // Folders that are already being followed. One without a delta link is

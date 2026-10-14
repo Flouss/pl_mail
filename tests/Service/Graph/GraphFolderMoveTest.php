@@ -51,6 +51,7 @@ final class GraphFolderMoveTest extends KernelTestCase
     private const string TRASH_FOLDER   = 'AAMkAD-trash';
     private const string ARCHIVE_FOLDER = 'AAMkAD-archive';
     private const string INBOX_FOLDER   = 'AAMkAD-inbox';
+    private const string SPAM_FOLDER    = 'AAMkAD-spam';
     private const string GRAPH_ID       = 'AAkALgAAmessage';
 
     protected function setUp(): void
@@ -159,6 +160,85 @@ final class GraphFolderMoveTest extends KernelTestCase
         self::assertTrue($message->hasLabel($inbox));
     }
 
+    // ── the thread follows the message ───────────────────────────────────────
+
+    /**
+     * What a list shows is the thread's labels, not the message's. A mail
+     * marked as spam in another client arrives as the destination half only,
+     * the message swaps Inbox for Spam, and the thread used to gain Spam
+     * without losing Inbox: still listed in the inbox, and in Spam as well.
+     *
+     * The thread starts wearing exactly its message's labels (Inbox), the way
+     * ThreadLabelSynchronizer leaves it after an arrival.
+     */
+    public function testTheThreadLeavesTheOldFolderWithItsMessage(): void
+    {
+        $inbox = $this->seedLabel('Inbox', LabelRole::Inbox, self::INBOX_FOLDER);
+        $this->seedLabel('Spam', LabelRole::Spam, self::SPAM_FOLDER);
+        $message = $this->seedMessage($inbox);
+        $this->seedThreadLabelsFromMessages($message);
+
+        $this->syncFolder(self::SPAM_FOLDER, $message->graphId);
+
+        // Presence and absence in one assertion: Spam arrived, Inbox left.
+        self::assertSame(['Spam'], $this->threadLabelNamesOf($message));
+    }
+
+    /**
+     * A thread is under a folder while ANY of its messages is. Moving one
+     * message out must not take the folder off a thread whose other message
+     * is still there.
+     */
+    public function testTheThreadKeepsAFolderAnotherMessageOfItStillWears(): void
+    {
+        $inbox = $this->seedLabel('Inbox', LabelRole::Inbox, self::INBOX_FOLDER);
+        $this->seedLabel('Spam', LabelRole::Spam, self::SPAM_FOLDER);
+        $message = $this->seedMessage($inbox);
+        $this->seedSibling($message, 'AAkALgAAsibling', $inbox);
+        $this->seedThreadLabelsFromMessages($message);
+
+        $this->syncFolder(self::SPAM_FOLDER, $message->graphId);
+
+        self::assertSame(['Inbox', 'Spam'], $this->threadLabelNamesOf($message));
+    }
+
+    /**
+     * The same move, delivered the way a run with several folders delivers
+     * it: `@removed` on the source, an ordinary item on the destination.
+     */
+    public function testAMoveSeenFromBothFoldersLeavesTheThreadInTheDestinationOnly(): void
+    {
+        $inbox = $this->seedLabel('Inbox', LabelRole::Inbox, self::INBOX_FOLDER);
+        $this->seedLabel('Spam', LabelRole::Spam, self::SPAM_FOLDER);
+        $message = $this->seedMessage($inbox);
+        $this->seedThreadLabelsFromMessages($message);
+
+        $this->syncFolders([
+            self::INBOX_FOLDER => [$this->removedItem($message->graphId)],
+            self::SPAM_FOLDER  => [['id' => $message->graphId, 'parentFolderId' => self::SPAM_FOLDER]],
+        ]);
+
+        self::assertSame(['Spam'], $this->threadLabelNamesOf($message));
+    }
+
+    /**
+     * The other half of a move on its own: `@removed` takes a folder off the
+     * message, so it takes it off the thread too. Needs a message that is
+     * still somewhere else afterwards (the Drafts-and-Trash state rows were
+     * left in before moves became exclusive), or the removal would delete the
+     * row and the thread with it.
+     */
+    public function testARemovalTakesTheFolderOffTheThreadToo(): void
+    {
+        $message = $this->seedMessage($this->drafts, $this->trash);
+        $this->seedThreadLabelsFromMessages($message);
+
+        $this->syncFolders([self::DRAFTS_FOLDER => [$this->removedItem($message->graphId)]]);
+
+        self::assertSame(['Trash'], $this->labelNamesOf($message), 'the row survives, in Trash');
+        self::assertSame(['Trash'], $this->threadLabelNamesOf($message));
+    }
+
     // ── and when it moved out of the mailbox altogether ──────────────────────
 
     /**
@@ -265,6 +345,7 @@ final class GraphFolderMoveTest extends KernelTestCase
             $container->get('App\Service\Mail\MessageEraser'),
             $container->get('App\Service\Mail\ThreadStatusUpdater'),
             new \App\Service\Mail\SyncOrigin(),
+            $container->get('App\Service\Label\ThreadLabelSynchronizer'),
         );
 
         // Folders that are already being followed. One without a delta link is
@@ -316,6 +397,7 @@ final class GraphFolderMoveTest extends KernelTestCase
             $container->get('App\Service\Mail\MessageEraser'),
             $container->get('App\Service\Mail\ThreadStatusUpdater'),
             new \App\Service\Mail\SyncOrigin(),
+            $container->get('App\Service\Label\ThreadLabelSynchronizer'),
         );
 
         // Folders that are already being followed. One without a delta link is
@@ -342,6 +424,76 @@ final class GraphFolderMoveTest extends KernelTestCase
         sort($names);
 
         return $names;
+    }
+
+    /**
+     * The thread's labels as a list shows them, read back from the database.
+     *
+     * @return list<string> sorted, so the assertions read as sets
+     */
+    private function threadLabelNamesOf(Message $message): array
+    {
+        $thread = $message->thread;
+        self::assertNotNull($thread);
+
+        $this->em->refresh($thread);
+
+        $names = [];
+
+        foreach ($thread->labels as $label) {
+            $names[] = (string) $label->name;
+        }
+
+        sort($names);
+
+        return $names;
+    }
+
+    /**
+     * seedMessage() leaves the thread without labels. Give it the union of
+     * its messages' labels, which is what an arrival leaves behind.
+     */
+    private function seedThreadLabelsFromMessages(Message $message): void
+    {
+        $thread = $message->thread;
+        self::assertNotNull($thread);
+
+        foreach ($thread->messages as $member) {
+            foreach ($member->labels as $label) {
+                $thread->addLabel($label);
+            }
+        }
+
+        $this->em->flush();
+    }
+
+    private function seedSibling(Message $of, string $graphId, Label ...$labels): Message
+    {
+        $thread = $of->thread;
+        self::assertNotNull($thread);
+
+        $message                 = new Message();
+        $message->account        = $this->account;
+        $message->thread         = $thread;
+        $message->subject        = 'Moved about';
+        $message->fromAddress    = 'sender@example.test';
+        $message->graphId        = $graphId;
+        $message->receivedAt     = new \DateTimeImmutable('-30 minutes');
+        $message->sentAt         = $message->receivedAt;
+        $message->hasAttachments = false;
+        $message->flags          = [];
+        $message->syncedAt       = new \DateTimeImmutable();
+
+        foreach ($labels as $label) {
+            $message->addLabel($label);
+        }
+
+        $thread->addMessage($message);
+
+        $this->em->persist($message);
+        $this->em->flush();
+
+        return $message;
     }
 
     private function seedMessage(Label ...$labels): Message

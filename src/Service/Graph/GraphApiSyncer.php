@@ -12,6 +12,7 @@ use App\Jmap\State\JmapObjectType;
 use App\Jmap\State\StateManager;
 use App\Infrastructure\Messaging\Message\SyncGraphMessageBatchMessage;
 use App\Repository\Mail\MessageRepository;
+use App\Service\Label\ThreadLabelSynchronizer;
 use App\Service\Mail\GraphApiClient;
 use App\Service\Mail\MessageEraser;
 use App\Service\Mail\SyncOrigin;
@@ -97,6 +98,7 @@ final class GraphApiSyncer
         private readonly MessageEraser          $eraser,
         private readonly ThreadStatusUpdater    $status,
         private readonly SyncOrigin             $origin,
+        private readonly ThreadLabelSynchronizer $threadLabels,
     ) {}
 
     /**
@@ -655,11 +657,11 @@ final class GraphApiSyncer
         // this the message silently moves in Outlook and never in ltt.rs.
         $this->recordMoved($account, $message);
 
-        $thread = $message->thread;
-
-        if (null !== $thread) {
-            $thread->addLabel($label);
-        }
+        // A list shows the thread's labels, and a thread wears a folder while
+        // any of its messages does. Adding the destination alone left the
+        // thread under the folder the message had just left: mail marked as
+        // spam in another client stayed in the inbox list here.
+        $this->syncThreadLabels($message);
     }
 
     private function detachFolderLabel(Account $account, string $graphId, string $folderId): void
@@ -678,6 +680,16 @@ final class GraphApiSyncer
 
         $message->removeLabel($label);
         $this->recordMoved($account, $message);
+        $this->syncThreadLabels($message);
+    }
+
+    private function syncThreadLabels(Message $message): void
+    {
+        $thread = $message->thread;
+
+        if (null !== $thread) {
+            $this->threadLabels->sync($thread);
+        }
     }
 
     /**

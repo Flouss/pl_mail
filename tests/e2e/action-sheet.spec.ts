@@ -27,6 +27,9 @@ const SHEET = '[data-controller~="mail--action-sheet"]';
 const DIALOG = "role=dialog";
 const SHELL = '[data-controller~="ui--sidebar-drawer"]';
 
+/** The list's rows scroller, as the list frame draws it. */
+const ROWS_SELECTOR = '[data-list-region="rows"]';
+
 test.beforeEach(async ({ page }) => {
     seed("seed-mail");
 
@@ -471,9 +474,6 @@ test.describe("a row that leaves under a held finger", () => {
         await next.up();
     });
 });
-
-/** The list's rows scroller, as the list frame draws it. */
-const ROWS_SELECTOR = '[data-list-region="rows"]';
 
 /** The DOM id of a seeded label's entry in the label menus, found by its name. */
 async function labelIdNamed(page: Page, name: string): Promise<string> {

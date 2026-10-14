@@ -37,6 +37,10 @@ test.describe("label menu for one conversation", () => {
         const given = panel.locator('[data-label-id][data-attached="false"]').first();
         const givenId = await given.getAttribute("data-label-id");
 
+        if (givenId === null) {
+            throw new Error("the label the menu is given has no data-label-id");
+        }
+
         // The label the server did not tick: presence of the starting state.
         await expect(given).toHaveAttribute("data-attached", "false");
         expect(givenId).not.toBeNull();

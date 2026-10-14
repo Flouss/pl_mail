@@ -299,6 +299,35 @@ final class AccountInboxTabsTest extends WebTestCase
         yield 'a key that is not one' => ['malformed'];
     }
 
+    /**
+     * The pager counts the tab that is open, as the list does. Hand-derived: one
+     * thread in Payments and 51 in Primary make 52 in the inbox; at 50 a page
+     * that is two pages of inbox, two of Primary and ONE of Payments. A page
+     * count taken from the whole inbox would offer page 2 of Payments, which
+     * the list cannot fill.
+     */
+    public function testThePagerOffersNoPageTheOpenTabDoesNotHave(): void
+    {
+        $payments = $this->category($this->user, 'Payments');
+        $this->filed('Zahlung geaendert', $payments, MessageCategory::Updates);
+
+        for ($i = 0; $i < 51; ++$i) {
+            $this->thread(self::PRIMARY . ' ' . $i, MessageCategory::Primary, flush: false);
+        }
+
+        $this->em->flush();
+
+        $base = '/mail/account/' . $this->account->id;
+
+        // Presence companion: Primary really has a second page, so the redirect
+        // below is the tab's own count at work and not a page limit of two.
+        $this->client->request('GET', $base . '?tab=primary&page=2');
+        self::assertResponseIsSuccessful();
+
+        $this->client->request('GET', $base . '?tab=c' . $payments->id . '&page=2');
+        self::assertResponseRedirects($base . '?tab=c' . $payments->id);
+    }
+
     /** With the tabs off the account page is the whole inbox, filed mail included. */
     public function testWithoutTabsTheWholeInboxListsFiledMailToo(): void
     {

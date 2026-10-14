@@ -1,4 +1,4 @@
-<!-- translated-from: features/mail.md sha1:2011fd5dbb57811a13d924f3a11665842104a0ad -->
+<!-- translated-from: features/mail.md sha1:6b4eca4b213db329d4988f7e04a7576ecbe08ba6 -->
 
 # Mail
 
@@ -90,6 +90,8 @@ Netzwerke**, **Werbung**, **Updates** und **Foren**. Bei einem Gmail-Konto vertr
 Gmails eigenen `CATEGORY_*`-Labels. Bei allem anderen leitet es die Kategorie aus Headern ab,
 die ohnehin schon gespeichert sind — darum braucht eine Neukategorisierung nie eine erneute
 Synchronisierung.
+
+Auf dem Telefon ersetzt ein Tab-Wechsel den Eintrag im Browser-Verlauf, statt einen neuen anzulegen. Die Zurück-Taste des Browsers verlässt darum den Posteingang, statt dich durch die Tabs zurückzuführen, die du dir angesehen hast.
 
 ### Ein Posteingang ohne Tabs
 

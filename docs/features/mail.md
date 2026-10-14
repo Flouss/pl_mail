@@ -79,6 +79,8 @@ The inbox is split into the five Gmail categories — **Primary**, **Social**, *
 For everything else it works the category out from headers that were already stored, which is why
 re-categorisation never needs a resync.
 
+On a phone, switching tabs replaces the entry in the browser's history rather than adding one, so the browser's Back leaves the inbox instead of stepping back through the tabs you looked at.
+
 ### An inbox without tabs
 
 If you would rather have one list, switch **Inbox tabs** to **One list** under **Settings → General

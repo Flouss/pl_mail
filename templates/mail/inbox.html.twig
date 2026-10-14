@@ -142,7 +142,8 @@
        since a strip that opens on Forums with Forums off-screen says nothing. #}
     <div class="border-b border-line px-1">
         <nav class="relative flex text-sm overflow-x-auto overflow-y-hidden pb-px -mb-px [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-             data-controller="ui--scroll-active">
+             data-controller="ui--scroll-active ui--tab-history"
+             data-action="click->ui--tab-history#choose">
             {% for tabCase in tabs %}
                 {% set isActive = tabCase === tab %}
                 {% set tabName = ('tabs.' ~ tabCase.value)|trans %}

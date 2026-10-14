@@ -8,6 +8,8 @@ The published image tags: `latest` follows the most recent release below,
 
 ## Unreleased
 
+**On a phone, switching category tabs no longer adds an entry to the browser's history.** Below the medium breakpoint a tab switch in the inbox replaces the current entry, so the browser's Back leaves the inbox instead of stepping back through every tab you looked at. Desktop keeps the entry it always added. No schema change, no deployment change.
+
 **A Gmail import takes in everything in the mailbox, not only mail addressed to the account.**
 plMail kept a Gmail message only when its headers named the account, and on a real mailbox
 (`app:gmail:skipped`) what it dropped was the account owner's own mail: 202 messages sent from

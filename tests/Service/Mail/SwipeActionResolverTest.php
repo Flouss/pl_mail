@@ -18,6 +18,7 @@ use App\Service\Label\LabelResolver;
 use App\Service\Mail\SwipeActionResolver;
 use DateTimeImmutable;
 use Doctrine\DBAL\Connection;
+use LogicException;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -481,6 +482,7 @@ final class SwipeActionResolverTest extends KernelTestCase
             'spam'                             => $thread && false === $draft && false === $discarded,
             'move', 'labels'                   => false === $draft,
             'select'                           => true,
+            default                            => throw new LogicException(sprintf('No parity rule for the sheet entry "%s".', $entry)),
         };
     }
 

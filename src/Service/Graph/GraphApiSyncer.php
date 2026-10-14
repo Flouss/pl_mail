@@ -642,9 +642,18 @@ final class GraphApiSyncer
         // Applying the destination exclusively makes the last move win, which
         // is exactly what the server means. Non-folder labels are untouched:
         // categories are the many-to-many axis, and Snoozed is plMail's own.
+        //
+        // Whether anything moved is measured before it is made, because Graph
+        // re-sends a message in its folder's delta for reasons that are not a
+        // move — plMail marking it read is one. Recording a change for a
+        // message that is already where it should be announces nothing true to
+        // a JMAP client, and sends the phone a "New mail" notification for it.
+        $changed = false === $message->hasLabel($label);
+
         foreach ($this->labelPolicy->folderLabels($message) as $current) {
             if ($current !== $label) {
                 $message->removeLabel($current);
+                $changed = true;
             }
         }
 
@@ -653,7 +662,9 @@ final class GraphApiSyncer
         // A folder move on the Microsoft side changes Email.mailboxIds, which
         // is the single most visible thing a JMAP client watches for. Without
         // this the message silently moves in Outlook and never in ltt.rs.
-        $this->recordMoved($account, $message);
+        if (true === $changed) {
+            $this->recordMoved($account, $message);
+        }
 
         $thread = $message->thread;
 
@@ -673,6 +684,12 @@ final class GraphApiSyncer
         $label = $this->folderResolver->resolveFolder($folderId, $account);
 
         if (null === $label) {
+            return;
+        }
+
+        // A removal for a folder the message is not in changes nothing, and
+        // recording it would announce a move that did not happen.
+        if (false === $message->hasLabel($label)) {
             return;
         }
 

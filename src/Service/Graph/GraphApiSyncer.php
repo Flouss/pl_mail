@@ -100,6 +100,7 @@ final class GraphApiSyncer
         private readonly ThreadStatusUpdater    $status,
         private readonly SyncOrigin             $origin,
         private readonly ThreadLabelSynchronizer $threadLabels,
+        private readonly SyncNotifier           $notifier,
     ) {}
 
     /**
@@ -722,6 +723,8 @@ final class GraphApiSyncer
         // thread under the folder the message had just left: mail marked as
         // spam in another client stayed in the inbox list here.
         $this->syncThreadLabels($message);
+
+        return $moved;
     }
 
     /**
@@ -747,6 +750,8 @@ final class GraphApiSyncer
         $message->removeLabel($label);
         $this->recordMoved($account, $message);
         $this->syncThreadLabels($message);
+
+        return $wasThere;
     }
 
     private function syncThreadLabels(Message $message): void

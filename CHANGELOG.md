@@ -52,6 +52,15 @@ a row beside Drafts for every account together, and a row at the top of each acc
 that account alone. Archiving or snoozing from it leaves the conversation in the list. A
 conversation with several labels is listed once. No migration.
 
+**An Outlook account's read, unread, starred, moved and deleted mail reaches an open page without a reload.**
+Marking a message unread in Outlook on the web moved the unread counts in the sidebar and left the
+list showing the old row until the page was reloaded; moving or deleting one there did the same. A
+sync that only changed such a message ingested no mail, and "an account changed" was announced only
+after a sync had ingested something, so the open list was never told. It is told now, once per
+sync, and only when a row really changed: a server that agrees with what plMail already has says
+nothing.
+[#122](https://github.com/karatektus/pl_mail/pull/122), by @Flouss.
+
 **Choosing a profile picture from Immich, Paperless-ngx or another connected service opens the
 same picker as attaching to a mail.** Settings → Profile showed a small grid of its own: the first
 couple of dozen images at the top of the service, with no albums, no people, no search, no way to

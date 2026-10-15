@@ -25,6 +25,14 @@ menu and the arrow now sit on a row of their own under the header, so the sender
 width. It follows the width of the pane, not of the window. Wider panes are unchanged. No
 migration.
 
+**Outlook mail moved in another app leaves the folder it came from here too.**
+A message marked as spam (or archived, or deleted) in the phone's mail app was taken out of its old
+folder and put in the new one, but its conversation kept the old folder as well. The message sat in
+Spam while the inbox list went on showing it. A conversation now sits in exactly the folders its
+messages do, so the move shows in the list at the next sync. Conversations already left that way
+are put right the next time one of their messages changes folder.
+[#121](https://github.com/karatektus/pl_mail/pull/121), by @Flouss.
+
 **All Mail, if you want it: every conversation outside Spam and the bin, in one list (#57).**
 Archived mail had no list of its own to be browsed in, only search. All Mail holds it, together
 with what arrived, what you sent and your drafts, as Gmail's All Mail does, leaving out only Spam

@@ -1,4 +1,4 @@
-<!-- translated-from: features/mail.md sha1:9c5c253bcbb1a45268b1b280215395cb7524d73e -->
+<!-- translated-from: features/mail.md sha1:0d286e6bdc10cc99381d89dbb13a925c15dba5cb -->
 
 # Mail
 
@@ -823,6 +823,26 @@ zurückbringt, wie du es eingerichtet hattest.
 **Tasten und angehakte Zeilen.** Neben der Liste können eine Auswahl und eine geöffnete
 Unterhaltung gleichzeitig zu sehen sein. Eine Taste gilt trotzdem zuerst der Auswahl: `e` mit zwei
 angehakten Zeilen archiviert diese zwei und lässt die Unterhaltung offen, die du gerade liest.
+
+## Externe Bilder
+
+Bilder, die eine Mail von den Servern des Absenders lädt, bleiben blockiert, bis du sie anforderst:
+Ein Bild, das beim Öffnen geladen wird, verrät dem Absender, dass und wann du seine Mail gelesen
+hast. Die Mail sagt, wie viele sie zurückgehalten hat, und bietet zwei Wege an — **Bilder anzeigen**
+nur für diese Mail und **Bilder von … immer anzeigen**, das sich den Absender für dein Konto merkt.
+Unter der Mail eines vertrauten Absenders steht das dann, mit **Nicht mehr anzeigen**, um es
+zurückzunehmen. Mail, die du selbst gesendet hast, zeigt ihre Bilder ohne Nachfrage.
+
+**Einstellungen → Mail → Bilder**, **Externe Bilder immer anzeigen**, schaltet die Nachfrage für
+alle Absender ab. Es ist aus, bis du es einschaltest. Absender können dann sehen, dass du ihre Mail
+geöffnet hast, aber nicht deine Adresse: Die Bilder holt plMail und reicht sie an dich weiter, nie
+dein Browser. Die Absender, denen du einzeln vertraut hast, bleiben so oder so erhalten; schaltest
+du es wieder aus, gilt genau die Liste, die du hattest. Eine Konfigurationssicherung enthält die
+Einstellung.
+
+Mail im **Spam** bleibt blockiert, egal was du wählst, auch von vertrauten Absendern: Eine als Spam
+abgelegte Mail ist dein Anbieter, der bezweifelt, dass sie von dem kommt, der sie zu sein vorgibt.
+**Bilder anzeigen** ist dort trotzdem da, um die Bilder einer Mail von Hand zu laden.
 
 ## Zurückstellen
 

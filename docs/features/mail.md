@@ -749,6 +749,25 @@ you had it.
 together. A key still goes to the selection first: `e` with two rows ticked archives those two and
 leaves the conversation you are reading open.
 
+## Remote images
+
+Pictures that a message loads from the sender's servers are blocked until you ask for them: a
+picture fetched when you open a message tells its sender that, and when, you read it. The message
+says how many it held back, with two ways to show them — **Show images** for this message only, and
+**Always show images from** the sender, which remembers that sender for your account. A trusted
+sender's messages say so under the body, with **Stop showing** to take it back. Mail you sent
+yourself shows its pictures without asking.
+
+**Settings → Mail → Images**, **Always show remote images**, turns the question off for every
+sender. It is off until you turn it on. Senders can then tell that you opened their mail, but not
+your address: the pictures are fetched by plMail and passed on to you, never by your browser. The
+senders you trusted one by one are kept either way, so switching it off again brings back exactly
+the list you had. A config backup carries the choice.
+
+Mail in **Spam** stays blocked whatever you choose, trusted senders included: a message filed as
+spam is your provider doubting it comes from who it says, and **Show images** is still there to
+load one message's pictures by hand.
+
 ## Snooze
 
 Snoozing is archiving with a timer. The conversation leaves the Inbox now — at the provider too,

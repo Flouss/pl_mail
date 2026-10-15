@@ -3770,6 +3770,17 @@ settings:
         'off': Aus
         'on': An
         subheading: Wie Mail endgültig weggeworfen wird.
+    images:
+        always_show: Externe Bilder immer anzeigen
+        always_show_hint: >-
+            Lädt die Bilder in jeder Mail, ohne vorher zu fragen. Absender können
+            dann sehen, dass und wann du ihre Mail geöffnet hast, aber nicht deine
+            Adresse: Die Bilder kommen weiterhin über plMail zu dir. Mail im Spam
+            bleibt so oder so blockiert. Aus, bis du es einschaltest.
+        heading: Bilder
+        'off': Aus
+        'on': An
+        subheading: Ob Bilder, die eine Mail von anderswo lädt, erst auf Nachfrage geladen werden.
     nav:
         accounts: E-Mail-Konten
         ai: 'Assistent'
@@ -3789,6 +3800,7 @@ settings:
             mail: E-Mail
             personal: Persönlich
         health: 'Zustand der Konten'
+        images: Bilder
         insights: Radar
         integrations: Integrationen
         labels: Labels

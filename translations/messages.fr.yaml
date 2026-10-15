@@ -3805,6 +3805,18 @@ settings:
         'off': 'Désactivé'
         'on': 'Activé'
         subheading: Comment le courrier est jeté pour de bon.
+    images:
+        always_show: Toujours afficher les images distantes
+        always_show_hint: >-
+            Charge les images de chaque message sans demander d’abord. Les
+            expéditeurs peuvent alors savoir que vous avez ouvert leur courrier, et
+            quand, mais pas votre adresse : les images vous parviennent toujours par
+            plMail. Le courrier dans Spam reste bloqué dans tous les cas. Désactivé
+            tant que vous ne l’activez pas.
+        heading: Images
+        'off': 'Désactivé'
+        'on': 'Activé'
+        subheading: Si les images qu’un message charge depuis ailleurs attendent qu’on les demande.
     nav:
         accounts: Comptes mail
         ai: 'Assistant'
@@ -3824,6 +3836,7 @@ settings:
             mail: Courrier
             personal: Personnel
         health: 'Santé des comptes'
+        images: Images
         insights: Aperçus
         integrations: Intégrations
         labels: Libellés

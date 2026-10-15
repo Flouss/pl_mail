@@ -3757,6 +3757,17 @@ settings:
         'off': 'Off'
         'on': 'On'
         subheading: How mail is thrown away for good.
+    images:
+        always_show: Always show remote images
+        always_show_hint: >-
+            Loads the pictures in every message without asking first. Senders
+            can then tell that and when you opened their mail, though not your
+            address: images still come to you through plMail. Mail in Spam stays
+            blocked either way. Off until you turn it on.
+        heading: Images
+        'off': 'Off'
+        'on': 'On'
+        subheading: Whether pictures that mail loads from elsewhere wait to be asked for.
     nav:
         accounts: Mail accounts
         ai: 'Assistant'
@@ -3776,6 +3787,7 @@ settings:
             mail: Mail
             personal: Personal
         health: 'Account health'
+        images: Images
         insights: Insights
         integrations: Integrations
         labels: Labels

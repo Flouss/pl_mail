@@ -3570,6 +3570,13 @@ settings:
         'off': Off
         'on': On
         subheading: "How bottles be sunk for good."
+    images:
+        always_show: "Always hoist the pictures"
+        always_show_hint: "Hauls in the pictures in every bottle without askin' first. Senders can then tell that an' when ye opened their mail, but not where ye be anchored: pictures still come aboard through plMail. Bottles in Spam stay blocked either way. Off till ye turn it on."
+        heading: Pictures
+        'off': Off
+        'on': On
+        subheading: "Whether pictures a bottle hauls in from elsewhere wait to be asked for."
     nav:
         accounts: Th' crew
         ai: "Ship's Oracle"
@@ -3589,6 +3596,7 @@ settings:
             mail: "Th' post"
             personal: Yerself
         health: "State o' yer crew"
+        images: Pictures
         insights: The spyglass
         integrations: 'Friendly ports'
         labels: Flags

@@ -4033,6 +4033,11 @@ settings:
             toggle: 'Vue de la signature'
         subheading: 'Ce qui est ajouté en bas des messages que vous écrivez.'
     sorting:
+        account_tabs:
+            hint: Affiche aussi les onglets dans la boîte de réception d’un compte, quand vous cliquez sur le compte dans la barre latérale. Désactivé affiche toute la boîte de ce compte en une seule liste.
+            label: Onglets dans chaque compte
+            'off': 'Désactivé'
+            'on': 'Activé'
         again:
             button: Redemander
             hint: L’assistant répond une fois par message et garde la réponse. Redemandez après un changement de modèle, d’instruction ou de version de plMail — cela coûte un appel au modèle par message, c’est donc limité à votre courrier le plus récent.

@@ -1075,6 +1075,32 @@ class User extends UserEntityModel implements UserInterface, PasswordAuthenticat
     }
 
     /**
+     * Whether an account's own inbox (the account row in the sidebar) is shown
+     * in the category tabs as well as the unified Inbox (#55).
+     *
+     * OFF unless somebody switches it on. With it on, clicking an account opens
+     * its Primary tab, and its Social or Promotions mail is one more click
+     * away; off, the account page is the account's whole inbox, which is what
+     * it always was and what the account's own "Inbox" folder row still lists.
+     * Turning a familiar page into a narrower one is a change somebody should
+     * ask for, not one that arrives with an upgrade.
+     *
+     * Only read while the inbox tabs are on at all (CategorySorting::$tabs):
+     * somebody who chose One list gets one list everywhere, whatever this says.
+     * Only a stored true is on, so the key is absent for nearly everybody.
+     * Per USER — Settings → Mail → Categories.
+     */
+    public const string SETTING_ACCOUNT_INBOX_TABS = 'categories.account_tabs';
+
+    /** Virtual, out of the settings bag — see SETTING_ACCOUNT_INBOX_TABS. */
+    public bool $accountInboxTabs {
+        get => true === $this->getSetting(self::SETTING_ACCOUNT_INBOX_TABS, false);
+        set(bool $on) {
+            $this->setSetting(self::SETTING_ACCOUNT_INBOX_TABS, $on ? true : null);
+        }
+    }
+
+    /**
      * Which position the topbar's calendar button leaves out — Settings →
      * Calendar → Behaviour. None unless somebody chooses: the three-way cycle
      * is what the button has always done, and a person who has learned it

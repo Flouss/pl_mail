@@ -1,4 +1,4 @@
-<!-- translated-from: features/mail.md sha1:0d286e6bdc10cc99381d89dbb13a925c15dba5cb -->
+<!-- translated-from: features/mail.md sha1:30bda5df940795ddf3d3cb5ef13bbd9ae0233ba8 -->
 
 # Mail
 
@@ -91,9 +91,12 @@ Gmails eigenen `CATEGORY_*`-Labels. Bei allem anderen leitet es die Kategorie au
 die ohnehin schon gespeichert sind — darum braucht eine Neukategorisierung nie eine erneute
 Synchronisierung.
 
-Die Tabs gibt es im Posteingang ganz oben und im **Posteingang eines einzelnen Kontos** (Klick auf
-das Konto in der Seitenleiste) — ein Outlook-Konto oder jedes andere hat sie also auch, [eigene
-Tabs](#eigene-tabs) eingeschlossen. Ein Tab ist da, solange er Mail enthält, und auf der Seite
+Die Tabs gibt es im Posteingang ganz oben, und du kannst sie auch im **Posteingang eines einzelnen
+Kontos** haben (Klick auf das Konto in der Seitenleiste): **Einstellungen → Mail → Kategorien**,
+**Tabs in jedem Konto**. Es ist aus, bis du es einschaltest; dann hat ein Outlook-Konto oder jedes
+andere sie auch, [eigene Tabs](#eigene-tabs) eingeschlossen. Ist es aus, zeigt die Seite eines Kontos
+seinen ganzen Posteingang als eine Liste. Den Schalter gibt es nur, solange **Tabs im Posteingang**
+an ist, und eine Konfigurationssicherung enthält ihn. Ein Tab ist da, solange er Mail enthält, und auf der Seite
 eines Kontos zählt er nur dessen Mail — ein eigener Tab, der nur in einem anderen Konto Mail
 enthält, fehlt auf dieser Seite also. Die Tabs auf
 der Kontoseite sind schlichter: keine „neu“-Markierungen, keine Absenderhinweise und keine

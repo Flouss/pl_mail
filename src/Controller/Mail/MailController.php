@@ -485,8 +485,16 @@ final class MailController extends AbstractController
         // is not theirs, or is gone, is Primary rather than a fault, and
         // somebody who has switched the tabs off gets the whole inbox whatever
         // a stale link says.
+        //
+        // Only for somebody who asked for them here (User::$accountInboxTabs,
+        // off by default). Everybody else gets the account's whole inbox, as
+        // this page always showed, and a `?tab=` link from somebody who has
+        // since switched it off opens that too rather than a narrowed list
+        // with no strip to leave it by.
         $user   = $this->getUser();
-        $tab    = $this->requestedTab($request);
+        $tab    = $user instanceof User && true === $user->accountInboxTabs
+            ? $this->requestedTab($request)
+            : null;
         $tabbed = null !== $tab;
 
         $total   = $this->threadRepository->countForAccountInbox($account, $tab);

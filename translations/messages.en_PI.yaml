@@ -3806,6 +3806,11 @@ settings:
         reorder: "Drag t' reorder"
         subheading: "Raise or strike the ship's own tabs, add yer own, an' haul 'em into whatever order ye fancy."
     sorting:
+        account_tabs:
+            hint: "Shows the tabs on each ship's own hold too, when ye click the ship in the sidebar. Off shows that ship's whole hold as one pile."
+            label: "Tabs on every ship"
+            'off': Off
+            'on': On
         again:
             button: "Ask again"
             hint: "Th' oracle answers once per message an' keeps th' answer. Ask again when th' oracle, its orders or a plMail release have changed — it costs an askin' per message, so it be bounded to yer newest post."

@@ -31,6 +31,11 @@ use Symfony\Component\DomCrawler\Crawler;
  * that category of THIS account, the links stay on this page rather than
  * jumping to the unified inbox, and the numbers that are about every account
  * together are not drawn on a page about one.
+ *
+ * All of it only for somebody who switched the account tabs on (Settings →
+ * Mail → Categories, User::$accountInboxTabs), which setUp() does. Off — the
+ * default — the account page is the account's whole inbox, as it always was;
+ * the two tests at the end pin that.
  */
 final class AccountInboxTabsTest extends WebTestCase
 {
@@ -55,6 +60,9 @@ final class AccountInboxTabsTest extends WebTestCase
         $this->user    = $this->seedUser();
         $this->account = $this->seedAccount();
         $this->inbox   = $this->seedLabel('Inbox', LabelRole::Inbox);
+
+        $this->user->accountInboxTabs = true;
+        $this->em->flush();
 
         $this->client->loginUser($this->user);
     }
@@ -147,6 +155,49 @@ final class AccountInboxTabsTest extends WebTestCase
 
         self::assertStringContainsString(self::PRIMARY, $stale);
         self::assertStringContainsString(self::PROMOTION, $stale);
+    }
+
+    /**
+     * Off by default: clicking an account opens its whole inbox, every
+     * category in one list, with no strip — what the page was before it had
+     * tabs, for everybody who has not asked for them there.
+     */
+    public function testByDefaultTheAccountInboxIsItsWholeInboxWithNoStrip(): void
+    {
+        $this->thread(self::PRIMARY, MessageCategory::Primary);
+        $this->thread(self::PROMOTION, MessageCategory::Promotions);
+
+        $this->user->accountInboxTabs = false;
+        $this->em->flush();
+
+        self::assertNull($this->user->getSetting(User::SETTING_ACCOUNT_INBOX_TABS), 'off is the absent key');
+
+        $html = $this->accountHtml();
+
+        self::assertStringContainsString(self::PRIMARY, $html);
+        self::assertStringContainsString(self::PROMOTION, $html);
+        self::assertStringNotContainsString(sprintf('/mail/account/%d?tab=', $this->account->id), $html);
+
+        // The unified inbox keeps its tabs: the switch is about this page only.
+        self::assertStringContainsString('/mail/inbox?tab=promotions', (string) $this->client->request('GET', '/mail/inbox')->html());
+    }
+
+    /**
+     * A `?tab=` link saved while the switch was on opens the whole inbox once
+     * it is off, rather than a narrowed list with no strip to leave it by.
+     */
+    public function testWithTheSwitchOffAStaleTabLinkOpensTheWholeInbox(): void
+    {
+        $this->thread(self::PRIMARY, MessageCategory::Primary);
+        $this->thread(self::PROMOTION, MessageCategory::Promotions);
+
+        $this->user->accountInboxTabs = false;
+        $this->em->flush();
+
+        $html = $this->accountHtml('?tab=promotions');
+
+        self::assertStringContainsString(self::PRIMARY, $html);
+        self::assertStringContainsString(self::PROMOTION, $html);
     }
 
     /**

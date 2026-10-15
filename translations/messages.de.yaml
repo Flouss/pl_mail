@@ -4027,6 +4027,11 @@ settings:
         reorder: "Zum Umsortieren ziehen"
         subheading: "Schalte die eingebauten Tabs ein oder aus, leg eigene an und zieh sie in die Reihenfolge, die du willst."
     sorting:
+        account_tabs:
+            hint: Zeigt die Tabs auch im eigenen Posteingang eines Kontos, wenn du das Konto in der Seitenleiste anklickst. Aus zeigt den ganzen Posteingang dieses Kontos als eine Liste.
+            label: Tabs in jedem Konto
+            'off': Aus
+            'on': An
         again:
             button: Nochmal fragen
             hint: Der Assistent antwortet einmal pro Nachricht und behält die Antwort. Frag noch einmal, wenn sich Modell, Anweisung oder eine plMail-Version geändert haben — es kostet einen Modell-Aufruf pro Nachricht und gilt deshalb nur für deine neueste Mail.

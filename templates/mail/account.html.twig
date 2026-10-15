@@ -40,18 +40,20 @@ it and from the account's other folders beside it.
        Links go to THIS page with `?tab=`, carrying whatever else narrows the
        list and dropping `page`, because page four of Primary is not page four
        of Social. The strip scrolls inside itself rather than squeezing, since
-       five tabs are wider than a phone. #}
+       five tabs are wider than a phone, and ui--scroll-active brings the open
+       tab into view the way it does on the unified strip (#53). #}
     {% set tabQuery = app.request.query.all|filter((v, k) => k not in ['tab', 'page']) %}
 
     {% if tabs|length > 1 %}
         <div class="border-b border-line px-1">
-            <nav class="flex text-sm overflow-x-auto overflow-y-hidden pb-px -mb-px [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <nav class="relative flex text-sm overflow-x-auto overflow-y-hidden pb-px -mb-px [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                 data-controller="ui--scroll-active">
                 {% for tabCase in tabs %}
                     {% set isActive = tab is not null and tabCase.value == tab.value %}
                     <a
                         href="{{ path('app_mail_account', {account: account.id}|merge(tabQuery)|merge({tab: tabCase.value})) }}"
                         data-turbo-frame="inbox-list-frame"
-                        {% if isActive %}aria-current="page"{% endif %}
+                        {% if isActive %}aria-current="page" data-ui--scroll-active-target="current"{% endif %}
                         class="flex items-center gap-2.5 px-3 @xl:px-5 py-1.5 min-h-14 font-medium border-b-2 -mb-px transition-colors shrink-0 whitespace-nowrap {{ isActive ? 'text-accent border-accent' : 'text-ink-muted hover:text-gray-700 border-transparent hover:border-gray-300' }}"
                     >
                         {% if isActive %}

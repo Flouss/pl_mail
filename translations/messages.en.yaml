@@ -4008,6 +4008,11 @@ settings:
         reorder: "Drag to reorder"
         subheading: "Switch the built-in tabs on or off, add your own, and drag them into the order you want."
     sorting:
+        account_tabs:
+            hint: Shows the tabs on an account's own inbox too, when you click the account in the sidebar. Off shows that account's whole inbox as one list.
+            label: Tabs on each account
+            'off': 'Off'
+            'on': 'On'
         again:
             button: Ask again
             hint: The assistant answers once per message and keeps the answer. Ask again after the model, the prompt or a plMail release has changed — it costs a model call per message, so it is bounded to your newest mail.

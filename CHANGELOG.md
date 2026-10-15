@@ -15,12 +15,14 @@ proxy, so a sender learns that the message was opened but not your address. Mail
 blocked as before, and the senders you trusted one by one are kept for when it is switched off
 again. The choice lives in your user settings and a config backup carries it. No migration.
 
-**An account's own inbox has the category tabs.** Clicking an account in the sidebar opened a plain
-list, so on an Outlook account — or any account — the tabs were nowhere to be found unless you
-went back to the top-level Inbox. The categories were being worked out all along; that page just
-never drew them. It now shows Primary, Social, Promotions, Updates and Forums for that account's
-mail, and **One list** under Settings → General → Categories switches them off there too. The tabs
-on this page are plainer than the top-level Inbox's: no "new" pills, sender hints or unread tint
+**An account's own inbox can have the category tabs (#55).** Clicking an account in the sidebar
+opened a plain list, so on an Outlook account — or any account — the tabs were nowhere to be found
+unless you went back to the top-level Inbox. The categories were being worked out all along; that
+page just never drew them. Settings → Mail → Categories now has **Tabs on each account**, off until
+you turn it on: with it on, an account's page shows Primary, Social, Promotions, Updates, Forums and
+your own tabs for that account's mail; off, it stays the account's whole inbox in one list, as
+before. It is offered only while **Inbox tabs** is on, and a config backup carries it. The tabs on
+this page are plainer than the top-level Inbox's: no "new" pills, sender hints or unread tint
 (those add up every account), and no dropping a conversation onto a tab. No migration.
 
 **Signing in through single sign-on keeps you signed in, as "Keep me signed in" does on the password form.**

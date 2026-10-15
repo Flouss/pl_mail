@@ -18,6 +18,17 @@ consume, a ZIP for one, and says so. Nextcloud, Google Drive, OneDrive, Dropbox,
 migration.
 [#78](https://github.com/karatektus/pl_mail/pull/78), by @Flouss.
 
+**A message you read in plMail is read in Outlook too.** On Microsoft accounts, marking mail read
+(or starring it) is sent to Outlook by a background job, and that job used to work out the new state
+by reading the message back from plMail's database. When the job started a moment before the change
+had been saved, it read the old state and told Outlook the message was still unread: Outlook was
+touched, nothing changed, and an hour later the next sync brought the "unread" back into plMail. In
+a bulk mark-read several messages were affected. The job now carries what you chose. Archive,
+trash and label changes are unchanged, and a retried push still sends the current state rather than
+the original choice. Messages already stuck this way are not repaired; mark them read again. Gmail
+and IMAP jobs already carried the change themselves. No migration.
+[#111](https://github.com/karatektus/pl_mail/pull/111), by @Flouss.
+
 **A message's header no longer breaks into pieces in a narrow pane.** On a phone, or with the
 reading pane on the right and dragged narrow, the sender's address was cut mid-word across three
 lines while the date and the buttons took half the width. Below 36rem of pane width the date, the

@@ -2205,6 +2205,7 @@ integration:
         link: Lien
         more: 'Afficher plus'
         no_results: 'Rien trouvé pour « %query% ».'
+        not_an_image: 'Pas une image'
         search: Rechercher
         search_placeholder:
             dropbox: 'Rechercher dans Dropbox'
@@ -2224,6 +2225,7 @@ integration:
             skipped: 'Ignorés : %files%'
         timeline: 'Aller à une date'
         too_big: 'Trop volumineux pour être joint'
+        use_as_avatar: 'Utiliser comme photo de profil'
 
 jobs:
     button:

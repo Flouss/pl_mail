@@ -8,6 +8,16 @@ The published image tags: `latest` follows the most recent release below,
 
 ## Unreleased
 
+**Saving an attachment to Paperless-ngx works.** The "Save to…" chooser listed your Paperless tags
+as folders to open, but a tag has nothing inside it, so clicking one only reloaded the same list and
+the dialog seemed to do nothing. A tag is now the choice itself: click it and the attachment is filed
+under it, or pick **No tag** to file it under none. The same goes for the folder a filter saves to.
+The upload itself was also refused ("No file was submitted") because it was sent in a form
+Paperless could not read; it now goes through. Paperless still turns down file types it cannot
+consume, a ZIP for one, and says so. Nextcloud, Google Drive, OneDrive, Dropbox, Immich and Google Photos choose exactly as before. No
+migration.
+[#78](https://github.com/karatektus/pl_mail/pull/78), by @Flouss.
+
 **A message's header no longer breaks into pieces in a narrow pane.** On a phone, or with the
 reading pane on the right and dragged narrow, the sender's address was cut mid-word across three
 lines while the date and the buttons took half the width. Below 36rem of pane width the date, the
@@ -397,15 +407,6 @@ arrived that you have not been shown, the unread count says what is unread. On f
 Settings → Appearance → Message list switches it off per person. One column is added to the user
 table; the migration is reversible.
 [#54](https://github.com/karatektus/pl_mail/pull/54), by @Flouss.
-**Saving an attachment to Paperless-ngx works.** The "Save to…" chooser listed your Paperless tags
-as folders to open, but a tag has nothing inside it, so clicking one only reloaded the same list and
-the dialog seemed to do nothing. A tag is now the choice itself: click it and the attachment is filed
-under it, or pick **No tag** to file it under none. The same goes for the folder a filter saves to.
-The upload itself was also refused ("No file was submitted") because it was sent in a form
-Paperless could not read; it now goes through. Paperless still turns down file types it cannot
-consume, a ZIP for one, and says so. Nextcloud, Google Drive, OneDrive, Dropbox, Immich and Google Photos choose exactly as before. No
-migration.
-[#78](https://github.com/karatektus/pl_mail/pull/78), by @Flouss.
 
 **An account's colour can be changed.** The coloured dot beside each account, and the mark on its
 messages in a mixed list, was picked for you when the account was added and could never be changed.

@@ -2187,16 +2187,21 @@ integration:
         # folder it will save to, for mail that has not arrived yet.
         choose_for_filter: 'Choisissez où ce filtre enregistre les pièces jointes.'
         choose_here: 'Choisir ce dossier'
+        choose_tag: 'Choisir une étiquette pour %file%'
         choose_this: Choisir
         create: Créer
         folder_name: 'Nom du dossier'
         library: 'Bibliothèque (sans album)'
         new_album: 'Nouvel album'
         new_folder: 'Nouveau dossier'
+        new_tag: 'Nouvelle étiquette'
         no_albums: 'Aucun album pour l’instant.'
         no_subfolders: 'Aucun dossier ici.'
+        no_tag: 'Sans étiquette'
+        no_tags: 'Aucune étiquette pour l’instant.'
         save_here: 'Enregistrer ici'
         start_over: 'Recommencer'
+        tag_name: 'Nom de l’étiquette'
     picker:
         attach: Joindre
         attach_from: 'Joindre depuis %name%'

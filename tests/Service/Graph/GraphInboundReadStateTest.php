@@ -351,6 +351,10 @@ final class GraphInboundReadStateTest extends KernelTestCase
             $account->graphDeltaLinks[self::INBOX_FOLDER] ?? null,
             'the listing ends by handing the folder the link it is followed with from now on',
         );
+
+        // The re-listing changed rows the open list is showing, and it runs
+        // through importPage(), not sync(): that path has to tell the list too.
+        $this->assertListToldToRefresh();
     }
 
     // ── helpers ───────────────────────────────────────────────────────────

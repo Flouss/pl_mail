@@ -8,6 +8,13 @@ The published image tags: `latest` follows the most recent release below,
 
 ## Unreleased
 
+**A message's header no longer breaks into pieces in a narrow pane.** On a phone, or with the
+reading pane on the right and dragged narrow, the sender's address was cut mid-word across three
+lines while the date and the buttons took half the width. Below 36rem of pane width the date, the
+menu and the arrow now sit on a row of their own under the header, so the sender gets the full
+width. It follows the width of the pane, not of the window. Wider panes are unchanged. No
+migration.
+
 **All Mail, if you want it: every conversation outside Spam and the bin, in one list (#57).**
 Archived mail had no list of its own to be browsed in, only search. All Mail holds it, together
 with what arrived, what you sent and your drafts, as Gmail's All Mail does, leaving out only Spam
@@ -390,12 +397,6 @@ arrived that you have not been shown, the unread count says what is unread. On f
 Settings → Appearance → Message list switches it off per person. One column is added to the user
 table; the migration is reversible.
 [#54](https://github.com/karatektus/pl_mail/pull/54), by @Flouss.
-**A message's header no longer breaks into pieces in a narrow pane.** On a phone, or with the
-reading pane on the right and dragged narrow, the sender's address was cut mid-word across three
-lines while the date and the buttons took half the width. Below 36rem of pane width the date, the
-menu and the arrow now sit on a row of their own under the header, so the sender gets the full
-width. It follows the width of the pane, not of the window. Wider panes are unchanged. No
-migration.
 
 **An account's colour can be changed.** The coloured dot beside each account, and the mark on its
 messages in a mixed list, was picked for you when the account was added and could never be changed.

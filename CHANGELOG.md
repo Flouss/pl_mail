@@ -8,6 +8,21 @@ The published image tags: `latest` follows the most recent release below,
 
 ## Unreleased
 
+**Mail read, unread, starred or unstarred in Outlook now reaches plMail.**
+An Outlook account follows each folder with a change feed, and the feed was begun asking for a
+message's id, folder and Message-ID only. Exchange reports a change in the properties a feed asks
+for, so a message whose only change was being read, unread, flagged or unflagged was not reported
+at all: mail handled in Outlook, on a phone or by a rule stayed as plMail had last seen it. (The
+other direction, plMail to Outlook, was not affected.) The feed now asks for both. A feed already
+running keeps what it was begun with, so after the upgrade every Outlook folder is listed once more
+and followed from a new feed; the account shows as importing until that pass is done, which costs
+its listing pages and fetches nothing it already has. Each message listed is also compared with the
+server's read state and star, so the few that drifted while nothing was listening move to match the
+server: a message plMail has as read that Outlook still has unread goes back to unread, and the
+other way round, so a badge can go up as well as down. **Migration:** clears the stored change feeds
+of Outlook accounts; nothing else changes in the schema.
+[#114](https://github.com/karatektus/pl_mail/pull/114), by @Flouss.
+
 **Saving an attachment to Paperless-ngx works.** The "Save to…" chooser listed your Paperless tags
 as folders to open, but a tag has nothing inside it, so clicking one only reloaded the same list and
 the dialog seemed to do nothing. A tag is now the choice itself: click it and the attachment is filed
